@@ -141,6 +141,7 @@ export default function RegisterPage() {
                       fromYear={1900}
                       toYear={new Date().getFullYear() - 18} 
                       initialFocus
+                      labels={{ labelMonthDropdown: '', labelYearDropdown: '' }}
                     />
                   </PopoverContent>
                 </Popover>
