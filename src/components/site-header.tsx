@@ -25,7 +25,7 @@ export function SiteHeader() {
             </Link>
           </Button>
           <Button variant="ghost" size="icon" asChild>
-            <Link href="/login" aria-label="User Profile / Login">
+            <Link href="/profile/edit" aria-label="User Profile / Edit">
               <User className="h-5 w-5" />
             </Link>
           </Button>

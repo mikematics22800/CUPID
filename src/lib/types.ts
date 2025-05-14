@@ -1,4 +1,5 @@
 
+
 export const HOBBIES_LIST = [
   "Reading",
   "Traveling",
@@ -43,4 +44,13 @@ export interface ChatConversation {
   lastMessage: ChatMessage | null;
   unreadCount?: number; // Number of unread messages for the current user in this conversation
   timestamp: Date; // Timestamp of the last activity or creation
+}
+
+// Extended User Profile for detailed information
+export interface UserProfile extends UserProfileSummary {
+  birthDate?: Date; // Already part of registration, might be useful here too
+  sex?: string; // Also part of registration
+  bio?: string;
+  photos?: (string | null)[];
+  hobbies?: string[];
 }
