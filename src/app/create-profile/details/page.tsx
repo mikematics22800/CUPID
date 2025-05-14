@@ -93,18 +93,18 @@ export default function ProfileDetailsPage() {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="birthDate">Birth Date</Label>
+            <Label htmlFor="birthDate">Date of Birth</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant={"outline"}
                   className={cn(
-                    "w-full justify-start text-left font-normal",
+                    "w-full justify-start text-left font-normal pl-10",
                     !birthDate && "text-muted-foreground"
                   )}
                 >
-                  <CalendarDays className="mr-2 h-4 w-4" />
-                  {birthDate ? format(birthDate, "PPP") : <span>Pick your birth date</span>}
+                  <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  {birthDate ? format(birthDate, "PPP") : <span>Select your date of birth</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">

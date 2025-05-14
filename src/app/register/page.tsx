@@ -118,7 +118,7 @@ export default function RegisterPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="birthDate">Birth Date</Label>
+                <Label htmlFor="birthDate">Date of Birth</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -129,7 +129,7 @@ export default function RegisterPage() {
                       )}
                     >
                       <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                      {birthDate ? format(birthDate, "PPP") : <span>Pick a date</span>}
+                      {birthDate ? format(birthDate, "PPP") : <span>Select date</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
