@@ -112,7 +112,7 @@ export default function ProfileDetailsPage() {
                   mode="single"
                   selected={birthDate}
                   onSelect={setBirthDate}
-                  captionLayout="dropdown-buttons"
+                  captionLayout="dropdown"
                   fromYear={1900}
                   toYear={new Date().getFullYear() - 18} // Ensure user can be at least 18
                   initialFocus
