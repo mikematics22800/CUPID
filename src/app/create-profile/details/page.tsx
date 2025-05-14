@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,9 @@ import { ArrowRight, UserCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { useToast } from "@/hooks/use-toast";
+
+const MIN_BIO_LENGTH = 100;
+const MAX_BIO_LENGTH = 500;
 
 export default function ProfileDetailsPage() {
   const [age, setAge] = useState("");
@@ -37,6 +41,22 @@ export default function ProfileDetailsPage() {
       });
       return;
     }
+    if (bio.length < MIN_BIO_LENGTH) {
+      toast({
+        title: "Bio Too Short",
+        description: `Your bio must be at least ${MIN_BIO_LENGTH} characters long.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    if (bio.length > MAX_BIO_LENGTH) {
+        toast({
+          title: "Bio Too Long",
+          description: `Your bio must be no more than ${MAX_BIO_LENGTH} characters long.`,
+          variant: "destructive",
+        });
+        return;
+      }
     console.log("Profile details:", { age, sex, bio });
     toast({
       title: "Details Saved (Mock)",
@@ -89,14 +109,20 @@ export default function ProfileDetailsPage() {
             <Label htmlFor="bio">Bio</Label>
             <Textarea
               id="bio"
-              placeholder="Write a short bio about yourself (max 500 characters)"
+              placeholder={`Write a short bio about yourself (min ${MIN_BIO_LENGTH}, max ${MAX_BIO_LENGTH} characters)`}
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               required
-              maxLength={500}
+              minLength={MIN_BIO_LENGTH}
+              maxLength={MAX_BIO_LENGTH}
               className="min-h-[120px]"
             />
-            <p className="text-xs text-muted-foreground text-right">{bio.length}/500</p>
+            <p className="text-xs text-muted-foreground text-right">
+              {bio.length < MIN_BIO_LENGTH 
+                ? `${bio.length}/${MIN_BIO_LENGTH} (min ${MIN_BIO_LENGTH})` 
+                : `${bio.length}/${MAX_BIO_LENGTH}`
+              }
+            </p>
           </div>
 
           <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-lg py-3 group">
