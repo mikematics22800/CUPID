@@ -2,16 +2,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { Users, Heart } from "lucide-react"; // Sparkles removed as it's part of the old logo
-import { Logo } from "@/components/logo"; // Import new logo
 
 export default function HomePage() {
   return (
     <div className="container mx-auto flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] p-4 text-center">
       {/* Replace Sparkles with Logo component if you want the logo itself here */}
       {/* For now, keeping text-based intro, Logo is in SiteHeader */}
-      <div className="mb-6">
-         <Logo /> {/* Display the logo */}
-      </div>
       <h1 className="text-5xl font-extrabold tracking-tight text-foreground sm:text-6xl md:text-7xl mb-6">
         Welcome to <span className="text-primary">Ourglass</span>
       </h1>
