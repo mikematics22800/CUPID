@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { useState, type ChangeEvent, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 
-const MAX_PHOTOS = 5;
+const MAX_PHOTOS = 6; // Updated from 5 to 6
 
 export default function ProfilePhotosPage() {
   const [photos, setPhotos] = useState<(string | null)[]>(Array(MAX_PHOTOS).fill(null));
@@ -74,7 +75,7 @@ export default function ProfilePhotosPage() {
           <Camera className="mr-2 h-7 w-7 text-primary" />
           Upload Your Best Photos
         </CardTitle>
-        <CardDescription>Add 5 photos that showcase your personality. Good photos get more attention!</CardDescription>
+        <CardDescription>Add {MAX_PHOTOS} photos that showcase your personality. Good photos get more attention!</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
