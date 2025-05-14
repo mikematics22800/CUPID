@@ -31,15 +31,15 @@ export default function ProfileHobbiesPage() {
   const handleSubmit = () => {
     if (selectedHobbies.length < MIN_HOBBIES) {
       toast({
-        title: "Select More Hobbies",
-        description: `Please select at least ${MIN_HOBBIES} hobbies to continue.`,
+        title: "Select More Hobbies and Interests",
+        description: `Please select at least ${MIN_HOBBIES} hobbies and interests to continue.`,
         variant: "destructive",
       });
       return;
     }
-    console.log("Selected hobbies:", selectedHobbies);
+    console.log("Selected hobbies and interests:", selectedHobbies);
     toast({
-      title: "Hobbies Saved (Mock)",
+      title: "Hobbies and Interests Saved (Mock)",
       description: "Proceeding to phone verification...",
     });
     router.push("/verify-phone");
@@ -50,9 +50,9 @@ export default function ProfileHobbiesPage() {
       <CardHeader>
         <CardTitle className="flex items-center text-2xl font-semibold">
           <ListChecks className="mr-2 h-7 w-7 text-primary" />
-          Share Your Interests
+          Share Your Hobbies and Interests
         </CardTitle>
-        <CardDescription>Select at least {MIN_HOBBIES} hobbies that you enjoy. This helps in finding better matches!</CardDescription>
+        <CardDescription>Select at least {MIN_HOBBIES} hobbies and interests that you enjoy. This helps in finding better matches!</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4 mb-6 max-h-96 overflow-y-auto p-1">
@@ -70,7 +70,7 @@ export default function ProfileHobbiesPage() {
           ))}
         </div>
         <p className="text-sm text-muted-foreground mb-6">
-          {selectedHobbies.length} hobbies selected (min {MIN_HOBBIES}).
+          {selectedHobbies.length} hobbies and interests selected (min {MIN_HOBBIES}).
         </p>
         <Button onClick={handleSubmit} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-lg py-3 group">
           Next: Verify Phone

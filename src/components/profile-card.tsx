@@ -1,3 +1,4 @@
+
 import Image from "next/image";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +10,7 @@ export interface Profile {
   age: number;
   photos: string[];
   bio: string;
-  hobbies: string[];
+  hobbies: string[]; // Internal name can remain hobbies for data structure consistency
   distance?: string; // Optional
 }
 
@@ -54,9 +55,9 @@ export function ProfileCard({ profile }: ProfileCardProps) {
           </p>
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center"><Sparkles className="w-4 h-4 mr-2 text-accent" />Interests</h3>
+          <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center"><Sparkles className="w-4 h-4 mr-2 text-accent" />Hobbies and Interests</h3>
           <div className="flex flex-wrap gap-2">
-            {profile.hobbies.slice(0, 5).map((hobby) => ( // Display up to 5 hobbies
+            {profile.hobbies.slice(0, 5).map((hobby) => ( // Display up to 5 hobbies/interests
               <Badge key={hobby} variant="secondary" className="bg-accent/20 text-accent-foreground hover:bg-accent/30 transition-colors">
                 {hobby}
               </Badge>

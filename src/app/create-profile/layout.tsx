@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Progress } from "@/components/ui/progress";
@@ -9,7 +10,7 @@ import Link from "next/link";
 const steps = [
   { path: "/create-profile/details", label: "Your Details", progress: 25 },
   { path: "/create-profile/photos", label: "Upload Photos", progress: 50 },
-  { path: "/create-profile/hobbies", label: "Select Hobbies", progress: 75 },
+  { path: "/create-profile/hobbies", label: "Select Hobbies and Interests", progress: 75 },
   { path: "/verify-phone", label: "Verify Phone", progress: 100 }, // Assuming verify-phone is the next step
 ];
 

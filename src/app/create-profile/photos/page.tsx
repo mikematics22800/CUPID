@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { useState, type ChangeEvent, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 
-const MAX_PHOTOS = 6; // Updated from 5 to 6
+const MAX_PHOTOS = 6; 
 
 export default function ProfilePhotosPage() {
   const [photos, setPhotos] = useState<(string | null)[]>(Array(MAX_PHOTOS).fill(null));
@@ -63,7 +63,7 @@ export default function ProfilePhotosPage() {
     console.log("Photos submitted:", photos.filter(p => p !== null));
     toast({
       title: "Photos Saved (Mock)",
-      description: "Proceeding to select hobbies...",
+      description: "Proceeding to select hobbies and interests...",
     });
     router.push("/create-profile/hobbies");
   };
@@ -134,7 +134,7 @@ export default function ProfilePhotosPage() {
             {photos.filter(p => p !== null).length} of {MAX_PHOTOS} photos uploaded. The first photo will be your main profile picture.
         </p>
         <Button onClick={handleSubmit} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-lg py-3 group">
-          Next: Select Hobbies
+          Next: Select Hobbies and Interests
           <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
         </Button>
       </CardContent>
