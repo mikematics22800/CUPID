@@ -11,7 +11,7 @@ import { useState, type FormEvent } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 const MIN_BIO_LENGTH = 100;
-const MAX_BIO_LENGTH = 500;
+const MAX_BIO_LENGTH = 1000; // Updated to 1000
 
 export default function ProfileDetailsPage() {
   const [bio, setBio] = useState("");
