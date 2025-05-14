@@ -57,7 +57,7 @@ export default function RegisterPage() {
         <CardHeader className="space-y-1 text-center">
           <User className="mx-auto h-12 w-12 text-primary" />
           <CardTitle className="text-3xl font-bold tracking-tight text-primary">Create an Account</CardTitle>
-          <CardDescription>Join Connectify and start your journey.</CardDescription>
+          <CardDescription>Join Ourglass and start your journey.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">

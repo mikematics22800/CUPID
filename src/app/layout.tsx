@@ -10,7 +10,7 @@ const geistSans = GeistSans;
 const geistMono = GeistMono;
 
 export const metadata: Metadata = {
-  title: 'Connectify - Find Your Connection',
+  title: 'Ourglass - Find Your Connection',
   description: 'A modern dating app to connect with like-minded people.',
 };
 

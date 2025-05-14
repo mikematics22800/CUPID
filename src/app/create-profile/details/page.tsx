@@ -32,7 +32,7 @@ export default function ProfileDetailsPage() {
     if (parseInt(age) < 18) {
       toast({
         title: "Age Restriction",
-        description: "You must be at least 18 years old to use Connectify.",
+        description: "You must be at least 18 years old to use Ourglass.",
         variant: "destructive",
       });
       return;

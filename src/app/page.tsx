@@ -1,17 +1,22 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-import { Sparkles, Users, Heart } from "lucide-react";
+import { Users, Heart } from "lucide-react"; // Sparkles removed as it's part of the old logo
+import { Logo } from "@/components/logo"; // Import new logo
 
 export default function HomePage() {
   return (
     <div className="container mx-auto flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] p-4 text-center">
-      <Sparkles className="w-24 h-24 text-primary mb-6" />
+      {/* Replace Sparkles with Logo component if you want the logo itself here */}
+      {/* For now, keeping text-based intro, Logo is in SiteHeader */}
+      <div className="mb-6">
+         <Logo /> {/* Display the logo */}
+      </div>
       <h1 className="text-5xl font-extrabold tracking-tight text-foreground sm:text-6xl md:text-7xl mb-6">
-        Welcome to <span className="text-primary">Connectify</span>
+        Welcome to <span className="text-primary">Ourglass</span>
       </h1>
       <p className="max-w-2xl text-xl text-muted-foreground mb-10">
-        Discover meaningful connections. Connectify helps you find like-minded individuals who share your passions and interests.
+        Discover meaningful connections. Ourglass helps you find like-minded individuals who share your passions and interests.
         Ready to find your spark?
       </p>
       

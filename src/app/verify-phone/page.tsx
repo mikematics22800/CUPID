@@ -47,7 +47,7 @@ export default function VerifyPhonePage() {
     console.log("Verifying code:", verificationCode);
     toast({
       title: "Phone Verified (Mock)",
-      description: "Your phone number has been successfully verified. Welcome to Connectify!",
+      description: "Your phone number has been successfully verified. Welcome to Ourglass!",
     });
     router.push("/dashboard");
   };
