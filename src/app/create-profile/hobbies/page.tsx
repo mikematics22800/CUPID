@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
-const MAX_HOBBIES = 5;
+const MIN_HOBBIES = 6;
 
 export default function ProfileHobbiesPage() {
   const [selectedHobbies, setSelectedHobbies] = useState<string[]>([]);
@@ -22,24 +23,16 @@ export default function ProfileHobbiesPage() {
       if (prev.includes(hobby)) {
         return prev.filter(h => h !== hobby);
       } else {
-        if (prev.length < MAX_HOBBIES) {
-          return [...prev, hobby];
-        }
-        toast({
-          title: `Limit Reached`,
-          description: `You can select up to ${MAX_HOBBIES} hobbies.`,
-          variant: "default",
-        });
-        return prev;
+        return [...prev, hobby];
       }
     });
   };
 
   const handleSubmit = () => {
-    if (selectedHobbies.length !== MAX_HOBBIES) {
+    if (selectedHobbies.length < MIN_HOBBIES) {
       toast({
-        title: "Select Hobbies",
-        description: `Please select exactly ${MAX_HOBBIES} hobbies to continue.`,
+        title: "Select More Hobbies",
+        description: `Please select at least ${MIN_HOBBIES} hobbies to continue.`,
         variant: "destructive",
       });
       return;
@@ -59,7 +52,7 @@ export default function ProfileHobbiesPage() {
           <ListChecks className="mr-2 h-7 w-7 text-primary" />
           Share Your Interests
         </CardTitle>
-        <CardDescription>Select up to {MAX_HOBBIES} hobbies that you enjoy. This helps in finding better matches!</CardDescription>
+        <CardDescription>Select at least {MIN_HOBBIES} hobbies that you enjoy. This helps in finding better matches!</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4 mb-6 max-h-96 overflow-y-auto p-1">
@@ -69,7 +62,6 @@ export default function ProfileHobbiesPage() {
                 id={`hobby-${hobby}`}
                 checked={selectedHobbies.includes(hobby)}
                 onCheckedChange={() => handleHobbyChange(hobby)}
-                disabled={selectedHobbies.length >= MAX_HOBBIES && !selectedHobbies.includes(hobby)}
               />
               <Label htmlFor={`hobby-${hobby}`} className="text-base font-normal cursor-pointer flex-1">
                 {hobby}
@@ -78,7 +70,7 @@ export default function ProfileHobbiesPage() {
           ))}
         </div>
         <p className="text-sm text-muted-foreground mb-6">
-          {selectedHobbies.length} of {MAX_HOBBIES} hobbies selected.
+          {selectedHobbies.length} hobbies selected (min {MIN_HOBBIES}).
         </p>
         <Button onClick={handleSubmit} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-lg py-3 group">
           Next: Verify Phone
