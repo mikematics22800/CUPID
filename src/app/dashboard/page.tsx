@@ -1,13 +1,14 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
 import { ProfileCard, type Profile } from "@/components/profile-card";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"; // Button will be removed for swipe actions
 import { Heart, X, Zap, RotateCcw } from "lucide-react";
 import { useCooldown } from "@/hooks/use-cooldown";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AnimatePresence, motion } from "framer-motion"; // For animations
+import { motion, AnimatePresence, useMotionValue, useTransform, type PanInfo } from "framer-motion";
 
 const MOCK_PROFILES: Profile[] = [
   {
@@ -39,46 +40,81 @@ const MOCK_PROFILES: Profile[] = [
   },
 ];
 
-const SWIPE_COOLDOWN_SECONDS = 30;
+const SWIPE_COOLDOWN_SECONDS = 2; // Reduced for easier testing of drag
+const SWIPE_THRESHOLD_X = 80; // Min drag distance in pixels for a swipe
+const SWIPE_VELOCITY_THRESHOLD = 0.3; // Min velocity for a flick swipe
 
 export default function DashboardPage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const { cooldown, startCooldown, isCoolingDown } = useCooldown(SWIPE_COOLDOWN_SECONDS);
+  
+  // This state will hold the direction of the swipe for the card *exiting*.
+  const [exitDirection, setExitDirection] = useState<'left' | 'right' | null>(null);
+
+  // Motion value for card's x position during drag
+  const x = useMotionValue(0);
+
+  // Transform x offset to rotation for visual feedback during drag
+  const rotate = useTransform(x, [-200, 0, 200], [-20, 0, 20], { clamp: false });
+  // Optional: transform opacity during drag for more feedback
+  // const cardOpacity = useTransform(x, [-150, 0, 150], [0.7, 1, 0.7]);
+
 
   useEffect(() => {
-    // Simulate fetching profiles
     setProfiles(MOCK_PROFILES);
-  }, []);
+    x.set(0); // Reset for the first card
+    setExitDirection(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Load profiles once
 
-  const handleSwipe = (action: "like" | "dislike") => {
+  useEffect(() => {
+    // When a new card comes into view (currentIndex changes), reset its drag properties
+    if (currentIndex < profiles.length) { // Ensure profile exists
+        x.set(0);
+        setExitDirection(null);
+    }
+  }, [currentIndex, profiles.length, x]);
+
+  const handleSwipeAction = (action: "like" | "dislike", profileName: string) => {
     if (isCoolingDown || currentIndex >= profiles.length) return;
 
-    console.log(`Swiped ${action} on ${profiles[currentIndex].name}`);
+    console.log(`Swiped ${action} on ${profileName}`);
     startCooldown();
-    // setCurrentIndex(prev => prev + 1); // Animate out first
-    
-    // Trigger animation, then advance index
-    // For now, simple advance:
-    setTimeout(() => {
-        setCurrentIndex(prev => prev + 1);
-    }, 300); // Match animation duration
+    setCurrentIndex(prev => prev + 1);
+  };
+
+  const onDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    const { offset, velocity } = info;
+
+    if (currentIndex >= profiles.length) return; // No profile to swipe
+
+    if (Math.abs(offset.x) > SWIPE_THRESHOLD_X || Math.abs(velocity.x) > SWIPE_VELOCITY_THRESHOLD) {
+      const direction = offset.x < 0 ? 'left' : 'right';
+      setExitDirection(direction); // Set direction for the exit animation
+      handleSwipeAction(direction === 'left' ? 'dislike' : 'like', profiles[currentIndex].name);
+    } else {
+      // Not a swipe, animate card back to center
+      x.set(0); // motion.div style={{x}} will animate this
+    }
+  };
+
+  const cardVariants = {
+    initial: { opacity: 0, y: 30, scale: 0.95 },
+    animate: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.4, type: "spring", stiffness: 100, damping: 20 } },
+    exit: (customExitDirection: 'left' | 'right' | null) => {
+      if (!customExitDirection) return { opacity: 0, scale: 0.8, transition: {duration: 0.2 }}; // Fallback if direction is null
+      return {
+        x: customExitDirection === 'left' ? -350 : 350,
+        opacity: 0,
+        scale: 0.85,
+        rotate: customExitDirection === 'left' ? -25 : 25,
+        transition: { duration: 0.3, ease: "easeIn" }
+      };
+    },
   };
 
   const currentProfile = profiles[currentIndex];
-
-  const cardVariants = {
-    initial: { opacity: 0, y: 50, scale: 0.9 },
-    animate: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.5, type: "spring" } },
-    exit: (direction: 'left' | 'right') => ({ 
-        x: direction === 'left' ? -300 : 300, 
-        opacity: 0, 
-        scale: 0.8,
-        rotate: direction === 'left' ? -15: 15,
-        transition: { duration: 0.3 } 
-    }),
-  };
-
 
   if (!profiles.length && currentIndex === 0) {
     return (
@@ -90,7 +126,6 @@ export default function DashboardPage() {
       </div>
     );
   }
-
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] p-4 space-y-8 overflow-hidden">
@@ -105,16 +140,22 @@ export default function DashboardPage() {
         </Alert>
       )}
 
-      <div className="relative h-[600px] w-full max-w-sm flex items-center justify-center"> {/* Container for card animation */}
-        <AnimatePresence customKey={currentProfile?.id}>
+      <div className="relative h-[600px] w-full max-w-sm flex items-center justify-center">
+        <AnimatePresence initial={false} custom={exitDirection}>
             {currentProfile ? (
             <motion.div
                 key={currentProfile.id}
+                className="absolute cursor-grab active:cursor-grabbing"
+                style={{ x, rotate }} // Apply dynamic style for drag feedback. Add opacity: cardOpacity if used.
+                drag="x"
+                dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }} // Visual drag handled by style.x, these keep it centered logically
+                dragElastic={0.7} // Allows some elastic drag feel beyond constraints if they were wider
+                onDragEnd={onDragEnd}
                 variants={cardVariants}
                 initial="initial"
                 animate="animate"
-                exit={() => cardVariants.exit(Math.random() > 0.5 ? 'left' : 'right')} // Random exit for demo
-                className="absolute"
+                exit="exit"
+                custom={exitDirection} // Pass the determined exit direction to the variant
             >
                 <ProfileCard profile={currentProfile} />
             </motion.div>
@@ -125,7 +166,12 @@ export default function DashboardPage() {
                 <p className="text-muted-foreground mb-6">
                 You&apos;ve seen everyone for now. Check back later for new connections!
                 </p>
-                <Button onClick={() => { setCurrentIndex(0); setProfiles(MOCK_PROFILES);}} variant="outline">
+                <Button onClick={() => { 
+                    setProfiles(MOCK_PROFILES); // Re-populate for demo
+                    setCurrentIndex(0); 
+                    x.set(0); 
+                    setExitDirection(null);
+                }} variant="outline">
                     <RotateCcw className="mr-2 h-4 w-4" /> Reload Profiles (Demo)
                 </Button>
             </motion.div>
@@ -133,13 +179,14 @@ export default function DashboardPage() {
         </AnimatePresence>
       </div>
 
-
+      {/* Swipe buttons are now removed */}
+      {/* 
       <div className="flex space-x-6">
         <Button
           variant="outline"
           size="lg"
           className="rounded-full p-0 w-20 h-20 border-2 border-rose-500 text-rose-500 hover:bg-rose-500/10 disabled:border-muted disabled:text-muted-foreground"
-          onClick={() => handleSwipe("dislike")}
+          onClick={() => handleSwipeAction("dislike", currentProfile?.name)}
           disabled={isCoolingDown || !currentProfile}
           aria-label="Dislike profile"
         >
@@ -150,13 +197,15 @@ export default function DashboardPage() {
           size="lg"
           className="rounded-full p-0 w-20 h-20 border-2 border-emerald-500 text-emerald-500 hover:bg-emerald-500/10  disabled:border-muted disabled:text-muted-foreground"
           style={{borderColor: "hsl(var(--accent))", color: "hsl(var(--accent))"}}
-          onClick={() => handleSwipe("like")}
+          onClick={() => handleSwipeAction("like", currentProfile?.name)}
           disabled={isCoolingDown || !currentProfile}
           aria-label="Like profile"
         >
           <Heart className="h-10 w-10" />
         </Button>
-      </div>
+      </div> 
+      */}
     </div>
   );
-}
+
+    
