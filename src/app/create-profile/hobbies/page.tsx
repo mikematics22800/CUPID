@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
-const MIN_HOBBIES = 6;
+const MIN_HOBBIES = 3; // Updated from 6 to 3
 
 export default function ProfileHobbiesPage() {
   const [selectedHobbies, setSelectedHobbies] = useState<string[]>([]);
@@ -80,3 +80,4 @@ export default function ProfileHobbiesPage() {
     </Card>
   );
 }
+
