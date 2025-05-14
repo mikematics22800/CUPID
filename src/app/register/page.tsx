@@ -13,12 +13,17 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Mail, Lock, User, Phone } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Mail, Lock, User, Phone, CalendarDays, VenetianMask } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { SEX_OPTIONS } from "@/lib/constants";
 
 export default function RegisterPage() {
+  const [fullName, setFullName] = useState("");
+  const [age, setAge] = useState("");
+  const [sex, setSex] = useState("");
   const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
@@ -28,7 +33,7 @@ export default function RegisterPage() {
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
-    if (!email || !phoneNumber || !password || !confirmPassword) {
+    if (!fullName || !age || !sex || !email || !phoneNumber || !password || !confirmPassword) {
       toast({
         title: "Error",
         description: "Please fill in all fields.",
@@ -36,7 +41,15 @@ export default function RegisterPage() {
       });
       return;
     }
-    if (!phoneNumber.match(/^\+[1-9]\d{1,14}$/)) { // Basic E.164 format validation
+    if (parseInt(age) < 18) {
+      toast({
+        title: "Age Restriction",
+        description: "You must be at least 18 years old to register for Ourglass.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!phoneNumber.match(/^\+[1-9]\d{1,14}$/)) { 
         toast({
             title: "Invalid Phone Number",
             description: "Please enter a valid phone number with country code (e.g., +12223334444).",
@@ -52,7 +65,7 @@ export default function RegisterPage() {
       });
       return;
     }
-    console.log("Registration attempt with:", { email, phoneNumber });
+    console.log("Registration attempt with:", { fullName, age, sex, email, phoneNumber });
     toast({
       title: "Registration Successful (Mock)",
       description: "Redirecting to create your profile...",
@@ -70,7 +83,60 @@ export default function RegisterPage() {
           <CardDescription>Join Ourglass and start your journey.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="fullName">Full Name</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input
+                  id="fullName"
+                  type="text"
+                  placeholder="John Doe"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="age">Age</Label>
+                <div className="relative">
+                  <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    id="age"
+                    type="number"
+                    placeholder="Your age"
+                    value={age}
+                    onChange={(e) => setAge(e.target.value)}
+                    required
+                    min="18"
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sex">Sex</Label>
+                 <div className="relative">
+                   <VenetianMask className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
+                    <Select value={sex} onValueChange={setSex} required>
+                    <SelectTrigger id="sex" className="pl-10">
+                        <SelectValue placeholder="Select sex" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {SEX_OPTIONS.map((option) => (
+                        <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                        </SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                 </div>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
@@ -136,7 +202,7 @@ export default function RegisterPage() {
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="text-center text-sm">
+        <CardFooter className="text-center text-sm pt-4">
           <p className="w-full">
             Already have an account?{" "}
             <Link href="/login" className="font-medium text-primary hover:underline">
@@ -148,3 +214,4 @@ export default function RegisterPage() {
     </div>
   );
 }
+
