@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Mail, Lock, User, Phone, CalendarDays, VenetianMask } from "lucide-react";
+import { Mail, Lock, User, Phone, CalendarDays, VenetianMask, } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -124,11 +124,11 @@ export default function RegisterPage() {
                     <Button
                       variant={"outline"}
                       className={cn(
-                        "w-full justify-start text-left font-normal pl-10",
+                        "w-full justify-start text-left font-normal",
                         !birthDate && "text-muted-foreground"
                       )}
                     >
-                      <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                      <CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />
                       {birthDate ? format(birthDate, "PPP") : <span>Select date</span>}
                     </Button>
                   </PopoverTrigger>
@@ -139,7 +139,7 @@ export default function RegisterPage() {
                       onSelect={setBirthDate}
                       captionLayout="dropdown"
                       fromYear={1900}
-                      toYear={new Date().getFullYear() - 18} // Ensure user can be at least 18
+                      toYear={new Date().getFullYear() - 18} 
                       initialFocus
                     />
                   </PopoverContent>
