@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -12,13 +13,14 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Mail, Lock, User } from "lucide-react";
+import { Mail, Lock, User, Phone } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const router = useRouter();
@@ -26,13 +28,21 @@ export default function RegisterPage() {
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
-    if (!email || !password || !confirmPassword) {
+    if (!email || !phoneNumber || !password || !confirmPassword) {
       toast({
         title: "Error",
         description: "Please fill in all fields.",
         variant: "destructive",
       });
       return;
+    }
+    if (!phoneNumber.match(/^\+[1-9]\d{1,14}$/)) { // Basic E.164 format validation
+        toast({
+            title: "Invalid Phone Number",
+            description: "Please enter a valid phone number with country code (e.g., +12223334444).",
+            variant: "destructive",
+        });
+        return;
     }
     if (password !== confirmPassword) {
       toast({
@@ -42,7 +52,7 @@ export default function RegisterPage() {
       });
       return;
     }
-    console.log("Registration attempt with:", { email });
+    console.log("Registration attempt with:", { email, phoneNumber });
     toast({
       title: "Registration Successful (Mock)",
       description: "Redirecting to create your profile...",
@@ -71,6 +81,21 @@ export default function RegisterPage() {
                   placeholder="name@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="+12345678900"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
                   required
                   className="pl-10"
                 />
