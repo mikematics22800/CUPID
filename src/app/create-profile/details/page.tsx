@@ -3,29 +3,42 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { SEX_OPTIONS } from "@/lib/constants";
-import { ArrowRight, UserCircle2 } from "lucide-react";
+import { ArrowRight, UserCircle2, CalendarDays } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 const MIN_BIO_LENGTH = 100;
 const MAX_BIO_LENGTH = 500;
 
 export default function ProfileDetailsPage() {
-  const [age, setAge] = useState("");
+  const [birthDate, setBirthDate] = useState<Date | undefined>();
   const [sex, setSex] = useState("");
   const [bio, setBio] = useState("");
   const router = useRouter();
   const { toast } = useToast();
 
+  const calculateAge = (dob: Date): number => {
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
-    if (!age || !sex || !bio) {
+    if (!birthDate || !sex || !bio) {
       toast({
         title: "Missing Information",
         description: "Please fill out all fields to continue.",
@@ -33,7 +46,9 @@ export default function ProfileDetailsPage() {
       });
       return;
     }
-    if (parseInt(age) < 18) {
+
+    const age = calculateAge(birthDate);
+    if (age < 18) {
       toast({
         title: "Age Restriction",
         description: "You must be at least 18 years old to use Ourglass.",
@@ -41,6 +56,7 @@ export default function ProfileDetailsPage() {
       });
       return;
     }
+
     if (bio.length < MIN_BIO_LENGTH) {
       toast({
         title: "Bio Too Short",
@@ -57,7 +73,7 @@ export default function ProfileDetailsPage() {
         });
         return;
       }
-    console.log("Profile details:", { age, sex, bio });
+    console.log("Profile details:", { birthDate, sex, bio, calculatedAge: age });
     toast({
       title: "Details Saved (Mock)",
       description: "Proceeding to photo upload...",
@@ -77,16 +93,32 @@ export default function ProfileDetailsPage() {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="age">Age</Label>
-            <Input
-              id="age"
-              type="number"
-              placeholder="Your age"
-              value={age}
-              onChange={(e) => setAge(e.target.value)}
-              required
-              min="18"
-            />
+            <Label htmlFor="birthDate">Birth Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !birthDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarDays className="mr-2 h-4 w-4" />
+                  {birthDate ? format(birthDate, "PPP") : <span>Pick your birth date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={birthDate}
+                  onSelect={setBirthDate}
+                  captionLayout="dropdown-buttons"
+                  fromYear={1900}
+                  toYear={new Date().getFullYear() - 18} // Ensure user can be at least 18
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="space-y-2">
