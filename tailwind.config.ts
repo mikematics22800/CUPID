@@ -10,6 +10,19 @@ export default {
   theme: {
   	extend: {
   		colors: {
+        coral: {
+          DEFAULT: '#FF7F50', // Coral
+          '50': '#FFF0EB',
+          '100': '#FFE1D6',
+          '200': '#FFC3AD',
+          '300': '#FFA485',
+          '400': '#FF865C',
+          '500': '#FF7F50',
+          '600': '#E66A48',
+          '700': '#CC5A3F',
+          '800': '#B34B36',
+          '900': '#993C2E',
+        },
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {
@@ -87,7 +100,11 @@ export default {
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
   			'accordion-up': 'accordion-up 0.2s ease-out'
-  		}
+  		},
+      fontFamily: {
+        sans: ['var(--font-geist-sans)'],
+        mono: ['var(--font-geist-mono)'],
+      },
   	}
   },
   plugins: [require("tailwindcss-animate")],
