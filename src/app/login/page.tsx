@@ -13,13 +13,12 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Mail, Lock, Phone } from "lucide-react";
+import { Lock, Phone } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const router = useRouter();
@@ -28,7 +27,7 @@ export default function LoginPage() {
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     // Basic validation
-    if (!email || !password || !phoneNumber) {
+    if (!password || !phoneNumber) {
       toast({
         title: "Error",
         description: "Please fill in all fields.",
@@ -44,7 +43,7 @@ export default function LoginPage() {
         });
         return;
     }
-    console.log("Login attempt with:", { email, password, phoneNumber });
+    console.log("Login attempt with:", { phoneNumber, password });
     toast({
       title: "Login Successful (Mock)",
       description: "Redirecting to your dashboard...",
@@ -62,21 +61,6 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="m@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="pl-10"
-                />
-              </div>
-            </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Phone Number</Label>
               <div className="relative">

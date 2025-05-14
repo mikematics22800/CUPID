@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Mail, Lock, User, Phone, CalendarDays, VenetianMask, } from "lucide-react";
+import { Lock, User, Phone, CalendarDays, VenetianMask, } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -28,7 +28,6 @@ export default function RegisterPage() {
   const [fullName, setFullName] = useState("");
   const [birthDate, setBirthDate] = useState<Date | undefined>();
   const [sex, setSex] = useState("");
-  const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -47,7 +46,7 @@ export default function RegisterPage() {
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
-    if (!fullName || !birthDate || !sex || !email || !phoneNumber || !password || !confirmPassword) {
+    if (!fullName || !birthDate || !sex || !phoneNumber || !password || !confirmPassword) {
       toast({
         title: "Error",
         description: "Please fill in all fields.",
@@ -82,7 +81,7 @@ export default function RegisterPage() {
       });
       return;
     }
-    console.log("Registration attempt with:", { fullName, birthDate, sex, email, phoneNumber, calculatedAge: age });
+    console.log("Registration attempt with:", { fullName, birthDate, sex, phoneNumber, calculatedAge: age });
     toast({
       title: "Registration Successful (Mock)",
       description: "Redirecting to create your profile...",
@@ -128,7 +127,7 @@ export default function RegisterPage() {
                         !birthDate && "text-muted-foreground"
                       )}
                     >
-                      <CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />
+                      <CalendarDays className="mr-2 h-4 w-4" />
                       {birthDate ? format(birthDate, "PPP") : <span>Select date</span>}
                     </Button>
                   </PopoverTrigger>
@@ -165,21 +164,6 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="pl-10"
-                />
-              </div>
-            </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Phone Number</Label>
               <div className="relative">
