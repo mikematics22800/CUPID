@@ -3,12 +3,14 @@
 
 import { useState, useEffect } from "react";
 import { ProfileCard, type Profile } from "@/components/profile-card";
-import { Button } from "@/components/ui/button"; // Button will be removed for swipe actions
+// Button component will be removed as swipe buttons are removed
 import { Heart, X, Zap, RotateCcw } from "lucide-react";
 import { useCooldown } from "@/hooks/use-cooldown";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { motion, AnimatePresence, useMotionValue, useTransform, type PanInfo } from "framer-motion";
+import { Button } from "@/components/ui/button";
+
 
 const MOCK_PROFILES: Profile[] = [
   {
@@ -40,7 +42,7 @@ const MOCK_PROFILES: Profile[] = [
   },
 ];
 
-const SWIPE_COOLDOWN_SECONDS = 2; // Reduced for easier testing of drag
+const SWIPE_COOLDOWN_SECONDS = 30; // Updated to 30 seconds
 const SWIPE_THRESHOLD_X = 80; // Min drag distance in pixels for a swipe
 const SWIPE_VELOCITY_THRESHOLD = 0.3; // Min velocity for a flick swipe
 
