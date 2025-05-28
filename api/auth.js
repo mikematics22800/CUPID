@@ -1,4 +1,4 @@
-import { getApp, initializeApp } from 'firebase/app';
+import app from '../firebase';
 import {
   getAuth,
   RecaptchaVerifier,
@@ -6,29 +6,7 @@ import {
   signOut
 } from 'firebase/auth';
 
-// Initialize Firebase only on client side
-let auth;
-if (typeof window !== 'undefined') {
-  const firebaseConfig = {
-    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
-  };
-
-  // Initialize Firebase only if it hasn't been initialized
-  let app;
-  try {
-    app = initializeApp(firebaseConfig);
-  } catch (error) {
-    // If Firebase is already initialized, get the existing app
-    app = getApp();
-  }
-
-  auth = getAuth(app);
-}
+auth = getAuth(app);
 
 // Setup reCAPTCHA verifier
 export const setupRecaptcha = (containerId) => {
