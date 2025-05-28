@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Video } from 'expo-av';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import PhoneInput from "react-native-phone-number-input";
 import { register } from '../api/auth';
 import { login } from '../api/auth';
@@ -12,11 +12,11 @@ export default function Welcome() {
   const [number, setNumber] = useState('')
 
   const useRegister = async () => {
-    await register(number, password, confirmPassword)
+    await register(number)
   }
 
   const useLogin = async () => {
-    await login(number, password)
+    await login(number)
   }
 
   return (
