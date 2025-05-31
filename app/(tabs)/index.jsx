@@ -2,7 +2,7 @@ import { Video } from 'expo-av';
 import { useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import PhoneInput from "react-native-phone-number-input";
-import { confirmCode, sendVerificationCode } from '../../api/auth';
+import { confirmCode, sendVerificationCode, signInWithGoogle } from '../../api/auth';
 
 export default function LoginScreen() {
   const [loginForm, setLoginForm] = useState(false);
@@ -33,6 +33,15 @@ export default function LoginScreen() {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    try {
+      await signInWithGoogle();
+      Alert.alert('Success', 'Google login successful!');
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    }
+  };
+
   return (
     <View style={styles.index}>
       <Video
@@ -47,7 +56,7 @@ export default function LoginScreen() {
           <View style={styles.hero}>
             <Text style={styles.heroTitle}>Ourglass</Text>
             <Text style={styles.heroText}>
-              For wandering hearts desiring more connection and less transaction.
+              For wandering hearts desiring less transaction and more connection.
             </Text>
           </View>
           <View style={styles.auth}>
@@ -57,7 +66,7 @@ export default function LoginScreen() {
             <TouchableOpacity style={styles.registerButton} onPress={() => setRegisterForm(true)}>
               <Text style={styles.registerButtonText}>Register</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.googleButton} onPress={() => {}}>
+            <TouchableOpacity style={styles.googleButton} onPress={handleGoogleLogin}>
               <Text style={styles.googleButtonText}>Login with 
                 <Text style={{color: '#4285F4'}}> G</Text>
                 <Text style={{color: '#DB4437'}}>o</Text>
