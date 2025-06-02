@@ -4,12 +4,11 @@ export default function TabLayout() {
   return (
     <Tabs>
       <Tabs.Screen
-        name="index"
+        name="home"
         options={{
-          title: 'Login',
+          title: 'home',
           href: null,
           headerShown: false,
-          tabBarStyle: { display: 'none' },
         }}
       />
     </Tabs>
