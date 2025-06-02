@@ -10,8 +10,8 @@ export default function RegisterForm({
   setFirstName,
   lastName,
   setLastName,
-  number,
-  setNumber,
+  phoneNumber,
+  setPhoneNumber,
   setSex,
   sex,
   sexuality,
@@ -29,7 +29,7 @@ export default function RegisterForm({
 
   useEffect(() => {
     // Email validation regex
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     
     // Check if all required fields are filled and valid
     const isValid = 
@@ -38,11 +38,11 @@ export default function RegisterForm({
       sex !== null &&
       sexuality !== null &&
       email?.match(emailRegex) !== null &&
-      number?.length >= 10 &&
+      phoneNumber?.length >= 10 &&
       birthday instanceof Date;
 
     setIsFormValid(isValid);
-  }, [firstName, lastName, sex, sexuality, email, number, birthday]);
+  }, [firstName, lastName, sex, sexuality, email, phoneNumber, birthday]);
 
   const handleSexChange = (sex) => {
     setSex(sex);
@@ -75,7 +75,7 @@ export default function RegisterForm({
             <TextInput
               style={styles.nameInput}
               placeholder="First Name"
-              value={firstName}x
+              value={firstName}
               onChangeText={setFirstName}
               keyboardType="default"
               maxLength={20}
@@ -171,11 +171,11 @@ export default function RegisterForm({
           </View>
           <View style={styles.phoneInput}>
             <PhoneInput
-              defaultValue={number}
+              defaultValue={phoneNumber}
               defaultCode="US"
               layout="first"
               onChangeText={(text) => {
-                setNumber(text);
+                setPhoneNumber(text);
               }}
               withDarkTheme
               withShadow

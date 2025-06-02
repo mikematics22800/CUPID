@@ -1,7 +1,7 @@
 import { Video } from 'expo-av';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-export default function Welcome({ onLoginPress, onRegisterPress, onGoogleLogin }) {
+export default function Welcome({ onLoginPress, onRegisterPress }) {
   return (
     <View style={styles.welcome}>
       <View style={styles.hero}>
@@ -79,16 +79,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'hotpink',
   },
-  googleButton: {
-    width: '100%',
-    height: 50,
-    backgroundColor: 'black',
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'white',
-  },
   loginButtonText: {
     color: 'white',
     fontWeight: 'bold',
@@ -96,11 +86,6 @@ const styles = StyleSheet.create({
   },
   registerButtonText: {
     color: 'hotpink',
-    fontWeight: 'bold',
-    fontSize: 18,
-  },
-  googleButtonText: {
-    color: 'white',
     fontWeight: 'bold',
     fontSize: 18,
   },

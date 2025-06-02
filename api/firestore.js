@@ -3,15 +3,28 @@ import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 
 export const createUserProfile = async (userId, userData) => {
   try {
+    console.log('Creating user profile for:', userId);
+    console.log('User data:', userData);
+    
     const userRef = doc(db, 'users', userId);
-    await setDoc(userRef, {
+    const profileData = {
       ...userData,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    });
+    };
+    
+    console.log('Saving profile data:', profileData);
+    await setDoc(userRef, profileData);
+    console.log('User profile created successfully');
+    
     return true;
   } catch (error) {
     console.error('Error creating user profile:', error);
+    console.error('Error details:', {
+      code: error.code,
+      message: error.message,
+      stack: error.stack
+    });
     throw error;
   }
 };

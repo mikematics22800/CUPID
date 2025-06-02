@@ -14,16 +14,16 @@ export default function LoginScreen() {
   const { signIn } = useAuth();
   const [loginForm, setLoginForm] = useState(false);
   const [registerForm, setRegisterForm] = useState(false);
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [number, setNumber] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [firstName, setFirstName] = useState('Michael');
+  const [lastName, setLastName] = useState('Medina');
+  const [phoneNumber, setPhoneNumber] = useState('5617159065');
+  const [email, setEmail] = useState('mikematics22800@gmail.com');
+  const [password, setPassword] = useState('D7452m61457!');
   const [verificationId, setVerificationId] = useState(null);
   const [verificationCode, setVerificationCode] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
-  const [sex, setSex] = useState('');
-  const [sexuality, setSexuality] = useState('');
+  const [sex, setSex] = useState('Male');
+  const [sexuality, setSexuality] = useState('Heterosexual');
   
   // Calculate date 18 years ago
   const today = new Date();
@@ -52,45 +52,19 @@ export default function LoginScreen() {
         }
       }
       
-      if (!number.trim()) {
+      if (!phoneNumber.trim()) {
         Alert.alert('Error', 'Please enter your phone number');
         return;
       }
 
-      const id = await sendVerificationCode(number);
+      const id = await sendVerificationCode(phoneNumber);
       setVerificationId(id);
       setIsVerifying(true);
       Alert.alert('Success', 'Verification code sent!');
     } catch (error) {
       Alert.alert('Error', error.message);
     }
-  };
-
-  const handleVerifyCode = async () => {
-    try {
-      await confirmCode(verificationId, verificationCode);
-      const user = auth.currentUser;
-      
-      if (user) {
-        const userProfile = await getUserProfile(user.uid);
-        
-        if (!userProfile) {
-          await createUserProfile(user.uid, {
-            phoneNumber: number,
-            name: firstName + ' ' + lastName,
-            birthday: birthday.toISOString(),
-            sex: sex,
-            sexuality: sexuality,
-          });
-        }
-        
-        await signIn();
-        Alert.alert('Success', 'Phone number verified!');
-      }
-    } catch (error) {
-      Alert.alert('Error', error.message);
-    }
-  };
+  };  
 
   const handleGoogleLogin = async () => {
     try {
@@ -123,15 +97,31 @@ export default function LoginScreen() {
     try {
       await signInWithEmail(email, password);
     } catch (error) {
-      Alert.alert('Error', error.message);
+      Alert.alert('Error', 'Invalid email or password');
     }
   };
 
   const handleEmailRegister = async () => {
     try {
-      await signUpWithEmail(email, password);
+      const userCredential = await signUpWithEmail(email, password);
+      if (!userCredential?.user?.uid) {
+        throw new Error('Failed to create user account');
+      }
+
+      await createUserProfile(userCredential.user.uid, {
+        name: firstName + ' ' + lastName,
+        birthday: birthday.toISOString(),
+        sex: sex,
+        sexuality: sexuality,
+        email: email,
+        phoneNumber: phoneNumber,
+      });
+
+      Alert.alert('Success', 'Account created successfully!');
+      await signIn();
     } catch (error) {
-      Alert.alert('Error', error.message);
+      console.error('Registration error:', error);
+      Alert.alert('Error', 'Failed to create account');
     }
   };
 
@@ -154,8 +144,8 @@ export default function LoginScreen() {
       {loginForm && !isVerifying && (
         <LoginForm
           onEmailLogin={handleEmailLogin}
-          number={number}
-          setNumber={setNumber}
+          phoneNumber={phoneNumber}
+          setPhoneNumber={setPhoneNumber} 
           email={email}
           setEmail={setEmail}
           password={password}
@@ -174,28 +164,21 @@ export default function LoginScreen() {
           setFirstName={setFirstName}
           lastName={lastName}
           setLastName={setLastName}
-          number={number}
-          setNumber={setNumber}
+          phoneNumber={phoneNumber}
+          setPhoneNumber={setPhoneNumber}
           sex={sex}
           setSex={setSex}
           sexuality={sexuality}
           setSexuality={setSexuality}
           birthday={birthday}
           setBirthday={setBirthday}
+          email={email}
+          setEmail={setEmail}
+          password={password}
+          setPassword={setPassword}
           onBack={() => {
             setLoginForm(false);
             setRegisterForm(false);
-          }}
-        />
-      )}
-      {isVerifying && (
-        <VerificationForm
-          verificationCode={verificationCode}
-          setVerificationCode={setVerificationCode}
-          onVerifyCode={handleVerifyCode}
-          onBack={() => {
-            setIsVerifying(false);
-            setVerificationId(null);
           }}
         />
       )}

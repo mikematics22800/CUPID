@@ -3,7 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View, TextInput } from 'react-nativ
 import PhoneInput from "react-native-phone-number-input";
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-export default function LoginForm({ number, setNumber, onSendCode, onBack, onEmailLogin, email, setEmail, password, setPassword }) {
+export default function LoginForm({ phoneNumber, setPhoneNumber, onSendCode, onBack, onEmailLogin, email, setEmail, password, setPassword }) {
   const [showPassword, setShowPassword] = useState(false);
   const [isEmailValid, setIsEmailValid] = useState(false);
   const [isPhoneValid, setIsPhoneValid] = useState(false);
@@ -16,8 +16,8 @@ export default function LoginForm({ number, setNumber, onSendCode, onBack, onEma
 
   useEffect(() => {
     // Phone validation
-    setIsPhoneValid(number.length >= 10);
-  }, [number]);
+    setIsPhoneValid(phoneNumber.length >= 10);
+  }, [phoneNumber]);
 
   return (
     <View style={styles.form}>
@@ -58,11 +58,11 @@ export default function LoginForm({ number, setNumber, onSendCode, onBack, onEma
       <View style={styles.flexColGap10}>
         <View style={styles.phoneInput}>
           <PhoneInput
-            defaultValue={number}
+            defaultValue={phoneNumber}
             defaultCode="US"
             layout="first"
             onChangeText={(text) => {
-              setNumber(text);
+              setPhoneNumber(text);
             }}
             withDarkTheme
             withShadow
@@ -74,7 +74,7 @@ export default function LoginForm({ number, setNumber, onSendCode, onBack, onEma
           onPress={onSendCode}
           disabled={!isPhoneValid}
         >
-          <Text style={styles.loginButtonText}>Login with Code</Text>
+          <Text style={styles.loginButtonText}>Login with Phone</Text>
         </TouchableOpacity>
       </View>
       <TouchableOpacity style={styles.registerButton} onPress={onBack}>
