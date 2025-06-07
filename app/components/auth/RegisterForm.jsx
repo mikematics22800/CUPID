@@ -1,31 +1,73 @@
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
 import PhoneInput from "react-native-phone-number-input";
 import { useState, useEffect } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import RNPickerSelect from 'react-native-picker-select';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { supabase } from '../../../lib/supabase';
 
-export default function RegisterForm({ 
-  firstName,
-  setFirstName,
-  lastName,
-  setLastName,
-  phoneNumber,
-  setPhoneNumber,
-  setSex,
-  sex,
-  sexuality,
-  setSexuality,
-  email,
-  setEmail,
-  password,
-  setPassword,
-  birthday,
-  setBirthday,
-  onBack,
-  onEmailRegister,
-}) {
+export default function RegisterForm({ onBack }) {
   const [isFormValid, setIsFormValid] = useState(false);
+  const [firstName, setFirstName] = useState('Michael');
+  const [lastName, setLastName] = useState('Medina');
+  const [phone, setPhone] = useState('5617159065');
+  const [email, setEmail] = useState('mikematics22800@gmail.com');
+  const [password, setPassword] = useState('D7452m61457!');
+  const [sex, setSex] = useState('Male');
+  const [sexuality, setSexuality] = useState('Heterosexual');
+  const [birthday, setBirthday] = useState(new Date(new Date().setFullYear(new Date().getFullYear() - 18)));
+  const [loading, setLoading] = useState(false);
+
+  async function createUser({id, created_at}) {
+    console.log(id)
+    console.log(created_at)
+    console.log(firstName + ' ' + lastName)
+    console.log(birthday)
+    console.log(sex)
+    console.log(sexuality)
+    console.log(email)
+    console.log(phone)
+    const { data, error } = await supabase.from('users').insert([
+      {
+        id,
+        created_at: new Date().toISOString(),
+        name: firstName + ' ' + lastName,
+        birthday: birthday.toISOString(),
+        sex: sex,
+        sexuality: sexuality,
+        email: email,
+        phone: phone,
+      }
+    ])
+    if (error) {
+      Alert.alert(error.message)
+      console.log(error.message)
+      return
+    }
+    console.log(data)
+    setLoading(false)
+  }
+
+  async function register() {
+    setLoading(true)
+    const {
+      data: { user, session },
+      error,
+    } = await supabase.auth.signUp({
+      email: email,
+      password: password,
+    })
+    if (error) {
+      Alert.alert(error.message)
+      setLoading(false)
+      return
+    }
+    if (user) {
+      const id = user?.id
+      const created_at = user?.created_at
+      await createUser({ id, created_at })
+    }
+  }
 
   useEffect(() => {
     // Email validation regex
@@ -38,11 +80,11 @@ export default function RegisterForm({
       sex !== null &&
       sexuality !== null &&
       email?.match(emailRegex) !== null &&
-      phoneNumber?.length >= 10 &&
+      phone?.length >= 10 &&
       birthday instanceof Date;
 
     setIsFormValid(isValid);
-  }, [firstName, lastName, sex, sexuality, email, phoneNumber, birthday]);
+  }, [firstName, lastName, sex, sexuality, email, phone, birthday]);
 
   const handleSexChange = (sex) => {
     setSex(sex);
@@ -118,8 +160,9 @@ export default function RegisterForm({
                 onValueChange={(value) => handleSexualityChange(value)}
                 items={[
                   { label: 'Heterosexual', value: 'Heterosexual' },
-                  { label: 'Homosexual', value: 'Homosexual' },
                   { label: 'Bisexual', value: 'Bisexual' },
+                  { label: 'Homosexual', value: 'Homosexual' },
+                  { label: 'Asexual', value: 'Asexual' }
                 ]}
                 placeholder={{ label: 'Sexuality', value: null }}
                 style={{
@@ -171,11 +214,11 @@ export default function RegisterForm({
           </View>
           <View style={styles.phoneInput}>
             <PhoneInput
-              defaultValue={phoneNumber}
+              defaultValue={phone}
               defaultCode="US"
               layout="first"
               onChangeText={(text) => {
-                setPhoneNumber(text);
+                setPhone(text);
               }}
               withDarkTheme
               withShadow
@@ -184,7 +227,7 @@ export default function RegisterForm({
           </View>
           <TouchableOpacity 
             style={[styles.registerButton, !isFormValid && styles.disabledButton]} 
-            onPress={onEmailRegister}
+            onPress={register}
             disabled={!isFormValid}
           >
             <Text style={styles.registerButtonText}>Register</Text>

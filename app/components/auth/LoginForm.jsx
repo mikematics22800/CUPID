@@ -2,11 +2,23 @@ import { useState, useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, TextInput } from 'react-native';
 import PhoneInput from "react-native-phone-number-input";
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { supabase } from '../../../lib/supabase';
 
-export default function LoginForm({ phoneNumber, setPhoneNumber, onSendCode, onBack, onEmailLogin, email, setEmail, password, setPassword }) {
-  const [showPassword, setShowPassword] = useState(false);
-  const [isEmailValid, setIsEmailValid] = useState(false);
-  const [isPhoneValid, setIsPhoneValid] = useState(false);
+export default function LoginForm({ onBack }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  async function signInWithEmail() {
+    setLoading(true)
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email,
+      password: password,
+    })
+    if (error) Alert.alert(error.message)
+    setLoading(false)
+  }
 
   useEffect(() => {
     // Email validation
@@ -22,7 +34,7 @@ export default function LoginForm({ phoneNumber, setPhoneNumber, onSendCode, onB
   return (
     <View style={styles.form}>
       <View style={styles.flexColGap10}>
-        <TextInput 
+        <TextInput
           style={styles.emailInput} 
           placeholder="Email" 
           onChangeText={setEmail}
