@@ -18,54 +18,82 @@ export default function RegisterForm({ onBack }) {
   const [birthday, setBirthday] = useState(new Date(new Date().setFullYear(new Date().getFullYear() - 18)));
   const [loading, setLoading] = useState(false);
 
-  async function createUser({id, created_at}) {
-    console.log(id)
-    console.log(created_at)
-    console.log(firstName + ' ' + lastName)
-    console.log(birthday)
-    console.log(sex)
-    console.log(sexuality)
-    console.log(email)
-    console.log(phone)
-    const { data, error } = await supabase.from('users').insert([
-      {
-        id,
-        created_at: new Date().toISOString(),
-        name: firstName + ' ' + lastName,
-        birthday: birthday.toISOString(),
-        sex: sex,
-        sexuality: sexuality,
-        email: email,
-        phone: phone,
+  async function createUserProfile(userId) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .insert([
+          {
+            id: userId,
+            name: firstName + ' ' + lastName,
+            birthday: birthday,
+            sex: sex,
+            sexuality: sexuality,
+            email: email,
+            phone: phone,
+          }
+        ])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating user profile:', error);
+        throw error;
       }
-    ])
-    if (error) {
-      Alert.alert(error.message)
-      console.log(error.message)
-      return
+
+      return data;
+    } catch (error) {
+      console.error('Error in createUserProfile:', error);
+      throw error;
     }
-    console.log(data)
-    setLoading(false)
   }
 
   async function register() {
-    setLoading(true)
-    const {
-      data: { user, session },
-      error,
-    } = await supabase.auth.signUp({
-      email: email,
-      password: password,
-    })
-    if (error) {
-      Alert.alert(error.message)
-      setLoading(false)
-      return
-    }
-    if (user) {
-      const id = user?.id
-      const created_at = user?.created_at
-      await createUser({ id, created_at })
+    try {
+      setLoading(true);
+      
+      // First, sign up the user with Supabase Auth
+      const { data: { user, session }, error: signUpError } = await supabase.auth.signUp({
+        email: email,
+        password: password,
+      });
+
+      if (signUpError) {
+        Alert.alert('Registration Error', signUpError.message);
+        console.error('Sign up error:', signUpError);
+        return;
+      }
+
+      if (!user) {
+        Alert.alert('Registration successful', 'Please check your email to verify your account before proceeding.');
+        return;
+      }
+
+      // Wait for a short moment to ensure the session is properly established
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Get the current session to ensure we have the latest auth state
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      
+      if (!currentSession) {
+        throw new Error('No active session found');
+      }
+
+      // Create the user profile with the authenticated user's ID
+      await createUserProfile(currentSession.user.id);
+      
+      Alert.alert('Success', 'Registration completed successfully!');
+      
+    } catch (error) {
+      console.error('Registration error:', error);
+      Alert.alert(
+        'Error',
+        error.message === 'new row violates row-level security policy for table "users"'
+          ? 'Unable to create profile. Please try logging in first.'
+          : 'An unexpected error occurred during registration.'
+      );
+    } finally {
+      setLoading(false);
     }
   }
 
