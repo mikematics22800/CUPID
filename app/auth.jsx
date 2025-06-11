@@ -1,7 +1,7 @@
 import { Video } from 'expo-av';
 import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
-import Welcome from './components/auth/Welcome';
+import WelcomeScreen from './components/auth/WelcomeScreen';
 import LoginForm from './components/auth/LoginForm';
 import RegisterForm from './components/auth/RegisterForm';
 
@@ -19,7 +19,7 @@ export default function LoginScreen() {
       />
       <View style={styles.darkOverlay}/>
       {!loginForm && !registerForm && (
-        <Welcome
+        <WelcomeScreen
           onLoginPress={() => setLoginForm(true)}
           onRegisterPress={() => setRegisterForm(true)}
         />

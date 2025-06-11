@@ -2,20 +2,51 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ProfileScreen() {
+  // This would typically come from your backend/database
+  const user = {
+    displayName: 'John Doe',
+    email: 'john@example.com',
+    photoURL: 'https://via.placeholder.com/150',
+    age: 28,
+    bio: 'Love traveling and trying new restaurants. Looking for someone to share adventures with!',
+    interests: ['Travel', 'Food', 'Photography', 'Hiking'],
+    location: 'San Francisco, CA',
+    occupation: 'Software Engineer'
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.profileImageContainer}>
           <Image
-            source={{ uri: user?.photoURL || 'https://via.placeholder.com/150' }}
+            source={{ uri: user.photoURL }}
             style={styles.profileImage}
           />
           <TouchableOpacity style={styles.editImageButton}>
             <Ionicons name="camera" size={20} color="white" />
           </TouchableOpacity>
         </View>
-        <Text style={styles.name}>{user?.displayName || 'User Name'}</Text>
-        <Text style={styles.email}>{user?.email}</Text>
+        <Text style={styles.name}>{user.displayName}, {user.age}</Text>
+        <Text style={styles.location}>
+          <Ionicons name="location" size={16} color="#666" /> {user.location}
+        </Text>
+        <Text style={styles.occupation}>{user.occupation}</Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>About Me</Text>
+        <Text style={styles.bio}>{user.bio}</Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Interests</Text>
+        <View style={styles.interestsContainer}>
+          {user.interests.map((interest, index) => (
+            <View key={index} style={styles.interestTag}>
+              <Text style={styles.interestText}>{interest}</Text>
+            </View>
+          ))}
+        </View>
       </View>
 
       <View style={styles.section}>
@@ -37,7 +68,7 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.signOutButton} onPress={signOut}>
+      <TouchableOpacity style={styles.signOutButton}>
         <Text style={styles.signOutText}>Sign Out</Text>
       </TouchableOpacity>
     </ScrollView>
@@ -80,7 +111,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 5,
   },
-  email: {
+  location: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 5,
+  },
+  occupation: {
     fontSize: 16,
     color: '#666',
   },
@@ -94,6 +130,28 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 15,
     color: '#333',
+  },
+  bio: {
+    fontSize: 16,
+    color: '#666',
+    lineHeight: 24,
+  },
+  interestsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 10,
+  },
+  interestTag: {
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 10,
+    marginBottom: 10,
+  },
+  interestText: {
+    color: '#2E7D32',
+    fontSize: 14,
   },
   menuItem: {
     flexDirection: 'row',

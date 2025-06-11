@@ -1,7 +1,6 @@
-import { Video } from 'expo-av';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-export default function Welcome({ onLoginPress, onRegisterPress }) {
+export default function WelcomeScreen({ onLoginPress, onRegisterPress }) {
   return (
     <View style={styles.welcome}>
       <View style={styles.hero}>

@@ -6,7 +6,7 @@ export default function Layout() {
   useEffect(() => {
     // Add a small delay to ensure the component is mounted
     const timer = setTimeout(() => {
-      router.replace('/auth');
+      router.replace('/swipe');
     }, 0);
     
     return () => clearTimeout(timer);
@@ -22,6 +22,12 @@ export default function Layout() {
       />
       <Stack.Screen 
         name="auth" 
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen 
+        name="swipe" 
         options={{
           headerShown: false,
         }}
