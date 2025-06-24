@@ -8,20 +8,27 @@
     "scheme": "ourglass",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "fonts": [
+      {
+        "asset": "./assets/fonts/PixelifySans.ttf",
+        "family": "PixelifySans"
+      },
+      {
+        "asset": "./assets/fonts/SpaceMono-Regular.ttf",
+        "family": "SpaceMono"
+      }
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ourglass.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "package": "com.ourglass.app",
       "edgeToEdgeEnabled": true
-    },
-    "web": {
-      "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       "expo-router",
@@ -32,13 +39,6 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
-        }
-      ],
-      [
-        "expo-video",
-        {
-          "supportsBackgroundPlayback": true,
-          "supportsPictureInPicture": true
         }
       ]
     ],

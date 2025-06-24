@@ -1,205 +1,96 @@
-import { useState } from 'react';
-import { Video } from 'expo-av';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import PhoneInput from "react-native-phone-number-input";
-import { register } from '../api/auth';
-import { login } from '../api/auth';
+import { Stack, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { View, ActivityIndicator } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { supabase } from '../lib/supabase';
 
-export default function Welcome() {
-  const [loginForm, setLoginForm] = useState(false);
-  const [registerForm, setRegisterForm] = useState(false);
+export default function Layout() {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const [number, setNumber] = useState('')
+  useEffect(() => {
+    let isMounted = true;
 
-  const useRegister = async () => {
-    await register(number)
-  }
+    const checkAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (isMounted) {
+          setIsAuthenticated(!!session);
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error('Error checking auth state:', error);
+        if (isMounted) {
+          setIsAuthenticated(false);
+          setIsLoading(false);
+        }
+      }
+    };
 
-  const useLogin = async () => {
-    await login(number)
+    checkAuth();
+
+    // Subscribe to auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (isMounted) {
+        if (event === 'SIGNED_IN') {
+          setIsAuthenticated(true);
+          router.replace('/(tabs)/swipe');
+        } else if (event === 'SIGNED_OUT') {
+          setIsAuthenticated(false);
+          router.replace('/auth');
+        }
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription?.unsubscribe();
+    };
+  }, []);
+
+  // Handle initial navigation after loading
+  useEffect(() => {
+    if (!isLoading) {
+      if (isAuthenticated) {
+        router.replace('/(tabs)/swipe');
+      } else {
+        router.replace('/auth');
+      }
+    }
+  }, [isLoading, isAuthenticated]);
+
+  // Show loading screen
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
   }
 
   return (
-    <View style={styles.index}>
-      <Video
-        source={require('.././assets/media/sequence.mp4')}
-        style={styles.bgVideo}
-        shouldPlay
-        isLooping
-        useNativeControls
-      />
-      {!loginForm && !registerForm && (
-        <View style={styles.content}>
-          <View style={styles.hero}>
-            <Text style={styles.heroTitle}>Ourglass</Text>
-            <Text style={styles.heroText}>
-              For wandering hearts desiring more connection and less transaction.
-            </Text>
-          </View>
-          <View style={styles.auth}>
-            <TouchableOpacity style={styles.loginButton} onPress={() => useLogin([number])}>
-              <Text style={styles.loginButtonText}>Login</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.registerButton} onPress={() => setRegister(true)}>
-              <Text style={styles.registerButtonText}>Register</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.googleButton} onPress={() => {}}>
-              <Text style={styles.googleButtonText}>Login with 
-                <Text style={{color: '#4285F4'}}> G</Text>
-                <Text style={{color: '#DB4437'}}>o</Text>
-                <Text style={{color: '#F4B400'}}>o</Text>
-                <Text style={{color: '#0F9D58'}}>g</Text>
-                <Text style={{color: '#4285F4'}}>l</Text>
-                <Text style={{color: '#DB4437'}}>e</Text>
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-      {login && (
-        <View style={styles.inputs}>
-          <PhoneInput
-            defaultValue={number}
-            defaultCode="US"
-            layout="first"
-            onChangeText={(text) => {
-              setNumber(text);
-            }}
-            withDarkTheme
-            withShadow
-            autoFocus
-          />
-          <TouchableOpacity style={styles.loginButton} onPress={() => useLogin()}>
-            <Text style={styles.loginButtonText}>Login</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.registerButton} onPress={() => setLoginForm(false)}>
-            <Text style={styles.registerButtonText}>Back</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      {register && (
-        <View style={styles.inputs}>
-          <PhoneInput
-            defaultValue={number}
-            defaultCode="US"
-            layout="first"
-            onChangeText={(text) => {
-              setNumber(text);
-            }}
-            withDarkTheme
-            withShadow
-            autoFocus
-          />       
-          <TouchableOpacity style={styles.loginButton} onPress={() => {useRegister()}}>
-            <Text style={styles.loginButtonText}>Register</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.registerButton} onPress={() => setRegisterForm(false)}>
-            <Text style={styles.registerButtonText}>Back</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Stack>
+        <Stack.Screen 
+          name="(tabs)" 
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="auth" 
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="index" 
+          options={{
+            headerShown: false,
+          }}
+        />
+      </Stack>
+    </GestureHandlerRootView>
   );
 }
-
-const styles = StyleSheet.create({
-  index: {
-    width: '100%',
-    height: '100%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bgVideo: {
-    position: 'absolute',
-    height: '100%',
-    aspectRatio: 16 / 9,
-  },
-  content: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'column',
-    padding: 25,
-    gap: 200,
-  },
-  hero: {
-    display: 'flex',
-    alignItems: 'center',
-    flexDirection: 'column',
-    gap: 10,
-    position: 'relative',
-  },
-  heroTitle: {
-    fontSize: 40,
-    color: 'hotpink',
-    textAlign: 'center',
-    fontWeight: 'bold',
-  },
-  heroText: {
-    fontSize: 20,
-    color: 'white',
-    textAlign: 'center',
-    fontWeight: 'bold',
-  },
-  auth: {
-    width: '100%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  loginButton: {
-    width: '100%',
-    height: 50,
-    backgroundColor: 'hotpink',
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  registerButton: {
-    width: '100%',
-    height: 50,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  googleButton: {
-    width: '100%',
-    height: 50,
-    backgroundColor: 'black',
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loginButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 18,
-  },
-  registerButtonText: {
-    color: 'hotpink',
-    fontWeight: 'bold',
-    fontSize: 18,
-  },
-  googleButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 18,
-  },
-  inputs: {
-    width: '100%',
-    height: '100%', 
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'column',
-    padding: 20,
-    gap: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-});
