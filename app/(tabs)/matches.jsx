@@ -3,34 +3,42 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function MatchesScreen() {
   // This would typically come from your backend/database
-  const matches = [
-    { id: '1', name: 'Sarah', photo: 'https://via.placeholder.com/150', lastMessage: 'Hey there!' },
-    { id: '2', name: 'Mike', photo: 'https://via.placeholder.com/150', lastMessage: 'How are you?' },
-    // Add more matches as needed
+  const conversations = [
+    { id: '1', name: 'Sarah', photo: 'https://via.placeholder.com/150', lastMessage: 'Hey there!', timestamp: '2m ago' },
+    { id: '2', name: 'Mike', photo: 'https://via.placeholder.com/150', lastMessage: 'How are you?', timestamp: '5m ago' },
+    // Add more conversations as needed
   ];
 
-  const renderMatch = ({ item }) => (
-    <TouchableOpacity style={styles.matchCard}>
-      <Image source={{ uri: item.photo }} style={styles.matchPhoto} />
-      <View style={styles.matchInfo}>
-        <Text style={styles.matchName}>{item.name}</Text>
+  const renderConversation = ({ item }) => (
+    <TouchableOpacity style={styles.conversationCard}>
+      <Image source={{ uri: item.photo }} style={styles.conversationPhoto} />
+      <View style={styles.conversationInfo}>
+        <Text style={styles.conversationName}>{item.name}</Text>
         <Text style={styles.lastMessage} numberOfLines={1}>{item.lastMessage}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={24} color="#999" />
+      <Text style={styles.timestamp}>{item.timestamp}</Text>
     </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Your Matches</Text>
+        <Text style={styles.title}>Messages</Text>
       </View>
-      <FlatList
-        data={matches}
-        renderItem={renderMatch}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.listContainer}
-      />
+      {conversations.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Ionicons name="chatbubbles-outline" size={64} color="#ccc" />
+          <Text style={styles.emptyText}>No messages yet</Text>
+          <Text style={styles.emptySubtext}>Start swiping to find matches!</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={conversations}
+          renderItem={renderConversation}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.listContainer}
+        />
+      )}
     </View>
   );
 }
@@ -54,13 +62,13 @@ const styles = StyleSheet.create({
   listContainer: {
     padding: 15,
   },
-  matchCard: {
+  conversationCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'white',
+    borderRadius: 15,
+    marginBottom: 15,
     padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -70,23 +78,45 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 3,
   },
-  matchPhoto: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+  conversationPhoto: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 15,
   },
-  matchInfo: {
+  conversationInfo: {
     flex: 1,
-    marginLeft: 15,
   },
-  matchName: {
+  conversationName: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
+    marginBottom: 5,
   },
   lastMessage: {
     fontSize: 14,
     color: '#666',
-    marginTop: 4,
   },
-}); 
+  timestamp: {
+    fontSize: 12,
+    color: '#999',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  emptyText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+  },
+});

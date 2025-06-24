@@ -11,12 +11,6 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.index}>
-      <Video
-        source={require('.././assets/media/sequence.mp4')}
-        style={styles.bgVideo}
-        shouldPlay
-        isLooping
-      />
       <View style={styles.darkOverlay}/>
       {!loginForm && !registerForm && (
         <WelcomeScreen
@@ -51,6 +45,7 @@ const styles = StyleSheet.create({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'gray',
   },
   darkOverlay: {
     position: 'absolute',

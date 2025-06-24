@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, TextInput } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, TextInput, Alert } from 'react-native';
 import PhoneInput from "react-native-phone-number-input";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { supabase } from '../../../lib/supabase';
 
 export default function LoginForm({ onBack }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [email, setEmail] = useState('mikematics22800@gmail.com');
+  const [password, setPassword] = useState('D7452m61457!');
+  const [phoneNumber, setPhoneNumber] = useState('5617159065');
   const [loading, setLoading] = useState(false);
+  const [isEmailValid, setIsEmailValid] = useState(false);
+  const [isPhoneValid, setIsPhoneValid] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function signInWithEmail() {
     setLoading(true)
@@ -18,6 +21,13 @@ export default function LoginForm({ onBack }) {
     })
     if (error) Alert.alert(error.message)
     setLoading(false)
+  }
+
+  async function signInWithPhone() {
+    setLoading(true)
+    const { error } = await supabase.auth.signInWithOtp({
+      phone: phoneNumber,
+    })
   }
 
   useEffect(() => {
@@ -61,7 +71,7 @@ export default function LoginForm({ onBack }) {
         </View>
         <TouchableOpacity 
           style={[styles.loginButton, !isEmailValid && styles.disabledButton]} 
-          onPress={onEmailLogin}
+          onPress={signInWithEmail}
           disabled={!isEmailValid}
         >
           <Text style={styles.loginButtonText}>Login with Email</Text>
@@ -83,7 +93,7 @@ export default function LoginForm({ onBack }) {
         </View>
         <TouchableOpacity 
           style={[styles.loginButton, !isPhoneValid && styles.disabledButton]} 
-          onPress={onSendCode}
+          onPress={signInWithPhone}
           disabled={!isPhoneValid}
         >
           <Text style={styles.loginButtonText}>Login with Phone</Text>
