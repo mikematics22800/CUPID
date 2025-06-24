@@ -263,15 +263,15 @@ export default function RegisterForm({ onBack }) {
             />
           </View>
           <TouchableOpacity 
-            style={[styles.registerButton, !isFormValid && styles.disabledButton]} 
+            style={[styles.button, !isFormValid && styles.disabledButton]} 
             onPress={register}
             disabled={!isFormValid}
           >
-            <Text style={styles.registerButtonText}>Register</Text>
+            <Text style={styles.buttonText}>Register</Text>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.backButton} onPress={onBack}>
-          <Text style={styles.backButtonText}>Back</Text>
+        <TouchableOpacity style={styles.button} onPress={onBack}>
+          <Text style={styles.buttonText}>Back</Text>
         </TouchableOpacity>
       </View>
   );
@@ -283,8 +283,8 @@ const styles = StyleSheet.create({
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'center',
-    gap: 100,
-    padding: 20,
+    gap: 25,
+    padding: 25,
   },
   flexColGap10: {
     width: '100%',
@@ -351,15 +351,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: 'black',
   },
-  registerButton: {
-    width: '100%',
-    height: 50,
-    backgroundColor: 'hotpink',
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backButton: {
+  button: {
     width: '100%',
     height: 50,
     backgroundColor: 'white',
@@ -367,12 +359,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  registerButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 18,
-  },
-  backButtonText: {
+  buttonText: {
     color: 'hotpink',
     fontWeight: 'bold',
     fontSize: 18,

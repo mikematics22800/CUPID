@@ -2,7 +2,6 @@ import { View, Text, StyleSheet, Animated, Dimensions, Image} from 'react-native
 import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
-import loading from '../../assets/images/loading.gif';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -18,7 +17,6 @@ export default function Swipe() {
     name: 'Sarah',
     age: 28,
     bio: 'Love hiking and photography',
-    image: 'https://picsum.photos/300/400'
   });
 
   // Animation values

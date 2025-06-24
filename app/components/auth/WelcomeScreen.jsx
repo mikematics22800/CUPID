@@ -39,19 +39,15 @@ export default function WelcomeScreen({ onLoginPress, onRegisterPress }) {
           style={[styles.logo, { transform: [{ translateY }] }]} 
         />
         <Text style={styles.heroText}>
-          <Text style={{color: 'hotpink'}}>C</Text>oupling&nbsp;
-          <Text style={{color: 'hotpink'}}>U</Text>nit for&nbsp;
-          <Text style={{color: 'hotpink'}}>P</Text>hysical&nbsp;
-          <Text style={{color: 'hotpink'}}>I</Text>ntimacy and&nbsp;
-          <Text style={{color: 'hotpink'}}>D</Text>ating
+          Coupling Unit for Physical Intimacy and Dating
         </Text>
       </View>
       <View style={styles.auth}>
-        <TouchableOpacity style={styles.loginButton} onPress={onLoginPress}>
-          <Text style={styles.loginButtonText}>Login</Text>
+        <TouchableOpacity style={styles.button} onPress={onLoginPress}>
+          <Text style={styles.buttonText}>Login</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.registerButton} onPress={onRegisterPress}>
-          <Text style={styles.registerButtonText}>Register</Text>
+        <TouchableOpacity style={styles.button} onPress={onRegisterPress}>
+          <Text style={styles.buttonText}>Register</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -66,7 +62,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'column',
-    padding: 20,
+    padding: 25,
     gap: 50,
   },
   logo: {
@@ -82,7 +78,7 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 50,
-    color: 'hotpink',
+    color: 'white',
     textAlign: 'center',
     fontWeight: 'bold',
   },
@@ -99,15 +95,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
   },
-  loginButton: {
-    width: '100%',
-    height: 50,
-    backgroundColor: 'hotpink',
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  registerButton: {
+  button: {
     width: '100%',
     height: 50,
     backgroundColor: 'white',
@@ -115,12 +103,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  loginButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 18,
-  },
-  registerButtonText: {
+  buttonText: {
     color: 'hotpink',
     fontWeight: 'bold',
     fontSize: 18,

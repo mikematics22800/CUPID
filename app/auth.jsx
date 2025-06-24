@@ -1,17 +1,17 @@
-import { Video } from 'expo-av';
 import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import WelcomeScreen from './components/auth/WelcomeScreen';
 import LoginForm from './components/auth/LoginForm';
 import RegisterForm from './components/auth/RegisterForm';
+import HeartBackground from './components/auth/HeartBackground';
 
 export default function LoginScreen() {
   const [loginForm, setLoginForm] = useState(false);
   const [registerForm, setRegisterForm] = useState(false);
 
   return (
-    <View style={styles.index}>
-      <View style={styles.darkOverlay}/>
+    <View style={styles.auth}>
+      <HeartBackground />
       {!loginForm && !registerForm && (
         <WelcomeScreen
           onLoginPress={() => setLoginForm(true)}
@@ -39,23 +39,12 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  index: {
+  auth: {
     width: '100%',
     height: '100%',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'gray',
-  },
-  darkOverlay: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  bgVideo: {
-    position: 'absolute',
-    height: '100%',
-    aspectRatio: 16 / 9,
+    backgroundColor: 'hotpink',
   },
 });

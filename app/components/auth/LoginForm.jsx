@@ -146,11 +146,11 @@ export default function LoginForm({ onBack }) {
           </TouchableOpacity>
         </View>
         <TouchableOpacity 
-          style={[styles.loginButton, !isEmailValid && styles.disabledButton]} 
+          style={[styles.button, !isEmailValid && styles.disabledButton]} 
           onPress={signInWithEmail}
           disabled={!isEmailValid}
         >
-          <Text style={styles.loginButtonText}>Login with Email</Text>
+          <Text style={styles.buttonText}>Login with Email</Text>
         </TouchableOpacity>
       </View>
       <View style={styles.flexColGap10}>
@@ -168,15 +168,15 @@ export default function LoginForm({ onBack }) {
           />
         </View>
         <TouchableOpacity 
-          style={[styles.loginButton, !isPhoneValid && styles.disabledButton]} 
+          style={[styles.button, !isPhoneValid && styles.disabledButton]} 
           onPress={signInWithPhone}
           disabled={!isPhoneValid}
         >
-          <Text style={styles.loginButtonText}>Login with Phone</Text>
+          <Text style={styles.buttonText}>Login with Phone</Text>
         </TouchableOpacity>
       </View>
-      <TouchableOpacity style={styles.registerButton} onPress={onBack}>
-        <Text style={styles.registerButtonText}>Back</Text>
+        <TouchableOpacity style={styles.button} onPress={onBack}>
+        <Text style={styles.buttonText}>Back</Text>
       </TouchableOpacity>
     </View>
   );
@@ -188,8 +188,8 @@ const styles = StyleSheet.create({
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'center',
-    gap: 20,
-    padding: 20,
+    gap: 25,
+    padding: 25,
   },
   flexColGap10: {
     width: '100%',
@@ -234,15 +234,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     overflow: 'hidden',
   },
-  loginButton: {
-    width: '100%',
-    height: 50,
-    backgroundColor: 'hotpink',
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  registerButton: {
+  button: {
     width: '100%',
     height: 50,
     backgroundColor: 'white',
@@ -250,12 +242,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  loginButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  registerButtonText: {
+  buttonText: {
     color: 'hotpink',
     fontWeight: 'bold',
     fontSize: 16,
