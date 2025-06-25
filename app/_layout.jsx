@@ -2,6 +2,7 @@ import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { PaperProvider, MD3LightTheme } from 'react-native-paper';
 import { supabase } from '../lib/supabase';
 
 export default function Layout() {
@@ -16,7 +17,9 @@ export default function Layout() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (isMounted) {
-          setIsAuthenticated(!!session);
+          // Only consider user authenticated if email is confirmed
+          const isEmailConfirmed = session?.user?.email_confirmed_at;
+          setIsAuthenticated(!!session && !!isEmailConfirmed);
           setIsLoading(false);
         }
       } catch (error) {
@@ -31,11 +34,19 @@ export default function Layout() {
     checkAuth();
 
     // Subscribe to auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (isMounted) {
         if (event === 'SIGNED_IN') {
-          setIsAuthenticated(true);
-          router.replace('/(tabs)/swipe');
+          // Check if user's email is confirmed
+          if (session?.user?.email_confirmed_at) {
+            setIsAuthenticated(true);
+            router.replace('/(tabs)/swipe');
+          } else {
+            // User is signed in but email not confirmed
+            setIsAuthenticated(false);
+            router.replace('/auth');
+            // You could show a message here about email verification
+          }
         } else if (event === 'SIGNED_OUT') {
           setIsAuthenticated(false);
           router.replace('/auth');
@@ -70,27 +81,35 @@ export default function Layout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <Stack>
-        <Stack.Screen 
-          name="(tabs)" 
-          options={{
-            headerShown: false,
-          }}
-        />
-        <Stack.Screen 
-          name="auth" 
-          options={{
-            headerShown: false,
-          }}
-        />
-        <Stack.Screen 
-          name="index" 
-          options={{
-            headerShown: false,
-          }}
-        />
-      </Stack>
-    </GestureHandlerRootView>
+    <PaperProvider theme={MD3LightTheme}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <Stack>
+          <Stack.Screen 
+            name="(tabs)" 
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen 
+            name="auth" 
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen 
+            name="index" 
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen 
+            name="profile" 
+            options={{
+              headerShown: false,
+            }}
+          />
+        </Stack>
+      </GestureHandlerRootView>
+    </PaperProvider>
   );
 }

@@ -1,9 +1,9 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Animated, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Animated, StyleSheet, Dimensions, Easing } from 'react-native';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-const HeartBackground = () => {
+const FloatingHearts = () => {
   const heartAnimations = useRef([]).current;
   const heartOpacityAnimations = useRef([]).current;
   const hearts = [];
@@ -18,7 +18,7 @@ const HeartBackground = () => {
     hearts.push({
       id: i,
       x: Math.random() * screenWidth,
-      speed: 5000,
+      speed: 3000 + Math.random() * 2000, // Random speed between 3-5 seconds
       size: 20 + Math.random() * 20, 
       animation: heartRef,
       opacityAnimation: opacityRef,
@@ -28,18 +28,12 @@ const HeartBackground = () => {
   useEffect(() => {
     const animations = hearts.map((heart, index) => {
       return Animated.loop(
-        Animated.sequence([
-          Animated.timing(heart.animation, {
-            toValue: -50,
-            duration: heart.speed,
-            useNativeDriver: true,
-          }),
-          Animated.timing(heart.animation, {
-            toValue: screenHeight + 50,
-            duration: 0,
-            useNativeDriver: true,
-          })
-        ])
+        Animated.timing(heart.animation, {
+          toValue: -50,
+          duration: heart.speed,
+          useNativeDriver: true,
+          easing: Easing.linear, // Ensure constant speed
+        })
       );
     });
 
@@ -103,4 +97,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default HeartBackground; 
+export default FloatingHearts; 

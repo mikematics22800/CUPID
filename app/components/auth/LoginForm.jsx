@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, TextInput, Alert } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
+import { TextInput } from 'react-native-paper';
 import PhoneInput from "react-native-phone-number-input";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -24,9 +25,9 @@ export default function LoginForm({ onBack }) {
             name: userData.firstName + ' ' + userData.lastName,
             birthday: new Date(userData.birthday),
             sex: userData.sex,
-            sexuality: userData.sexuality,
             email: userData.email,
             phone: userData.phone,
+            created_at: new Date().toISOString(),
           }
         ])
         .select()
@@ -54,7 +55,39 @@ export default function LoginForm({ onBack }) {
       });
 
       if (error) {
-        Alert.alert('Login Error', error.message);
+        // Check if the error is due to email not being confirmed
+        if (error.message?.includes('Email not confirmed') || error.message?.includes('not confirmed')) {
+          Alert.alert(
+            'Email Not Verified', 
+            'Please check your email and click the verification link before logging in.',
+            [
+              {
+                text: 'Resend Email',
+                onPress: async () => {
+                  try {
+                    const { error: resendError } = await supabase.auth.resend({
+                      type: 'signup',
+                      email: email,
+                    });
+                    if (resendError) {
+                      Alert.alert('Error', 'Failed to resend verification email.');
+                    } else {
+                      Alert.alert('Success', 'Verification email sent! Please check your inbox.');
+                    }
+                  } catch (resendError) {
+                    Alert.alert('Error', 'Failed to resend verification email.');
+                  }
+                }
+              },
+              {
+                text: 'OK',
+                style: 'cancel'
+              }
+            ]
+          );
+        } else {
+          Alert.alert('Login Error', error.message);
+        }
         return;
       }
 
@@ -75,15 +108,36 @@ export default function LoginForm({ onBack }) {
         const registrationData = await AsyncStorage.getItem('registrationData');
         
         if (registrationData) {
-          const userData = JSON.parse(registrationData);
-          
-          // Create the profile
-          await createUserProfile(user.id, userData);
-          
-          // Clear the registration data
-          await AsyncStorage.removeItem('registrationData');
-          
-          Alert.alert('Success', 'Profile created successfully!');
+          try {
+            const userData = JSON.parse(registrationData);
+            
+            // Create the profile
+            await createUserProfile(user.id, userData);
+            
+            // Clear the registration data
+            await AsyncStorage.removeItem('registrationData');
+            
+            Alert.alert('Success', 'Profile created successfully! Welcome to CUPID!');
+          } catch (profileCreationError) {
+            console.error('Error creating profile:', profileCreationError);
+            Alert.alert('Warning', 'Profile creation failed. You can complete your profile later in settings.');
+          }
+        } else {
+          // No registration data found, create a basic profile
+          try {
+            await createUserProfile(user.id, {
+              firstName: user.user_metadata?.firstName || 'User',
+              lastName: user.user_metadata?.lastName || '',
+              phone: user.user_metadata?.phone || '',
+              email: user.email,
+              sex: user.user_metadata?.sex || null,
+              birthday: user.user_metadata?.birthday || new Date().toISOString(),
+              bio: user.user_metadata?.bio || '',
+            });
+          } catch (profileCreationError) {
+            console.error('Error creating basic profile:', profileCreationError);
+            Alert.alert('Warning', 'Profile creation failed. You can complete your profile later in settings.');
+          }
         }
       } else if (profileError) {
         console.error('Error checking profile:', profileError);
@@ -121,8 +175,10 @@ export default function LoginForm({ onBack }) {
     <View style={styles.form}>
       <View style={styles.flexColGap10}>
         <TextInput
+          mode="outlined"
+          label="Email"
           style={styles.emailInput} 
-          placeholder="Email" 
+          placeholder="Enter your email address" 
           onChangeText={setEmail}
           value={email}
           keyboardType="email-address"
@@ -130,20 +186,20 @@ export default function LoginForm({ onBack }) {
         />
         <View style={styles.passwordInputContainer}>
           <TextInput 
-            placeholder="Password" 
+            mode="outlined"
+            label="Password"
+            placeholder="Enter your password" 
             onChangeText={setPassword} 
             secureTextEntry={!showPassword} 
             style={styles.passwordInput}
             value={password}
+            right={
+              <TextInput.Icon 
+                icon={showPassword ? "eye-off" : "eye"} 
+                onPress={() => setShowPassword(!showPassword)}
+              />
+            }
           />
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-            <Ionicons 
-              name={showPassword ? "eye-off-outline" : "eye-outline"} 
-              size={24} 
-              color="black" 
-              style={styles.passwordIcon}
-            />
-          </TouchableOpacity>
         </View>
         <TouchableOpacity 
           style={[styles.button, !isEmailValid && styles.disabledButton]} 
@@ -200,32 +256,12 @@ const styles = StyleSheet.create({
   },
   emailInput: {
     width: '100%',
-    height: 50,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    fontSize: 16,
-    color: 'black',
   },
   passwordInputContainer: {
     width: '100%',
-    height: 50,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    display: 'flex',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
   },
   passwordInput: {
-    flex: 1,
-    height: '100%',
-    fontSize: 16,
-    color: 'black',
-  },
-  passwordIcon: {
-    padding: 5,
+    width: '100%',
   },
   phoneInput: {
     width: '100%',

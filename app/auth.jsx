@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import WelcomeScreen from './components/auth/WelcomeScreen';
 import LoginForm from './components/auth/LoginForm';
 import RegisterForm from './components/auth/RegisterForm';
-import HeartBackground from './components/auth/HeartBackground';
+import FloatingHearts from './components/auth/FloatingHearts';
 
 export default function LoginScreen() {
   const [loginForm, setLoginForm] = useState(false);
@@ -11,7 +11,7 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.auth}>
-      <HeartBackground />
+      <FloatingHearts />
       {!loginForm && !registerForm && (
         <WelcomeScreen
           onLoginPress={() => setLoginForm(true)}

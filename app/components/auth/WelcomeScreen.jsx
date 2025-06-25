@@ -39,7 +39,7 @@ export default function WelcomeScreen({ onLoginPress, onRegisterPress }) {
           style={[styles.logo, { transform: [{ translateY }] }]} 
         />
         <Text style={styles.heroText}>
-          Coupling Unit for Physical Intimacy and Dating
+          Companion Unification Platform for Intelligent Dating 💘
         </Text>
       </View>
       <View style={styles.auth}>
@@ -66,8 +66,7 @@ const styles = StyleSheet.create({
     gap: 50,
   },
   logo: {
-    width: 300,
-    height: 300,
+    height: 250,
     resizeMode: 'contain',
   },
   hero: {
@@ -75,6 +74,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'column',
     position: 'relative',
+    gap: 15,
   },
   heroTitle: {
     fontSize: 50,

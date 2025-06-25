@@ -1,5 +1,9 @@
+import { PaperProvider, MD3LightTheme } from 'react-native-paper';
+
 export default function RootLayout({ children }) {
   return (
-    {children}
+    <PaperProvider theme={MD3LightTheme}>
+      {children}
+    </PaperProvider>
   );
 } 

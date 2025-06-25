@@ -1,11 +1,14 @@
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { TextInput } from 'react-native-paper';
 
 export default function VerificationForm({ verificationCode, setVerificationCode, onVerifyCode, onBack }) {
   return (
     <View style={styles.flexColGap10}>
       <TextInput
+        mode="outlined"
+        label="Verification Code"
         style={styles.codeInput}
-        placeholder="Enter verification code"
+        placeholder="Enter the 6-digit verification code"
         value={verificationCode}
         onChangeText={setVerificationCode}
         keyboardType="number-pad"
@@ -30,12 +33,6 @@ const styles = StyleSheet.create({
   },
   codeInput: {
     width: '100%',
-    height: 50,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    fontSize: 18,
-    color: 'black',
   },
   loginButton: {
     width: '100%',

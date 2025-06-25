@@ -8,16 +8,6 @@
     "scheme": "ourglass",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "fonts": [
-      {
-        "asset": "./assets/fonts/PixelifySans.ttf",
-        "family": "PixelifySans"
-      },
-      {
-        "asset": "./assets/fonts/SpaceMono-Regular.ttf",
-        "family": "SpaceMono"
-      }
-    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.ourglass.app"
@@ -35,7 +25,6 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
