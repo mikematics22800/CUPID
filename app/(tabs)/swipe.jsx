@@ -1,13 +1,16 @@
-import { View, Text, StyleSheet, Animated, Dimensions, Image} from 'react-native';
+import { View, Text, StyleSheet, Animated, Dimensions, Image, TouchableOpacity} from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
+import { supabase } from '../../lib/supabase';
+import { useRouter } from 'expo-router';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const SWIPE_THRESHOLD = 120;
 
 export default function Swipe() {
+  const router = useRouter();
   const [canSwipe, setCanSwipe] = useState(true);
   const [timeLeft, setTimeLeft] = useState(10);
   const [isFirstSwipe, setIsFirstSwipe] = useState(true);
@@ -18,6 +21,8 @@ export default function Swipe() {
     age: 28,
     bio: 'Love hiking and photography',
   });
+  const [userPhotoCount, setUserPhotoCount] = useState(0);
+  const [loadingPhotos, setLoadingPhotos] = useState(true);
 
   // Animation values
   const position = useRef(new Animated.ValueXY()).current;
@@ -45,6 +50,40 @@ export default function Swipe() {
     outputRange: [0, 1],
     extrapolate: 'clamp'
   });
+
+  // Load user's photo count on component mount
+  useEffect(() => {
+    loadUserPhotoCount();
+  }, []);
+
+  const loadUserPhotoCount = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // List files in user's storage folder
+      const { data: files, error } = await supabase.storage
+        .from('users')
+        .list(`${user.id}/`, {
+          limit: 100,
+          offset: 0,
+          sortBy: { column: 'name', order: 'asc' }
+        });
+
+      if (error) {
+        console.error('Error loading photos:', error);
+        setUserPhotoCount(0);
+      } else {
+        const photoCount = files?.filter(file => file.name.match(/\.(jpg|jpeg|png|webp)$/i)).length || 0;
+        setUserPhotoCount(photoCount);
+      }
+    } catch (error) {
+      console.error('Error in loadUserPhotoCount:', error);
+      setUserPhotoCount(0);
+    } finally {
+      setLoadingPhotos(false);
+    }
+  };
 
   useEffect(() => {
     let timer;
@@ -177,44 +216,57 @@ export default function Swipe() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.cardContainer}>
-        {/* Swipe Indicators */}
-        <Animated.View style={[styles.swipeIndicator, styles.leftIndicator, { opacity: leftOpacity }]}>
-          <Ionicons name="close-circle" size={60} color="#ff0000" />
-          <Text style={[styles.indicatorText, { color: '#ff0000' }]}>DISLIKE</Text>
-        </Animated.View>
-
-        <Animated.View style={[styles.swipeIndicator, styles.rightIndicator, { opacity: rightOpacity }]}>
-          <Ionicons name="heart" size={60} color="#4cd964" />
-          <Text style={[styles.indicatorText, { color: '#4cd964' }]}>LIKE</Text>
-        </Animated.View>
-
-        <Animated.View style={[styles.swipeIndicator, styles.downIndicator, { opacity: downOpacity }]}>
-          <Ionicons name="archive" size={60} color="#ffd93d" />
-          <Text style={[styles.indicatorText, { color: '#ffd93d' }]}>ARCHIVE</Text>
-        </Animated.View>
-
-        <PanGestureHandler
-          onGestureEvent={onGestureEvent}
-          onHandlerStateChange={onHandlerStateChange}
-          enabled={canSwipe}
-        >
-          <Animated.View style={[styles.profileCard, cardStyle]}>
-            <Image source={{ uri: currentProfile.image }} style={styles.profileImage} />
-            <View style={styles.profileInfo}>
-              <Text style={styles.name}>{currentProfile.name}, {currentProfile.age}</Text>
-              <Text style={styles.bio}>{currentProfile.bio}</Text>
-            </View>
+      {loadingPhotos ? (
+        <View style={styles.loadingContainer}>
+          <Text>Loading...</Text>
+        </View>
+      ) : userPhotoCount < 3 ? (
+        <View style={styles.insufficientPhotosContainer}>
+          <Ionicons name="camera-outline" size={80} color="#ccc" />
+          <Text style={styles.insufficientPhotosTitle}>Please complete your profile before continuing.</Text>
+          <TouchableOpacity   
+            style={styles.button}
+            onPress={() => router.push('/profile')}
+          >
+            <Text style={styles.buttonText}>Complete Profile</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.cardContainer}>
+          {/* Swipe Indicators */}
+          <Animated.View style={[styles.swipeIndicator, styles.leftIndicator, { opacity: leftOpacity }]}>
+            <Ionicons name="close-circle" size={60} color="#ff0000" />
+            <Text style={[styles.indicatorText, { color: '#ff0000' }]}>DISLIKE</Text>
           </Animated.View>
-        </PanGestureHandler>
-      </View>
 
-      {!canSwipe && (
+          <Animated.View style={[styles.swipeIndicator, styles.rightIndicator, { opacity: rightOpacity }]}>
+            <Ionicons name="heart" size={60} color="#4cd964" />
+            <Text style={[styles.indicatorText, { color: '#4cd964' }]}>LIKE</Text>
+          </Animated.View>
+
+          <Animated.View style={[styles.swipeIndicator, styles.downIndicator, { opacity: downOpacity }]}>
+            <Ionicons name="archive" size={60} color="#ffd93d" />
+            <Text style={[styles.indicatorText, { color: '#ffd93d' }]}>ARCHIVE</Text>
+          </Animated.View>
+
+          <PanGestureHandler
+            onGestureEvent={onGestureEvent}
+            onHandlerStateChange={onHandlerStateChange}
+            enabled={canSwipe}
+          >
+            <Animated.View style={[styles.profileCard, cardStyle]}>
+              <Image source={{ uri: currentProfile.image }} style={styles.profileImage} />
+              <View style={styles.profileInfo}>
+                <Text style={styles.name}>{currentProfile.name}, {currentProfile.age}</Text>
+                <Text style={styles.bio}>{currentProfile.bio}</Text>
+              </View>
+            </Animated.View>
+          </PanGestureHandler>
+        </View>
+      )}
+
+      {!canSwipe && userPhotoCount >= 3 && (
         <View style={styles.timerContainer}>
-          <Image 
-            source={loading}
-            style={styles.loadingGif}
-          />
           <Text style={styles.timerText}>Next swipe in {timeLeft}s</Text>
         </View>
       )}
@@ -295,14 +347,46 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 20,
   },
-  loadingGif: {
-    width: 50,
-    height: 50,
-    marginBottom: 10,
-  },
   timerText: {
     fontSize: 16,
     color: '#666',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  insufficientPhotosContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  insufficientPhotosTitle: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  insufficientPhotosText: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 20,
+  },
+  insufficientPhotosCount: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  button: {
+    backgroundColor: 'hotpink',
+    padding: 15,
+    borderRadius: 10,
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
   },
 }); 
 

@@ -12,12 +12,19 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 
 2. Set up environment variables
 
-   Create a `.env` file in the root directory with your Supabase credentials:
+   Create a `.env` file in the root directory with your Supabase credentials and Gemini API key:
    ```
    EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
    EXPO_PUBLIC_SUPABASE_KEY=your_supabase_anon_key
    SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+   EXPO_PUBLIC_GEMINI_KEY=your_gemini_api_key_here
    ```
+
+   **To get your Gemini API key:**
+   - Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
+   - Sign in with your Google account
+   - Click "Create API Key"
+   - Copy the generated key and paste it in your `.env` file
 
 3. Set up Supabase storage for photo uploads
 
@@ -62,6 +69,36 @@ The app now requires users to upload at least 5 photos before they can register.
 
 ### Database Schema:
 The `users` table should contain basic profile information (name, bio, birthday, etc.) but does not need a `photos` column since photos are managed entirely through Supabase storage.
+
+## AI Bio Generation Feature
+
+The app now includes an AI-powered bio generation feature that helps users create engaging dating app bios based on their interests and hobbies.
+
+### Features:
+- **Interest Selection**: Users can select from 5 categories of interests and hobbies:
+  - Sports & Fitness (Running, Gym, Yoga, etc.)
+  - Arts & Culture (Photography, Music, Travel, etc.)
+  - Technology & Gaming (Programming, Gaming, AI/ML, etc.)
+  - Nature & Outdoors (Camping, Hiking, Gardening, etc.)
+  - Social & Lifestyle (Networking, Volunteering, Foodie, etc.)
+- **Multi-Selection**: Users can select multiple interests across different categories
+- **AI Bio Generation**: Uses Google's Gemini AI to generate personalized bio suggestions
+- **Character Limit**: Generated bios are kept under 150 characters for optimal dating app performance
+- **One-Click Integration**: Generated bios are automatically added to the bio text field
+
+### How to Use:
+1. Navigate to the Profile screen
+2. Tap the "AI Bio Generator" button in the About Me section
+3. Select your interests and hobbies from the available categories
+4. Tap "Generate Bio Suggestion"
+5. The AI will create a personalized bio based on your selections
+6. The generated bio will be automatically added to your bio text field
+
+### Technical Details:
+- Uses Google's Gemini 2.0 Flash model via direct API calls for React Native compatibility
+- Interests are categorized for better organization and user experience
+- The AI prompt is optimized for dating app context and character limits
+- Error handling includes network connectivity checks and user-friendly error messages
 
 ## Get a fresh project
 

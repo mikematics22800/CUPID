@@ -8,6 +8,7 @@ export default function PhotoSection({
   required = true, // Default to required for backward compatibility
   onRemovePhoto = null, // Optional callback for custom photo removal
 }) {
+
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -93,6 +94,11 @@ export default function PhotoSection({
 
   return (
     <View style={styles.photoSection}>
+      <View style={styles.header}>
+        <Text style={styles.requirementText}>
+          {photos.length}/3 Minimum 
+        </Text>
+      </View>
       <View style={styles.photoGrid}>
         {renderPhotoGrid().slice(0, 3)}
       </View>
@@ -181,5 +187,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     marginTop: 5,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  requirementText: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    width: '100%',
   },
 }); 
