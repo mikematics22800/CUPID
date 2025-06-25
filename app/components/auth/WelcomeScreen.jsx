@@ -39,7 +39,7 @@ export default function WelcomeScreen({ onLoginPress, onRegisterPress }) {
           style={[styles.logo, { transform: [{ translateY }] }]} 
         />
         <Text style={styles.heroText}>
-          Companion Unification Platform for Intelligent Dating 💘
+          Cognitive User Platform for Intimacy and Dating 💘
         </Text>
       </View>
       <View style={styles.auth}>
