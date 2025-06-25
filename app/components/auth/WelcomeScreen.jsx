@@ -9,12 +9,12 @@ export default function WelcomeScreen({ onLoginPress, onRegisterPress }) {
       Animated.sequence([
         Animated.timing(floatAnim, {
           toValue: 1,
-          duration: 2000,
+          duration: 1000,
           useNativeDriver: true,
         }),
         Animated.timing(floatAnim, {
           toValue: 0,
-          duration: 2000,
+          duration: 1000,
           useNativeDriver: true,
         }),
       ])
@@ -33,7 +33,7 @@ export default function WelcomeScreen({ onLoginPress, onRegisterPress }) {
   return (
     <View style={styles.welcome}>
       <View style={styles.hero}>
-        <Text style={styles.heroTitle}>C.U.P.I.D.</Text>
+        <Text style={styles.heroTitle}>CUPID</Text>
         <Animated.Image 
           source={require('../../../assets/images/cupid.png')} 
           style={[styles.logo, { transform: [{ translateY }] }]} 
