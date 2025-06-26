@@ -1,21 +1,31 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
 
 export default function TabLayout() {
   return (
     <Tabs screenOptions={{
-      tabBarActiveTintColor: '#007AFF',
-      tabBarInactiveTintColor: '#999',
+      tabBarActiveTintColor: 'hotpink',
+      tabBarInactiveTintColor: 'gray',
       tabBarStyle: {
         borderTopWidth: 1,
         borderTopColor: '#eee',
       },
-      headerShown: false,
+      headerTitle: ''
     }}>
       <Tabs.Screen
         name="swipe"
         options={{
           title: 'Swipe',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="swipe" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="likes"
+        options={{
+          title: 'Likes',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="heart" size={size} color={color} />
           ),

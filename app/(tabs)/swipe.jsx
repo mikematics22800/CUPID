@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Animated, Dimensions, Image, TouchableOpacity, Alert} from 'react-native';
+import { View, Text, StyleSheet, Animated, Dimensions, Image, TouchableOpacity, Alert, ScrollView} from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
@@ -6,7 +6,6 @@ import { supabase, handleUserLike, getSwipeProfiles } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const SCREEN_HEIGHT = Dimensions.get('window').height;
 const SWIPE_THRESHOLD = 120;
 
 export default function Swipe() {
@@ -286,19 +285,25 @@ export default function Swipe() {
         >
           <Animated.View style={[styles.profileCard, cardStyle]}>
             <Image source={{ uri: currentProfile.image }} style={styles.profileImage} />
-            <View style={styles.profileInfo}>
-              <Text style={styles.name}>{currentProfile.name}, {currentProfile.age}</Text>
-              <Text style={styles.bio}>{currentProfile.bio}</Text>
-              {currentProfile.interests && currentProfile.interests.length > 0 && (
-                <View style={styles.interestsContainer}>
-                  <View style={styles.interestsList}>
-                    {currentProfile.interests.map((interest, index) => (
-                      <Text key={index} style={styles.interestTag}>{interest}</Text>
-                    ))}
+            <ScrollView 
+              style={styles.scrollContainer}
+              showsVerticalScrollIndicator={false}
+              nestedScrollEnabled={true}
+            >
+              <View style={styles.profileInfo}>
+                <Text style={styles.name}>{currentProfile.name}, {currentProfile.age}</Text>
+                <Text style={styles.bio}>{currentProfile.bio}</Text>
+                {currentProfile.interests && currentProfile.interests.length > 0 && (
+                  <View style={styles.interestsContainer}>
+                    <View style={styles.interestsList}>
+                      {currentProfile.interests.map((interest, index) => (
+                        <Text key={index} style={styles.interestTag}>{interest}</Text>
+                      ))}
+                    </View>
                   </View>
-                </View>
-              )}
-            </View>
+                )}
+              </View>
+            </ScrollView>
           </Animated.View>
         </PanGestureHandler>
       </View>
@@ -345,6 +350,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     padding: 20,
     width: '100%',
+    height: 450,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -360,8 +366,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 15,
   },
+  scrollContainer: {
+    flex: 1,
+  },
   profileInfo: {
     alignItems: 'center',
+    paddingBottom: 20,
   },
   name: {
     fontSize: 24,
@@ -393,18 +403,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   timerContainer: {
-    position: 'absolute',
-    bottom: 20,
-    left: 0,
-    right: 0,
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: 'pink',
     padding: 15,
     borderRadius: 20,
+    marginTop: 20,
   },
   timerText: {
     fontSize: 16,
-    color: '#666',
+    color: 'red',
   },
   loadingContainer: {
     flex: 1,
@@ -465,6 +472,19 @@ const styles = StyleSheet.create({
   matchingInterestTag: {
     backgroundColor: '#ffd700',
     color: '#333',
+  },
+  debugButton: {
+    backgroundColor: '#ff6b6b',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 10,
+    alignSelf: 'center',
+  },
+  debugButtonText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: 'white',
+    textAlign: 'center',
   },
 }); 
 

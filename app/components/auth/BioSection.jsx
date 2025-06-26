@@ -16,7 +16,7 @@ export default function BioSection({
   };
 
   const handleInterestsChange = (newInterests) => {
-    if (setInterests) {
+    if (setInterests) { 
       setInterests(newInterests);
     }
   };

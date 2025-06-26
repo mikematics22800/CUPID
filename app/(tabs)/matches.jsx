@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
+import { getMatchesForUser } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
 
 export default function MatchesScreen() {
@@ -17,102 +17,9 @@ export default function MatchesScreen() {
     try {
       setLoading(true);
       
-      // Get current user
-      const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !currentUser) {
-        console.error('❌ Authentication error:', authError);
-        Alert.alert('Error', 'Please log in again.');
-        return;
-      }
-
-      // Get current user's profile with likes
-      const { data: currentUserProfile, error: profileError } = await supabase
-        .from('users')
-        .select('likes')
-        .eq('id', currentUser.id)
-        .single();
-
-      if (profileError) {
-        console.error('❌ Error fetching current user profile:', profileError);
-        Alert.alert('Error', 'Failed to load profile.');
-        return;
-      }
-
-      const currentUserLikes = currentUserProfile?.likes || [];
-      
-      if (currentUserLikes.length === 0) {
-        setMatches([]);
-        return;
-      }
-
-      // Get profiles of users that current user has liked
-      const { data: likedProfiles, error: likedError } = await supabase
-        .from('users')
-        .select('id, name, bio, birthday, interests')
-        .in('id', currentUserLikes);
-
-      if (likedError) {
-        console.error('❌ Error fetching liked profiles:', likedError);
-        Alert.alert('Error', 'Failed to load matches.');
-        return;
-      }
-
-      // Filter for mutual matches (users who have also liked current user)
-      const mutualMatches = [];
-      
-      for (const profile of likedProfiles) {
-        // Get the likes array for each profile
-        const { data: profileData, error: profileDataError } = await supabase
-          .from('users')
-          .select('likes')
-          .eq('id', profile.id)
-          .single();
-
-        if (!profileDataError && profileData?.likes) {
-          // Check if current user is in this profile's likes array
-          if (profileData.likes.includes(currentUser.id)) {
-            // Calculate age
-            const age = profile.birthday ? 
-              Math.floor((new Date() - new Date(profile.birthday)) / (365.25 * 24 * 60 * 60 * 1000)) : 0;
-
-            // Get first photo from storage
-            let photoUrl = null;
-            try {
-              const { data: files } = await supabase.storage
-                .from('users')
-                .list(`${profile.id}/`, {
-                  limit: 1,
-                  offset: 0,
-                  sortBy: { column: 'name', order: 'asc' }
-                });
-
-              if (files && files.length > 0) {
-                const firstPhoto = files.find(file => file.name.match(/\.(jpg|jpeg|png|webp)$/i));
-                if (firstPhoto) {
-                  photoUrl = supabase.storage.from('users').getPublicUrl(`${profile.id}/${firstPhoto.name}`).data.publicUrl;
-                }
-              }
-            } catch (photoError) {
-              console.error('Error fetching photo for match:', profile.id, photoError);
-            }
-
-            mutualMatches.push({
-              id: profile.id,
-              name: profile.name || 'Anonymous',
-              age: age,
-              bio: profile.bio || 'No bio available',
-              interests: profile.interests || [],
-              photo: photoUrl || 'https://picsum.photos/150/150',
-              lastMessage: 'Start a conversation!',
-              timestamp: 'Just matched!'
-            });
-          }
-        }
-      }
-
-      setMatches(mutualMatches);
-      console.log(`✅ Found ${mutualMatches.length} mutual matches`);
+      const matchesData = await getMatchesForUser();
+      setMatches(matchesData);
+      console.log(`✅ Successfully loaded ${matchesData.length} matches`);
 
     } catch (error) {
       console.error('❌ Error loading matches:', error);
@@ -124,7 +31,10 @@ export default function MatchesScreen() {
 
   const renderMatch = ({ item }) => (
     <TouchableOpacity style={styles.matchCard}>
-      <Image source={{ uri: item.photo }} style={styles.matchPhoto} />
+      <Image 
+        source={{ uri: item.photo || 'https://picsum.photos/150/150' }} 
+        style={styles.matchPhoto} 
+      />
       <View style={styles.matchInfo}>
         <Text style={styles.matchName}>{item.name}, {item.age}</Text>
         <Text style={styles.matchBio} numberOfLines={2}>{item.bio}</Text>
@@ -171,7 +81,7 @@ export default function MatchesScreen() {
           <Ionicons name="heart-outline" size={64} color="#ccc" />
           <Text style={styles.emptyText}>No matches yet</Text>
           <Text style={styles.emptySubtext}>Keep swiping to find your perfect match!</Text>
-          <TouchableOpacity style={styles.swipeButton} onPress={() => router.push('/swipe')}>
+          <TouchableOpacity style={styles.swipeButton} onPress={() => router.push('/(tabs)/swipe')}>
             <Text style={styles.swipeButtonText}>Start Swiping</Text>
           </TouchableOpacity>
         </View>
