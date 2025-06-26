@@ -1,8 +1,8 @@
-import { View, Text, StyleSheet, Animated, Dimensions, Image, TouchableOpacity} from 'react-native';
+import { View, Text, StyleSheet, Animated, Dimensions, Image, TouchableOpacity, Alert} from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
-import { supabase } from '../../lib/supabase';
+import { supabase, handleUserLike, getSwipeProfiles } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -15,14 +15,12 @@ export default function Swipe() {
   const [timeLeft, setTimeLeft] = useState(10);
   const [isFirstSwipe, setIsFirstSwipe] = useState(true);
   const [swipeDirection, setSwipeDirection] = useState(null);
-  const [currentProfile, setCurrentProfile] = useState({
-    id: '1',
-    name: 'Sarah',
-    age: 28,
-    bio: 'Love hiking and photography',
-  });
+  const [currentProfile, setCurrentProfile] = useState(null);
   const [userPhotoCount, setUserPhotoCount] = useState(0);
   const [loadingPhotos, setLoadingPhotos] = useState(true);
+  const [loadingProfiles, setLoadingProfiles] = useState(true);
+  const [profiles, setProfiles] = useState([]);
+  const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
 
   // Animation values
   const position = useRef(new Animated.ValueXY()).current;
@@ -45,15 +43,10 @@ export default function Swipe() {
     extrapolate: 'clamp'
   });
 
-  const downOpacity = position.y.interpolate({
-    inputRange: [0, SCREEN_HEIGHT / 2],
-    outputRange: [0, 1],
-    extrapolate: 'clamp'
-  });
-
-  // Load user's photo count on component mount
+  // Load user's photo count and profiles on component mount
   useEffect(() => {
     loadUserPhotoCount();
+    loadProfiles();
   }, []);
 
   const loadUserPhotoCount = async () => {
@@ -85,6 +78,24 @@ export default function Swipe() {
     }
   };
 
+  const loadProfiles = async () => {
+    try {
+      setLoadingProfiles(true);
+      const fetchedProfiles = await getSwipeProfiles(20); // Get 20 profiles
+      setProfiles(fetchedProfiles);
+      
+      if (fetchedProfiles.length > 0) {
+        setCurrentProfile(fetchedProfiles[0]);
+        setCurrentProfileIndex(0);
+      }
+    } catch (error) {
+      console.error('Error loading profiles:', error);
+      Alert.alert('Error', 'Failed to load profiles. Please try again.');
+    } finally {
+      setLoadingProfiles(false);
+    }
+  };
+
   useEffect(() => {
     let timer;
     if (!isFirstSwipe && !canSwipe && timeLeft > 0) {
@@ -102,19 +113,19 @@ export default function Swipe() {
   }, [canSwipe, timeLeft, isFirstSwipe]);
 
   const loadNextProfile = () => {
-    // This would typically fetch from your backend/database
-    const profiles = [
-      { id: '2', name: 'Mike', age: 31, bio: 'Coffee enthusiast and tech lover', image: 'https://picsum.photos/300/400' },
-      { id: '3', name: 'Emma', age: 26, bio: 'Artist and yoga instructor', image: 'https://picsum.photos/300/400' },
-      { id: '4', name: 'David', age: 29, bio: 'Foodie and travel blogger', image: 'https://picsum.photos/300/400' },
-    ];
+    const nextIndex = currentProfileIndex + 1;
     
-    const randomProfile = profiles[Math.floor(Math.random() * profiles.length)];
-    setCurrentProfile(randomProfile);
+    if (nextIndex < profiles.length) {
+      setCurrentProfile(profiles[nextIndex]);
+      setCurrentProfileIndex(nextIndex);
+    } else {
+      // No more profiles, reload
+      loadProfiles();
+    }
   };
 
-  const handleSwipe = (direction) => {
-    if (!canSwipe) return;
+  const handleSwipe = async (direction) => {
+    if (!canSwipe || !currentProfile) return;
     
     setSwipeDirection(direction);
     
@@ -127,7 +138,7 @@ export default function Swipe() {
     const toValue = {
       x: direction === 'left' ? -SCREEN_WIDTH * 1.5 : 
          direction === 'right' ? SCREEN_WIDTH * 1.5 : 0,
-      y: direction === 'archive' ? SCREEN_HEIGHT : 0
+      y: 0
     };
 
     Animated.spring(position, {
@@ -146,15 +157,35 @@ export default function Swipe() {
     switch (direction) {
       case 'left':
         console.log(`Disliked profile ${currentProfile.id}`);
-        // Here you would make an API call to update the profile status
+        // For dislikes, we don't need to do anything in the database
         break;
       case 'right':
         console.log(`Liked profile ${currentProfile.id}`);
-        // Here you would make an API call to update the profile status
-        break;
-      case 'archive':
-        console.log(`Archived profile ${currentProfile.id}`);
-        // Here you would make an API call to move the profile to archive
+        try {
+          const result = await handleUserLike(currentProfile.id);
+          
+          if (result.success) {
+            if (result.isMatch) {
+              Alert.alert(
+                '🎉 It\'s a Match!',
+                `You and ${currentProfile.name} have liked each other!`,
+                [
+                  {
+                    text: 'View Match',
+                    onPress: () => router.push('/matches')
+                  },
+                  {
+                    text: 'Continue Swiping',
+                    style: 'cancel'
+                  }
+                ]
+              );
+            }
+          }
+        } catch (error) {
+          console.error('Error handling like:', error);
+          Alert.alert('Error', 'Failed to process like. Please try again.');
+        }
         break;
     }
   };
@@ -166,34 +197,15 @@ export default function Swipe() {
 
   const onHandlerStateChange = (event) => {
     if (event.nativeEvent.state === State.END) {
-      const { translationX, translationY } = event.nativeEvent;
+      const { translationX } = event.nativeEvent;
       
-      // Determine swipe direction based on distance and angle
+      // Determine swipe direction based on distance
       const absX = Math.abs(translationX);
-      const absY = Math.abs(translationY);
       
-      if (absX > SWIPE_THRESHOLD || absY > SWIPE_THRESHOLD) {
-        let direction = null;
-        
-        if (absX > absY) {
-          // Horizontal swipe
-          direction = translationX > 0 ? 'right' : 'left';
-        } else if (translationY > 0) {
-          // Downward swipe
-          direction = 'archive';
-        }
-        
-        if (direction) {
-          handleSwipe(direction);
-        } else {
-          // Reset position if no valid swipe
-          Animated.spring(position, {
-            toValue: { x: 0, y: 0 },
-            useNativeDriver: true,
-            tension: 40,
-            friction: 7
-          }).start();
-        }
+      if (absX > SWIPE_THRESHOLD) {
+        // Horizontal swipe
+        const direction = translationX > 0 ? 'right' : 'left';
+        handleSwipe(direction);
       } else {
         // Reset position if swipe wasn't long enough
         Animated.spring(position, {
@@ -214,58 +226,84 @@ export default function Swipe() {
     ]
   };
 
+  if (loadingPhotos || loadingProfiles) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (userPhotoCount < 3) {
+    return (
+      <View style={styles.insufficientPhotosContainer}>
+        <Ionicons name="camera-outline" size={80} color="#ccc" />
+        <Text style={styles.insufficientPhotosTitle}>Please complete your profile before continuing.</Text>
+        <TouchableOpacity   
+          style={styles.button}
+          onPress={() => router.push('/profile')}
+        >
+          <Text style={styles.buttonText}>Complete Profile</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (!currentProfile) {
+    return (
+      <View style={styles.noProfilesContainer}>
+        <Ionicons name="heart-outline" size={80} color="#ccc" />
+        <Text style={styles.noProfilesTitle}>No more profiles to show</Text>
+        <Text style={styles.noProfilesText}>Check back later for new people!</Text>
+        <TouchableOpacity   
+          style={styles.button}
+          onPress={loadProfiles}
+        >
+          <Text style={styles.buttonText}>Refresh</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      {loadingPhotos ? (
-        <View style={styles.loadingContainer}>
-          <Text>Loading...</Text>
-        </View>
-      ) : userPhotoCount < 3 ? (
-        <View style={styles.insufficientPhotosContainer}>
-          <Ionicons name="camera-outline" size={80} color="#ccc" />
-          <Text style={styles.insufficientPhotosTitle}>Please complete your profile before continuing.</Text>
-          <TouchableOpacity   
-            style={styles.button}
-            onPress={() => router.push('/profile')}
-          >
-            <Text style={styles.buttonText}>Complete Profile</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View style={styles.cardContainer}>
-          {/* Swipe Indicators */}
-          <Animated.View style={[styles.swipeIndicator, styles.leftIndicator, { opacity: leftOpacity }]}>
-            <Ionicons name="close-circle" size={60} color="#ff0000" />
-            <Text style={[styles.indicatorText, { color: '#ff0000' }]}>DISLIKE</Text>
+      <View style={styles.cardContainer}>
+        {/* Swipe Indicators */}
+        <Animated.View style={[styles.swipeIndicator, styles.leftIndicator, { opacity: leftOpacity }]}>
+          <Ionicons name="close-circle" size={60} color="#ff0000" />
+          <Text style={[styles.indicatorText, { color: '#ff0000' }]}>DISLIKE</Text>
+        </Animated.View>
+
+        <Animated.View style={[styles.swipeIndicator, styles.rightIndicator, { opacity: rightOpacity }]}>
+          <Ionicons name="heart" size={60} color="#4cd964" />
+          <Text style={[styles.indicatorText, { color: '#4cd964' }]}>LIKE</Text>
+        </Animated.View>
+
+        <PanGestureHandler
+          onGestureEvent={onGestureEvent}
+          onHandlerStateChange={onHandlerStateChange}
+          enabled={canSwipe}
+        >
+          <Animated.View style={[styles.profileCard, cardStyle]}>
+            <Image source={{ uri: currentProfile.image }} style={styles.profileImage} />
+            <View style={styles.profileInfo}>
+              <Text style={styles.name}>{currentProfile.name}, {currentProfile.age}</Text>
+              <Text style={styles.bio}>{currentProfile.bio}</Text>
+              {currentProfile.interests && currentProfile.interests.length > 0 && (
+                <View style={styles.interestsContainer}>
+                  <View style={styles.interestsList}>
+                    {currentProfile.interests.map((interest, index) => (
+                      <Text key={index} style={styles.interestTag}>{interest}</Text>
+                    ))}
+                  </View>
+                </View>
+              )}
+            </View>
           </Animated.View>
+        </PanGestureHandler>
+      </View>
 
-          <Animated.View style={[styles.swipeIndicator, styles.rightIndicator, { opacity: rightOpacity }]}>
-            <Ionicons name="heart" size={60} color="#4cd964" />
-            <Text style={[styles.indicatorText, { color: '#4cd964' }]}>LIKE</Text>
-          </Animated.View>
-
-          <Animated.View style={[styles.swipeIndicator, styles.downIndicator, { opacity: downOpacity }]}>
-            <Ionicons name="archive" size={60} color="#ffd93d" />
-            <Text style={[styles.indicatorText, { color: '#ffd93d' }]}>ARCHIVE</Text>
-          </Animated.View>
-
-          <PanGestureHandler
-            onGestureEvent={onGestureEvent}
-            onHandlerStateChange={onHandlerStateChange}
-            enabled={canSwipe}
-          >
-            <Animated.View style={[styles.profileCard, cardStyle]}>
-              <Image source={{ uri: currentProfile.image }} style={styles.profileImage} />
-              <View style={styles.profileInfo}>
-                <Text style={styles.name}>{currentProfile.name}, {currentProfile.age}</Text>
-                <Text style={styles.bio}>{currentProfile.bio}</Text>
-              </View>
-            </Animated.View>
-          </PanGestureHandler>
-        </View>
-      )}
-
-      {!canSwipe && userPhotoCount >= 3 && (
+      {!canSwipe && (
         <View style={styles.timerContainer}>
           <Text style={styles.timerText}>Next swipe in {timeLeft}s</Text>
         </View>
@@ -296,9 +334,6 @@ const styles = StyleSheet.create({
   },
   rightIndicator: {
     right: 20,
-  },
-  downIndicator: {
-    bottom: 100,
   },
   indicatorText: {
     fontSize: 16,
@@ -336,6 +371,26 @@ const styles = StyleSheet.create({
   bio: {
     fontSize: 16,
     color: '#666',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  interestsContainer: {
+    width: '100%',
+    marginTop: 10,
+  },
+  interestsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 5,
+  },
+  interestTag: {
+    fontSize: 12,
+    color: 'hotpink',
+    backgroundColor: '#ffe6f0',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   timerContainer: {
     position: 'absolute',
@@ -368,15 +423,23 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     textAlign: 'center',
   },
-  insufficientPhotosText: {
+  noProfilesContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  noProfilesTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  noProfilesText: {
     fontSize: 16,
     color: '#666',
     marginBottom: 20,
-  },
-  insufficientPhotosCount: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 20,
+    textAlign: 'center',
   },
   button: {
     backgroundColor: 'hotpink',
@@ -387,6 +450,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: 'white',
+  },
+  matchingInterestsContainer: {
+    width: '100%',
+    marginTop: 10,
+  },
+  matchingInterestsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 5,
+    textAlign: 'center',
+    color: '#333',
+  },
+  matchingInterestTag: {
+    backgroundColor: '#ffd700',
+    color: '#333',
   },
 }); 
 

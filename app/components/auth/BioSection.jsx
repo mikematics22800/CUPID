@@ -6,37 +6,28 @@ import InterestsSection from './InterestsSection';
 
 export default function BioSection({
   bio,
-  setBio
+  setBio,
+  interests = [],
+  setInterests
 }) {
-  const [showInterests, setShowInterests] = useState(false);
 
   const handleBioGenerated = (suggestion) => {
     setBio(suggestion);
   };
 
+  const handleInterestsChange = (newInterests) => {
+    if (setInterests) {
+      setInterests(newInterests);
+    }
+  };
+
   return (
     <View style={styles.bioSection}>
-      <View style={styles.header}>
-        <Text style={styles.sectionTitle}>About Me</Text>
-        <TouchableOpacity 
-          style={styles.interestsButton}
-          onPress={() => setShowInterests(!showInterests)}
-        >
-          <Ionicons 
-            name={showInterests ? "chevron-up" : "sparkles"} 
-            size={20} 
-            color="#007AFF" 
-          />
-          <Text style={styles.interestsButtonText}>
-            {showInterests ? 'Hide' : 'AI Bio Generator'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {showInterests && (
-        <InterestsSection onBioGenerated={handleBioGenerated} />
-      )}
-
+      <InterestsSection 
+        onBioGenerated={handleBioGenerated} 
+        initialInterests={interests}
+        onInterestsChange={handleInterestsChange}
+      />
       <TextInput
         mode="outlined"
         label="Bio"

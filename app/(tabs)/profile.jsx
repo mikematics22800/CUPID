@@ -16,6 +16,7 @@ export default function ProfileScreen() {
   
   // Form state
   const [bio, setBio] = useState('');
+  const [interests, setInterests] = useState([]);
   const [photos, setPhotos] = useState([]);
 
   useEffect(() => {
@@ -36,7 +37,7 @@ export default function ProfileScreen() {
       // Load profile data (excluding photos since they're in storage)
       const { data: profileData, error } = await supabase
         .from('users')
-        .select('id, bio, name, birthday, sex, email, phone')
+        .select('id, bio, interests, name, birthday, sex, email, phone')
         .eq('id', currentUser.id)
         .single();
 
@@ -54,11 +55,16 @@ export default function ProfileScreen() {
         setBio(profileData.bio || '');
         console.log('Bio loaded:', profileData.bio || '');
         
+        // Load existing interests
+        setInterests(profileData.interests || []);
+        console.log('Interests loaded:', profileData.interests || []);
+        
         // Load photos from storage instead of database
         await loadPhotosFromStorage(currentUser.id);
       } else {
         console.log('No profile data found, starting with empty profile');
         setBio('');
+        setInterests([]);
         setPhotos([]);
       }
     } catch (error) {
@@ -168,6 +174,7 @@ export default function ProfileScreen() {
           .from('users')
           .update({
             bio: bio,
+            interests: interests,
           })
           .eq('id', user.id);
         dbError = error;
@@ -178,6 +185,7 @@ export default function ProfileScreen() {
           .insert({
             id: user.id,
             bio: bio,
+            interests: interests,
           });
         dbError = error;
       }
@@ -209,7 +217,7 @@ export default function ProfileScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#007AFF" />
+          <Ionicons name="arrow-back" size={24} color="hotpink" />
         </TouchableOpacity>
         <TouchableOpacity 
           onPress={saveProfile} 
@@ -231,23 +239,23 @@ export default function ProfileScreen() {
         {profile && (
           <View style={styles.profileCard}>
             <View style={styles.profileRow}>
-              <Ionicons name="person" size={20} color="#007AFF" style={styles.profileIcon} />
+              <Ionicons name="person" size={20} color="hotpink" style={styles.profileIcon} />
               <Text style={styles.profileValue}>{profile.name || '-'}</Text>
             </View>
             <View style={styles.profileRow}>
-              <Ionicons name="male-female" size={20} color="#007AFF" style={styles.profileIcon} />
+              <Ionicons name="male-female" size={20} color="hotpink" style={styles.profileIcon} />
               <Text style={styles.profileValue}>{profile.sex || '-'}</Text>
             </View>
             <View style={styles.profileRow}>
-              <Ionicons name="calendar-outline" size={20} color="#007AFF" style={styles.profileIcon} />
+              <Ionicons name="calendar-outline" size={20} color="hotpink" style={styles.profileIcon} />
               <Text style={styles.profileValue}>{profile.birthday ? new Date(profile.birthday).toLocaleDateString() : '-'}</Text>
             </View>
             <View style={styles.profileRow}>
-              <Ionicons name="mail" size={20} color="#007AFF" style={styles.profileIcon} />
+              <Ionicons name="mail" size={20} color="hotpink" style={styles.profileIcon} />
               <Text style={styles.profileValue}>{profile.email || '-'}</Text>
             </View>
             <View style={styles.profileRow}>
-              <Ionicons name="call" size={20} color="#007AFF" style={styles.profileIcon} />
+              <Ionicons name="call" size={20} color="hotpink" style={styles.profileIcon} />
               <Text style={styles.profileValue}>{profile.phone || '-'}</Text>
             </View>
           </View>
@@ -261,6 +269,8 @@ export default function ProfileScreen() {
         <BioSection
           bio={bio}
           setBio={setBio}
+          interests={interests}
+          setInterests={setInterests}
         />
       </ScrollView>
     </View>
@@ -296,7 +306,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   saveButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: 'hotpink',
     paddingHorizontal: 20,
     paddingVertical: 8,
     borderRadius: 8,

@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { promptGemini } from '../../../lib/gemini';
 
@@ -31,18 +31,34 @@ const INTERESTS_CATEGORIES = {
   ]
 };
 
-export default function InterestsSection({ onBioGenerated }) {
-  const [selectedInterests, setSelectedInterests] = useState([]);
+export default function InterestsSection({ onBioGenerated, initialInterests = [], onInterestsChange }) {
+  const [selectedInterests, setSelectedInterests] = useState(initialInterests);
   const [generating, setGenerating] = useState(false);
 
+  // Only update selected interests when initialInterests prop changes and is different
+  useEffect(() => {
+    if (JSON.stringify(initialInterests) !== JSON.stringify(selectedInterests)) {
+      setSelectedInterests(initialInterests);
+    }
+  }, [initialInterests]);
+
   const toggleInterest = (interest) => {
-    setSelectedInterests(prev => {
-      if (prev.includes(interest)) {
-        return prev.filter(i => i !== interest);
-      } else {
-        return [...prev, interest];
-      }
-    });
+    const newSelectedInterests = selectedInterests.includes(interest)
+      ? selectedInterests.filter(i => i !== interest)
+      : [...selectedInterests, interest];
+    
+    // Prevent selecting more than 10 interests
+    if (newSelectedInterests.length > 10) {
+      Alert.alert('Maximum Interests Reached', 'You can only select up to 10 interests. Please remove one before adding another.');
+      return;
+    }
+    
+    setSelectedInterests(newSelectedInterests);
+    
+    // Call the callback to notify parent component of interest changes
+    if (onInterestsChange) {
+      onInterestsChange(newSelectedInterests);
+    }
   };
 
   const generateBioSuggestion = async () => {
@@ -74,10 +90,8 @@ export default function InterestsSection({ onBioGenerated }) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Select Your Interests</Text>
-        <Text style={styles.subtitle}>Choose interests that represent you best</Text>
+        <Text style={styles.subtitle}>Choose between 5 and 10 interests which represent you best!</Text>
       </View>
-
       <ScrollView style={styles.interestsContainer} showsVerticalScrollIndicator={false}>
         {Object.entries(INTERESTS_CATEGORIES).map(([category, interests]) => (
           <View key={category} style={styles.category}>
@@ -85,13 +99,23 @@ export default function InterestsSection({ onBioGenerated }) {
             <View style={styles.interestsGrid}>
               {interests.map((interest) => {
                 const isSelected = selectedInterests.includes(interest);
+                const isDisabled = !isSelected && selectedInterests.length >= 10;
                 return (
                   <TouchableOpacity
                     key={interest}
-                    style={[styles.interestChip, isSelected && styles.interestChipSelected]}
+                    style={[
+                      styles.interestChip, 
+                      isSelected && styles.interestChipSelected,
+                      isDisabled && styles.interestChipDisabled
+                    ]}
                     onPress={() => toggleInterest(interest)}
+                    disabled={isDisabled}
                   >
-                    <Text style={[styles.interestText, isSelected && styles.interestTextSelected]}>
+                    <Text style={[
+                      styles.interestText, 
+                      isSelected && styles.interestTextSelected,
+                      isDisabled && styles.interestTextDisabled
+                    ]}>
                       {interest}
                     </Text>
                     {isSelected && (
@@ -107,10 +131,7 @@ export default function InterestsSection({ onBioGenerated }) {
 
       <View style={styles.footer}>
         <Text style={styles.selectedCount}>
-          {selectedInterests.length} interest{selectedInterests.length !== 1 ? 's' : ''} selected
-          {selectedInterests.length < 5 && (
-            <Text style={styles.requirementText}> (minimum 5 required)</Text>
-          )}
+          {selectedInterests.length}/10 interest{selectedInterests.length !== 1 ? 's' : ''} selected
         </Text>
         <TouchableOpacity
           style={[styles.generateButton, (generating || selectedInterests.length < 5) && styles.generateButtonDisabled]}
@@ -118,7 +139,7 @@ export default function InterestsSection({ onBioGenerated }) {
           disabled={generating || selectedInterests.length < 5}
         >
           <Ionicons 
-            name={generating ? "hourglass" : "sparkles"} 
+            name={"sparkles"} 
             size={20} 
             color="white" 
             style={styles.generateIcon}
@@ -184,8 +205,12 @@ const styles = StyleSheet.create({
     borderColor: '#e0e0e0',
   },
   interestChipSelected: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: 'hotpink',
+    borderColor: 'hotpink',
+  },
+  interestChipDisabled: {
+    backgroundColor: '#ccc',
+    borderColor: '#ccc',
   },
   interestText: {
     fontSize: 14,
@@ -193,6 +218,9 @@ const styles = StyleSheet.create({
   },
   interestTextSelected: {
     color: 'white',
+  },
+  interestTextDisabled: {
+    color: '#999',
   },
   checkIcon: {
     marginLeft: 5,
@@ -213,7 +241,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#007AFF',
+    backgroundColor: 'hotpink',
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 12,
@@ -231,6 +259,11 @@ const styles = StyleSheet.create({
     marginRight: 0,
   },
   requirementText: {
+    color: '#ff6b6b',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  limitText: {
     color: '#ff6b6b',
     fontSize: 12,
     fontWeight: '500',

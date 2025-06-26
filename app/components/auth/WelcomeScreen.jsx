@@ -39,7 +39,7 @@ export default function WelcomeScreen({ onLoginPress, onRegisterPress }) {
           style={[styles.logo, { transform: [{ translateY }] }]} 
         />
         <Text style={styles.heroText}>
-          Cognitive User Platform for Intimacy and Dating 💘
+          Cognitive User Platform for Intelligent Dating 💘
         </Text>
       </View>
       <View style={styles.auth}>
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     gap: 15,
   },
   heroTitle: {
-    fontSize: 50,
+    fontSize: 100,
     color: 'white',
     textAlign: 'center',
     fontWeight: 'bold',

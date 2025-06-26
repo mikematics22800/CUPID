@@ -10,6 +10,7 @@ export default function TabLayout() {
         borderTopWidth: 1,
         borderTopColor: '#eee',
       },
+      headerShown: false,
     }}>
       <Tabs.Screen
         name="swipe"

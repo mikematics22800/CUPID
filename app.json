@@ -1,23 +1,23 @@
 {
   "expo": {
-    "name": "ourglass",
-    "slug": "ourglass",
+    "name": "CUPID",
+    "slug": "CUPID",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "ourglass",
+    "scheme": "CUPID",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.ourglass.app"
+      "bundleIdentifier": "com.CUPID.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.ourglass.app",
+      "package": "com.CUPID.app",
       "edgeToEdgeEnabled": true
     },
     "plugins": [

@@ -1,19 +1,39 @@
 import { useState, useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 import { TextInput } from 'react-native-paper';
-import PhoneInput from "react-native-phone-number-input";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../../lib/supabase';
 
 export default function LoginForm({ onBack }) {
-  const [email, setEmail] = useState('mikematics22800@gmail.com');
+  const [email, setEmail] = useState('michaeljmedina22800@gmail.com');
   const [password, setPassword] = useState('D7452m61457!');
   const [phoneNumber, setPhoneNumber] = useState('5617159065');
   const [loading, setLoading] = useState(false);
   const [isEmailValid, setIsEmailValid] = useState(false);
   const [isPhoneValid, setIsPhoneValid] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Format phone number for better display
+  const formatPhoneNumber = (text) => {
+    // Remove all non-numeric characters
+    const cleaned = text.replace(/\D/g, '');
+    
+    // Format as (XXX) XXX-XXXX
+    if (cleaned.length <= 3) {
+      return cleaned;
+    } else if (cleaned.length <= 6) {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3)}`;
+    } else {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
+    }
+  };
+
+  const handlePhoneChange = (text) => {
+    // Remove formatting for storage, keep only digits
+    const cleaned = text.replace(/\D/g, '');
+    setPhoneNumber(cleaned);
+  };
 
   async function createUserProfile(userId, userData) {
     try {
@@ -210,17 +230,21 @@ export default function LoginForm({ onBack }) {
         </TouchableOpacity>
       </View>
       <View style={styles.flexColGap10}>
-        <View style={styles.phoneInput}>
-          <PhoneInput
-            defaultValue={phoneNumber}
-            defaultCode="US"
-            layout="first"
-            onChangeText={(text) => {
-              setPhoneNumber(text);
-            }}
-            withDarkTheme
-            withShadow
-            autoFocus
+        <View style={styles.phoneInputContainer}>
+          <TextInput
+            mode="outlined"
+            label="Phone Number"
+            style={styles.phoneInput}
+            placeholder="(555) 123-4567"
+            value={formatPhoneNumber(phoneNumber)}
+            onChangeText={handlePhoneChange}
+            keyboardType="numeric"
+            maxLength={14} // (XXX) XXX-XXXX format
+            left={
+              <TextInput.Icon 
+                icon="phone" 
+              />
+            }
           />
         </View>
         <TouchableOpacity 
@@ -263,12 +287,11 @@ const styles = StyleSheet.create({
   passwordInput: {
     width: '100%',
   },
+  phoneInputContainer: {
+    width: '100%',
+  },
   phoneInput: {
     width: '100%',
-    height: 50,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    overflow: 'hidden',
   },
   button: {
     width: '100%',

@@ -1,6 +1,5 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { TextInput } from 'react-native-paper';
-import PhoneInput from "react-native-phone-number-input";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 
@@ -14,6 +13,27 @@ export default function ContactSection({
   validationStatus
 }) {
   const [showPassword, setShowPassword] = useState(false);
+
+  // Format phone number for better display
+  const formatPhoneNumber = (text) => {
+    // Remove all non-numeric characters
+    const cleaned = text.replace(/\D/g, '');
+    
+    // Format as (XXX) XXX-XXXX
+    if (cleaned.length <= 3) {
+      return cleaned;
+    } else if (cleaned.length <= 6) {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3)}`;
+    } else {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
+    }
+  };
+
+  const handlePhoneChange = (text) => {
+    // Remove formatting for storage, keep only digits
+    const cleaned = text.replace(/\D/g, '');
+    setPhone(cleaned);
+  };
 
   return (
     <View style={styles.flexColGap10}>
@@ -55,19 +75,24 @@ export default function ContactSection({
         />
       </View>
       <View style={[
-        styles.phoneInput,
+        styles.phoneInputContainer,
         !validationStatus.phone && phone.length > 0 && styles.invalidInput
       ]}>
-        <PhoneInput
-          defaultValue={phone}
-          defaultCode="US"
-          layout="first"
-          onChangeText={(text) => {
-            setPhone(text);
-          }}
-          withDarkTheme
-          withShadow
-          autoFocus
+        <TextInput
+          mode="outlined"
+          label="Phone Number"
+          style={styles.phoneInput}
+          placeholder="(555) 123-4567"
+          value={formatPhoneNumber(phone)}
+          onChangeText={handlePhoneChange}
+          keyboardType="numeric"
+          maxLength={14} // (XXX) XXX-XXXX format
+          outlineColor={!validationStatus.phone && phone.length > 0 ? 'red' : undefined}
+          left={
+            <TextInput.Icon 
+              icon="phone" 
+            />
+          }
         />
       </View>
     </View>
@@ -93,14 +118,11 @@ const styles = StyleSheet.create({
   passwordInput: {
     width: '100%',
   },
+  phoneInputContainer: {
+    width: '100%',
+  },
   phoneInput: {
     width: '100%',
-    height: 50,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    fontSize: 18,
-    color: 'black',
   },
   invalidInput: {
     borderColor: 'red',
