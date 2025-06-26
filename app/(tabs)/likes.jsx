@@ -22,8 +22,12 @@ export default function LikesScreen() {
   const fetchLikes = async () => {
     try {
       setLoading(true);
+      console.log('🔄 Starting to fetch likes...');
       
       const likesData = await getUsersWhoLikedMe();
+      console.log('📊 Likes data received:', likesData);
+      console.log('📊 Number of likes:', likesData.length);
+      
       setLikes(likesData);
       console.log(`✅ Successfully loaded ${likesData.length} likes`);
 
@@ -142,12 +146,6 @@ export default function LikesScreen() {
           )}
         </View>
       </View>
-      
-      <View style={styles.likeIndicator}>
-        <Ionicons name="heart" size={24} color="hotpink" />
-        <Text style={styles.likedText}>Liked you</Text>
-      </View>
-
       <View style={styles.actionButtons}>
         <TouchableOpacity
           style={[styles.actionButton, styles.discardButton]}

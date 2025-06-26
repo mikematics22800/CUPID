@@ -1,13 +1,14 @@
 import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
-import { getMatchesForUser } from '../../lib/supabase';
+import { getMatchesForUser, unmatchUsers, supabase } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
 
 export default function MatchesScreen() {
   const router = useRouter();
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [processingUnmatch, setProcessingUnmatch] = useState(null);
 
   useEffect(() => {
     loadMatches();
@@ -29,34 +30,93 @@ export default function MatchesScreen() {
     }
   };
 
+  const handleUnmatch = async (userId, userName) => {
+    try {
+      setProcessingUnmatch(userId);
+      
+      // Get current user
+      const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !currentUser) {
+        throw new Error('User not authenticated');
+      }
+      
+      await unmatchUsers(currentUser.id, userId);
+      
+      // Remove from local state
+      setMatches(prevMatches => prevMatches.filter(match => match.id !== userId));
+      
+      Alert.alert('Unmatched', `You have unmatched with ${userName}`);
+      
+    } catch (error) {
+      console.error('❌ Error unmatching:', error);
+      Alert.alert('Error', 'Failed to unmatch. Please try again.');
+    } finally {
+      setProcessingUnmatch(null);
+    }
+  };
+
+  const confirmUnmatch = (userId, userName) => {
+    Alert.alert(
+      'Unmatch',
+      `Are you sure you want to unmatch with ${userName}? This action cannot be undone.`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Unmatch',
+          style: 'destructive',
+          onPress: () => handleUnmatch(userId, userName)
+        }
+      ]
+    );
+  };
+
   const renderMatch = ({ item }) => (
-    <TouchableOpacity style={styles.matchCard}>
-      <Image 
-        source={{ uri: item.photo || 'https://picsum.photos/150/150' }} 
-        style={styles.matchPhoto} 
-      />
-      <View style={styles.matchInfo}>
-        <Text style={styles.matchName}>{item.name}, {item.age}</Text>
-        <Text style={styles.matchBio} numberOfLines={2}>{item.bio}</Text>
-        {item.interests && item.interests.length > 0 && (
-          <View style={styles.interestsContainer}>
-            {item.interests.slice(0, 2).map((interest, index) => (
-              <Text key={index} style={styles.interestTag}>{interest}</Text>
-            ))}
-            {item.interests.length > 2 && (
-              <Text style={styles.interestTag}>+{item.interests.length - 2} more</Text>
-            )}
-          </View>
-        )}
-        <Text style={styles.lastMessage} numberOfLines={1}>{item.lastMessage}</Text>
+    <View style={styles.matchCard}>
+      <View style={styles.matchContent}>
+        <Image 
+          source={{ uri: item.photo || 'https://picsum.photos/150/150' }} 
+          style={styles.matchPhoto} 
+        />
+        <View style={styles.matchInfo}>
+          <Text style={styles.matchName}>{item.name}, {item.age}</Text>
+          <Text style={styles.matchBio} numberOfLines={2}>{item.bio}</Text>
+          {item.interests && item.interests.length > 0 && (
+            <View style={styles.interestsContainer}>
+              {item.interests.slice(0, 2).map((interest, index) => (
+                <Text key={index} style={styles.interestTag}>{interest}</Text>
+              ))}
+              {item.interests.length > 2 && (
+                <Text style={styles.interestTag}>+{item.interests.length - 2} more</Text>
+              )}
+            </View>
+          )}
+          <Text style={styles.lastMessage} numberOfLines={1}>{item.lastMessage}</Text>
+        </View>
       </View>
       <View style={styles.matchActions}>
         <Text style={styles.timestamp}>{item.timestamp}</Text>
-        <TouchableOpacity style={styles.messageButton}>
-          <Ionicons name="chatbubble-outline" size={20} color="hotpink" />
-        </TouchableOpacity>
+        <View style={styles.actionButtons}>
+          <TouchableOpacity style={styles.messageButton}>
+            <Ionicons name="chatbubble-outline" size={20} color="hotpink" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.unmatchButton, processingUnmatch === item.id && styles.processingButton]}
+            onPress={() => confirmUnmatch(item.id, item.name)}
+            disabled={processingUnmatch === item.id}
+          >
+            {processingUnmatch === item.id ? (
+              <Ionicons name="ellipsis-horizontal" size={20} color="white" />
+            ) : (
+              <Ionicons name="close" size={20} color="white" />
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 
   if (loading) {
@@ -164,8 +224,6 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     padding: 15,
     marginBottom: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -174,6 +232,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  matchContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
   },
   matchPhoto: {
     width: 60,
@@ -214,17 +277,32 @@ const styles = StyleSheet.create({
     color: '#999',
   },
   matchActions: {
-    alignItems: 'flex-end',
+    flexDirection: 'row',
     justifyContent: 'space-between',
-    height: 60,
+    alignItems: 'center',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
   },
   timestamp: {
     fontSize: 12,
     color: '#999',
   },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   messageButton: {
     padding: 8,
     backgroundColor: '#f8f8f8',
     borderRadius: 20,
+  },
+  unmatchButton: {
+    padding: 8,
+    backgroundColor: '#ff6b6b',
+    borderRadius: 20,
+  },
+  processingButton: {
+    backgroundColor: '#ccc',
   },
 });
