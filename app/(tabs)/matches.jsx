@@ -16,6 +16,7 @@ import {
   deleteMessage
 } from '../../lib/supabase';
 import { generateChatSuggestions, getSuggestionCategories } from '../../lib/chatSuggestions';
+import { detectViolentThreats, isUserBanned, getUserStrikes } from '../../lib/contentModeration';
 import { useRouter } from 'expo-router';
 
 export default function MatchesScreen() {
@@ -42,14 +43,26 @@ export default function MatchesScreen() {
   const [selectedCategory, setSelectedCategory] = useState('general');
   const [generatingSuggestions, setGeneratingSuggestions] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionsEnabled, setSuggestionsEnabled] = useState(false);
+
+  // Content moderation state
+  const [moderatingMessage, setModeratingMessage] = useState(false);
+  const [userStrikes, setUserStrikes] = useState(0);
+  const [userBanned, setUserBanned] = useState(false);
 
   const flatListRef = useRef(null);
 
+  // Get current user on component mount
   useEffect(() => {
+    getCurrentUser();
+  }, []);
+
+  useEffect(() => {
+    if (currentUserId) {
     loadMatches();
     loadChatRooms();
     setupChatSubscription();
-    getCurrentUser();
+    }
 
     return () => {
       if (chatSubscription) {
@@ -59,7 +72,7 @@ export default function MatchesScreen() {
         unsubscribeFromChannel(messageSubscription);
       }
     };
-  }, []);
+  }, [currentUserId]);
 
   const getCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -95,6 +108,11 @@ export default function MatchesScreen() {
   };
 
   const setupChatSubscription = () => {
+    // Unsubscribe from existing subscription if it exists
+    if (chatSubscription) {
+      unsubscribeFromChannel(chatSubscription);
+    }
+    
     const subscription = subscribeToChatRooms((newRoom, event) => {
       console.log(`🔔 Chat room ${event}:`, newRoom);
       loadChatRooms(); // Reload chat rooms when there are updates
@@ -162,6 +180,11 @@ export default function MatchesScreen() {
       // Mark messages as read
       await markMessagesAsRead(chatRoomId);
 
+      // Unsubscribe from existing message subscription if it exists
+      if (messageSubscription) {
+        unsubscribeFromChannel(messageSubscription);
+      }
+
       // Subscribe to real-time messages
       const subscription = subscribeToMessages(chatRoomId, (newMessage, event) => {
         if (event === 'update') {
@@ -211,6 +234,7 @@ export default function MatchesScreen() {
     setSuggestions([]);
     setSuggestionCategories([]);
     setShowSuggestions(false);
+    setSuggestionsEnabled(false);
     if (messageSubscription) {
       unsubscribeFromChannel(messageSubscription);
       setMessageSubscription(null);
@@ -218,15 +242,51 @@ export default function MatchesScreen() {
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !roomId || sending) return;
+    if (!newMessage.trim() || !roomId || sending || moderatingMessage) return;
 
     try {
-      setSending(true);
+      setModeratingMessage(true);
       const messageContent = newMessage.trim();
+      
+      // Check for violent threats BEFORE sending
+      const threatCheck = await detectViolentThreats(messageContent, currentUserId, selectedMatch.id);
+      
+      if (threatCheck.isThreat) {
+        console.log('🚨 Message blocked due to explicit violent content');
+        
+        // Update user strikes display
+        const userStrikeInfo = await getUserStrikes(currentUserId);
+        setUserStrikes(userStrikeInfo.strikes);
+        
+        if (threatCheck.isBanned) {
+          setUserBanned(true);
+          Alert.alert(
+            'Account Banned',
+            'Your account has been banned for using explicit violent language. You have reached 3 strikes.',
+            [{ text: 'OK', onPress: () => router.replace('/auth') }]
+          );
+          return;
+        } else {
+          const keywordList = threatCheck.detectedKeywords?.join(', ') || 'explicit violent language';
+          Alert.alert(
+            'Explicit Violent Language Detected',
+            `Your message was blocked for containing: "${keywordList}". You now have ${userStrikeInfo.strikes}/3 strikes. ${threatCheck.strikesRemaining} strikes remaining before ban.`,
+            [{ text: 'OK' }]
+          );
+          setNewMessage('');
+          setModeratingMessage(false);
+          return;
+        }
+      }
+      
+      // If no threats detected, proceed with sending
+      setSending(true);
       setNewMessage('');
 
+      // Create a temporary message ID that we can track
       const tempMessageId = `temp-${Date.now()}`;
       
+      // Optimistically add message to UI
       const tempMessage = {
         id: tempMessageId,
         content: messageContent,
@@ -234,14 +294,16 @@ export default function MatchesScreen() {
         sender_id: currentUserId,
         created_at: new Date().toISOString(),
         is_read: false,
-        sender_name: 'You',
-        isTemp: true,
+        sender_name: 'You', // Add sender name for consistency
+        isTemp: true, // Flag to identify temporary messages
       };
       
       setMessages(prev => [...prev, tempMessage]);
 
+      // Send message to server
       const sentMessage = await sendMessage(roomId, messageContent, 'text');
       
+      // Update the temporary message with the real message data
       setMessages(prev => 
         prev.map(msg => 
           msg.id === tempMessageId 
@@ -256,11 +318,29 @@ export default function MatchesScreen() {
 
     } catch (error) {
       console.error('❌ Error sending message:', error);
+      
+      // Check if the error is due to user being banned
+      if (error.message?.includes('banned') || error.message?.includes('strikes')) {
+        const isBanned = await isUserBanned(currentUserId);
+        if (isBanned) {
+          setUserBanned(true);
+          Alert.alert(
+            'Account Banned',
+            'Your account has been banned for using explicit violent language.',
+            [{ text: 'OK', onPress: () => router.replace('/auth') }]
+          );
+          return;
+        }
+      }
+      
       Alert.alert('Error', 'Failed to send message. Please try again.');
+      // Remove the temporary message on error
       setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
+      // Restore the message input
       setNewMessage(messageContent);
     } finally {
       setSending(false);
+      setModeratingMessage(false);
     }
   };
 
@@ -304,11 +384,47 @@ export default function MatchesScreen() {
   }, [messages, selectedMatch, currentUserId]);
 
   useEffect(() => {
-    if (selectedMatch && messages.length === 0) {
-      // Auto-generate opener suggestions for new conversations
+    if (selectedMatch && messages.length === 0 && suggestionsEnabled) {
+      // Auto-generate opener suggestions for new conversations only if enabled
       generateSuggestions('opener');
     }
-  }, [selectedMatch, messages.length]);
+  }, [selectedMatch, messages.length, suggestionsEnabled]);
+
+  // Check user ban status and load strikes
+  useEffect(() => {
+    const checkUserBanStatus = async () => {
+      if (currentUserId) {
+        try {
+          console.log(`🔍 Checking ban status for user: ${currentUserId}`);
+          const isBanned = await isUserBanned(currentUserId);
+          
+          if (isBanned) {
+            console.log(`🚫 User ${currentUserId} is banned, logging out`);
+            setUserBanned(true);
+            Alert.alert(
+              'Account Banned',
+              'Your account has been banned for using explicit violent language.',
+              [{ text: 'OK', onPress: () => router.replace('/auth') }]
+            );
+            return;
+          } else {
+            console.log(`✅ User ${currentUserId} is not banned`);
+          }
+          
+          // Load current strike count
+          const strikeInfo = await getUserStrikes(currentUserId);
+          setUserStrikes(strikeInfo.strikes);
+          console.log(`📊 User ${currentUserId} has ${strikeInfo.strikes} strikes`);
+          
+        } catch (error) {
+          console.error('❌ Error checking user ban status:', error);
+          // Don't log out user on error, just log the issue
+        }
+      }
+    };
+    
+    checkUserBanStatus();
+  }, [currentUserId]);
 
   const renderMessage = ({ item }) => {
     const isMyMessage = item.sender_id === currentUserId;
@@ -435,7 +551,7 @@ export default function MatchesScreen() {
   };
 
   const generateSuggestions = async (category = 'general') => {
-    if (!selectedMatch || !currentUserId || generatingSuggestions) return;
+    if (!selectedMatch || !currentUserId || generatingSuggestions || !suggestionsEnabled) return;
 
     try {
       setGeneratingSuggestions(true);
@@ -524,11 +640,17 @@ export default function MatchesScreen() {
             />
             <Text style={styles.chatHeaderName}>{selectedMatch.name}</Text>
           </View>
-          <TouchableOpacity style={styles.moreButton}>
-            <Ionicons name="ellipsis-vertical" size={24} color="#333" />
+          <TouchableOpacity 
+            style={styles.moreButton}
+            onPress={() => setSuggestionsEnabled(!suggestionsEnabled)}
+          >
+            <Ionicons 
+              name={suggestionsEnabled ? "bulb" : "bulb-outline"} 
+              size={24} 
+              color={suggestionsEnabled ? "hotpink" : "#333"} 
+            />
           </TouchableOpacity>
         </View>
-
         {/* Messages */}
         {chatLoading ? (
           <View style={styles.chatLoadingContainer}>
@@ -554,20 +676,20 @@ export default function MatchesScreen() {
             style={styles.textInput}
             value={newMessage}
             onChangeText={setNewMessage}
-            placeholder="Type a message..."
+            placeholder={moderatingMessage ? "Checking message..." : "Type a message..."}
             multiline
             maxLength={1000}
-            editable={!sending}
+            editable={!sending && !moderatingMessage}
           />
           <TouchableOpacity
             style={[
               styles.sendButton,
-              (!newMessage.trim() || sending) && styles.sendButtonDisabled
+              (!newMessage.trim() || sending || moderatingMessage) && styles.sendButtonDisabled
             ]}
             onPress={handleSendMessage}
-            disabled={!newMessage.trim() || sending}
+            disabled={!newMessage.trim() || sending || moderatingMessage}
           >
-            {sending ? (
+            {sending || moderatingMessage ? (
               <ActivityIndicator size="small" color="white" />
             ) : (
               <Ionicons name="send" size={20} color="white" />
@@ -575,8 +697,18 @@ export default function MatchesScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Strike Indicator */}
+        {userStrikes > 0 && (
+          <View style={styles.strikeIndicator}>
+            <Ionicons name="warning" size={16} color="#FF6B35" />
+            <Text style={styles.strikeText}>
+              {userStrikes}/3 strikes - {3 - userStrikes} remaining before ban
+            </Text>
+          </View>
+        )}
+
         {/* Chat Suggestions */}
-        {showSuggestions && (
+        {showSuggestions && suggestionsEnabled && (
           <View style={styles.suggestionsContainer}>
             {/* Suggestion Categories */}
             <ScrollView 
@@ -635,8 +767,8 @@ export default function MatchesScreen() {
           </View>
         )}
 
-        {/* Show Suggestions Button */}
-        {!showSuggestions && (
+        {/* Show Suggestions Button - Only show if suggestions are enabled */}
+        {!showSuggestions && suggestionsEnabled && (
           <TouchableOpacity
             style={styles.showSuggestionsButton}
             onPress={() => generateSuggestions(selectedCategory)}
@@ -692,7 +824,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    paddingTop: 60,
     backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
@@ -913,8 +1044,7 @@ const styles = StyleSheet.create({
   chatHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
-    paddingTop: 60,
+    padding: 10,
     backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
@@ -1071,5 +1201,53 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: 'hotpink',
+  },
+  strikeIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  strikeText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#666',
+  },
+  safetyNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  safetyNoticeText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#666',
+  },
+  suggestionsToggleButton: {
+    padding: 8,
+    backgroundColor: '#f8f8f8',
+    borderRadius: 20,
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  suggestionsToggleButtonActive: {
+    backgroundColor: 'hotpink',
+  },
+  suggestionsToggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    marginLeft: 8,
+  },
+  suggestionsToggleTextActive: {
+    color: 'white',
   },
 });
