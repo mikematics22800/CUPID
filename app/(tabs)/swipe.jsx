@@ -274,8 +274,8 @@ export default function Swipe() {
         </Animated.View>
 
         <Animated.View style={[styles.swipeIndicator, styles.rightIndicator, { opacity: rightOpacity }]}>
-          <Ionicons name="heart" size={60} color="#4cd964" />
-          <Text style={[styles.indicatorText, { color: '#4cd964' }]}>LIKE</Text>
+          <Ionicons name="heart" size={60} color="hotpink" />
+          <Text style={[styles.indicatorText, { color: 'hotpink' }]}>LIKE</Text>
         </Animated.View>
 
         <PanGestureHandler
