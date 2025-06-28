@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, Alert, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useRef } from 'react';
+import LottieView from 'lottie-react-native';
 import { 
   getMatchesForUser, 
   unmatchUsers, 
@@ -43,7 +44,7 @@ export default function MatchesScreen() {
   const [selectedCategory, setSelectedCategory] = useState('general');
   const [generatingSuggestions, setGeneratingSuggestions] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [suggestionsEnabled, setSuggestionsEnabled] = useState(false);
+  const [suggestionsEnabled, setSuggestionsEnabled] = useState(true);
 
   // Content moderation state
   const [moderatingMessage, setModeratingMessage] = useState(false);
@@ -234,7 +235,6 @@ export default function MatchesScreen() {
     setSuggestions([]);
     setSuggestionCategories([]);
     setShowSuggestions(false);
-    setSuggestionsEnabled(false);
     if (messageSubscription) {
       unsubscribeFromChannel(messageSubscription);
       setMessageSubscription(null);
@@ -384,11 +384,11 @@ export default function MatchesScreen() {
   }, [messages, selectedMatch, currentUserId]);
 
   useEffect(() => {
-    if (selectedMatch && messages.length === 0 && suggestionsEnabled) {
-      // Auto-generate opener suggestions for new conversations only if enabled
+    if (selectedMatch && messages.length === 0 && showSuggestions) {
+      // Auto-generate opener suggestions for new conversations when suggestions are shown
       generateSuggestions('opener');
     }
-  }, [selectedMatch, messages.length, suggestionsEnabled]);
+  }, [selectedMatch, messages.length, showSuggestions]);
 
   // Check user ban status and load strikes
   useEffect(() => {
@@ -551,7 +551,7 @@ export default function MatchesScreen() {
   };
 
   const generateSuggestions = async (category = 'general') => {
-    if (!selectedMatch || !currentUserId || generatingSuggestions || !suggestionsEnabled) return;
+    if (!selectedMatch || !currentUserId || generatingSuggestions) return;
 
     try {
       setGeneratingSuggestions(true);
@@ -568,7 +568,6 @@ export default function MatchesScreen() {
       );
       
       setSuggestions(newSuggestions);
-      setShowSuggestions(true);
       
     } catch (error) {
       console.error('❌ Error generating suggestions:', error);
@@ -581,6 +580,20 @@ export default function MatchesScreen() {
   const handleSuggestionSelect = (suggestion) => {
     setNewMessage(suggestion);
     setShowSuggestions(false);
+  };
+
+  const toggleSuggestions = async () => {
+    if (showSuggestions) {
+      // Hide suggestions
+      setShowSuggestions(false);
+    } else {
+      // Show suggestions and generate them
+      setShowSuggestions(true);
+      if (suggestions.length === 0) {
+        // Generate suggestions if none exist
+        await generateSuggestions(selectedCategory);
+      }
+    }
   };
 
   const updateSuggestionCategories = async () => {
@@ -615,7 +628,14 @@ export default function MatchesScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <Text>Loading matches...</Text>
+        <LottieView
+          source={require('../../assets/animations/heart.json')}
+          autoPlay
+          loop
+          style={styles.lottieAnimation}
+          speed={1}
+        />
+        <Text style={styles.loadingText}>Loading matches...</Text>
       </View>
     );
   }
@@ -642,12 +662,12 @@ export default function MatchesScreen() {
           </View>
           <TouchableOpacity 
             style={styles.moreButton}
-            onPress={() => setSuggestionsEnabled(!suggestionsEnabled)}
+            onPress={toggleSuggestions}
           >
             <Ionicons 
-              name={suggestionsEnabled ? "bulb" : "bulb-outline"} 
+              name={showSuggestions ? "bulb" : "bulb-outline"} 
               size={24} 
-              color={suggestionsEnabled ? "hotpink" : "#333"} 
+              color={showSuggestions ? "hotpink" : "#333"} 
             />
           </TouchableOpacity>
         </View>
@@ -708,7 +728,7 @@ export default function MatchesScreen() {
         )}
 
         {/* Chat Suggestions */}
-        {showSuggestions && suggestionsEnabled && (
+        {showSuggestions && (
           <View style={styles.suggestionsContainer}>
             {/* Suggestion Categories */}
             <ScrollView 
@@ -756,27 +776,7 @@ export default function MatchesScreen() {
                 ))}
               </View>
             )}
-
-            {/* Close Suggestions Button */}
-            <TouchableOpacity
-              style={styles.closeSuggestionsButton}
-              onPress={() => setShowSuggestions(false)}
-            >
-              <Ionicons name="close" size={20} color="#666" />
-            </TouchableOpacity>
           </View>
-        )}
-
-        {/* Show Suggestions Button - Only show if suggestions are enabled */}
-        {!showSuggestions && suggestionsEnabled && (
-          <TouchableOpacity
-            style={styles.showSuggestionsButton}
-            onPress={() => generateSuggestions(selectedCategory)}
-            disabled={generatingSuggestions}
-          >
-            <Ionicons name="bulb-outline" size={20} color="hotpink" />
-            <Text style={styles.showSuggestionsText}>Get Suggestions</Text>
-          </TouchableOpacity>
         )}
       </KeyboardAvoidingView>
     );
@@ -785,13 +785,6 @@ export default function MatchesScreen() {
   // Show matches list
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Matches</Text>
-        <TouchableOpacity onPress={() => { loadMatches(); loadChatRooms(); }} style={styles.refreshButton}>
-          <Ionicons name="refresh" size={24} color="hotpink" />
-        </TouchableOpacity>
-      </View>
-      
       {matches.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="heart-outline" size={64} color="#ccc" />
@@ -833,13 +826,20 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
   },
-  refreshButton: {
-    padding: 8,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  lottieAnimation: {
+    width: 200,
+    height: 200,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
   },
   emptyState: {
     flex: 1,
@@ -1128,8 +1128,12 @@ const styles = StyleSheet.create({
     maxHeight: 50,
   },
   categoryContainer: {
-    paddingHorizontal: 15,
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 10,
+    width: '100%',
   },
   categoryButton: {
     paddingHorizontal: 15,
@@ -1186,22 +1190,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
     borderRadius: 15,
   },
-  showSuggestionsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: '#f8f8f8',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    gap: 8,
-  },
-  showSuggestionsText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: 'hotpink',
-  },
   strikeIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1227,27 +1215,5 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 14,
     color: '#666',
-  },
-  suggestionsToggleButton: {
-    padding: 8,
-    backgroundColor: '#f8f8f8',
-    borderRadius: 20,
-    display: 'flex',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  suggestionsToggleButtonActive: {
-    backgroundColor: 'hotpink',
-  },
-  suggestionsToggleText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    marginLeft: 8,
-  },
-  suggestionsToggleTextActive: {
-    color: 'white',
   },
 });

@@ -5,7 +5,7 @@ import PersonalInfoSection from './PersonalInfoSection';
 import ContactSection from './ContactSection';
 import RegisterButton from './RegisterButton';
 
-export default function RegisterForm({ onBack }) {
+export default function RegisterForm({ onBack, onRegistrationSuccess }) {
   const [isFormValid, setIsFormValid] = useState(false);
   const [firstName, setFirstName] = useState('Michael');
   const [lastName, setLastName] = useState('Medina');
@@ -17,13 +17,16 @@ export default function RegisterForm({ onBack }) {
   const [loading, setLoading] = useState(false);
 
   const handleRegister = () => {
-    register(firstName, lastName, phone, email, sex, birthday, password, onBack, setLoading);
+    register(firstName, lastName, phone, email, sex, birthday, password, onBack, setLoading, onRegistrationSuccess);
   };
 
   useEffect(() => {
     // Email validation regex
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     
+    // Phone validation - ensure it has at least 10 digits
+    const cleanedPhone = phone.replace(/\D/g, '');
+    const isPhoneValid = cleanedPhone.length >= 10;
     
     // Check if all required fields are filled and valid
     const isValid = 
@@ -31,7 +34,7 @@ export default function RegisterForm({ onBack }) {
       lastName?.trim().length > 0 &&
       sex !== null &&
       email?.match(emailRegex) !== null &&
-      phone?.length >= 10 &&
+      isPhoneValid &&
       birthday instanceof Date &&
       password?.length >= 8; // Require at least 8 characters for password
 
@@ -41,13 +44,14 @@ export default function RegisterForm({ onBack }) {
   // Validation helper functions
   const getFieldValidationStatus = () => {
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    const cleanedPhone = phone.replace(/\D/g, '');
     
     return {
       firstName: firstName?.trim().length > 0,
       lastName: lastName?.trim().length > 0,
       sex: sex !== null,
       email: email?.match(emailRegex) !== null,
-      phone: phone?.length >= 10,
+      phone: cleanedPhone.length >= 10,
       birthday: birthday instanceof Date,
       password: password?.length >= 8
     };

@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Modal, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '../../lib/supabase';
+import { supabase, deleteUserAccount } from '../../lib/supabase';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
@@ -30,6 +30,69 @@ export default function SettingsScreen() {
     } catch (error) {
       Alert.alert('Error', error.message);
     }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This action cannot be undone and will permanently remove all your data including:\n\n• Your profile and photos\n• All your matches and conversations\n• Your likes and preferences\n\nThis action is irreversible.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete Account',
+          style: 'destructive',
+          onPress: () => {
+            // Second confirmation
+            Alert.alert(
+              'Final Confirmation',
+              'This is your final warning. Deleting your account will:\n\n• Permanently remove all your data\n• End all your matches and conversations\n• Cannot be undone\n\nAre you absolutely sure you want to proceed?',
+              [
+                {
+                  text: 'Cancel',
+                  style: 'cancel',
+                },
+                {
+                  text: 'Yes, Delete My Account',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      await deleteUserAccount();
+                      Alert.alert(
+                        'Account Deleted',
+                        'Your account data has been successfully removed from CUPID. You have been signed out. For complete account deletion from our systems, please contact support.',
+                        [
+                          {
+                            text: 'OK',
+                            onPress: () => {
+                              // Navigate to auth screen
+                              router.replace('/auth');
+                            }
+                          }
+                        ]
+                      );
+                    } catch (error) {
+                      console.error('Account deletion error:', error);
+                      Alert.alert(
+                        'Deletion Error',
+                        'There was an error deleting your account. Please try again or contact support.',
+                        [
+                          {
+                            text: 'OK'
+                          }
+                        ]
+                      );
+                    }
+                  }
+                }
+              ]
+            );
+          }
+        }
+      ]
+    );
   };
 
   const handleAgeRangePress = () => {
@@ -86,11 +149,11 @@ export default function SettingsScreen() {
     return `${distance} miles`;
   };
 
-  const SettingItem = ({ icon, title, value, onPress, showSwitch = false, displayValue = null }) => (
+  const SettingItem = ({ icon, title, value, onPress, showSwitch = false, displayValue = null, destructive = false }) => (
     <TouchableOpacity style={styles.settingItem} onPress={onPress}>
       <View style={styles.settingLeft}>
-        <Ionicons name={icon} size={24} color="#007AFF" style={styles.settingIcon} />
-        <Text style={styles.settingText}>{title}</Text>
+        <Ionicons name={icon} size={24} color={destructive ? "#ff3b30" : "#007AFF"} style={styles.settingIcon} />
+        <Text style={[styles.settingText, destructive && styles.destructiveText]}>{title}</Text>
       </View>
       {showSwitch ? (
         <Switch
@@ -128,6 +191,12 @@ export default function SettingsScreen() {
           icon="lock-closed-outline"
           title="Privacy"
           onPress={() => {}}
+        />
+              <SettingItem
+          icon="trash-outline"
+          title="Delete Account"
+          onPress={handleDeleteAccount}
+          destructive
         />
       </View>
 
@@ -481,5 +550,13 @@ const styles = StyleSheet.create({
   },
   picker: {
     width: '100%',
+  },
+  destructiveText: {
+    color: '#ff3b30',
+  },
+  separator: {
+    height: 1,
+    backgroundColor: '#eee',
+    marginVertical: 10,
   },
 });

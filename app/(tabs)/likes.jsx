@@ -11,6 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import LottieView from 'lottie-react-native';
 import { getUsersWhoLikedMe, handleUserLike, discardLike } from '../../lib/supabase';
 
 export default function LikesScreen() {
@@ -184,16 +185,19 @@ export default function LikesScreen() {
     <View style={styles.emptyState}>
       <Ionicons name="heart-outline" size={80} color="#ccc" />
       <Text style={styles.emptyTitle}>No likes yet</Text>
-      <Text style={styles.emptySubtitle}>
-        When someone likes your profile, they'll appear here
-      </Text>
     </View>
   );
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="hotpink" />
+        <LottieView
+          source={require('../../assets/animations/heart.json')}
+          autoPlay
+          loop
+          style={styles.lottieAnimation}
+          speed={1}
+        />
         <Text style={styles.loadingText}>Loading likes...</Text>
       </View>
     );
@@ -201,13 +205,6 @@ export default function LikesScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Likes</Text>
-        <Text style={styles.headerSubtitle}>
-          {likes.length} {likes.length === 1 ? 'person' : 'people'} liked you
-        </Text>
-      </View>
-      
       <FlatList
         data={likes}
         renderItem={renderLikeItem}
@@ -219,6 +216,11 @@ export default function LikesScreen() {
         ListEmptyComponent={renderEmptyState}
         showsVerticalScrollIndicator={false}
       />
+      <View style={styles.refreshContainer}>
+        <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
+          <Ionicons name="refresh" size={80} color="hotpink" />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -250,6 +252,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f8f9fa',
+  },
+  lottieAnimation: {
+    width: 200,
+    height: 200,
   },
   loadingText: {
     marginTop: 10,
@@ -391,5 +397,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 40,
     lineHeight: 24,
+  },
+  refreshContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingBottom: 10,
+  },
+  refreshButton: {
+    padding: 10,
   },
 }); 

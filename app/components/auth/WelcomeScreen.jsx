@@ -39,7 +39,7 @@ export default function WelcomeScreen({ onLoginPress, onRegisterPress }) {
           style={[styles.logo, { transform: [{ translateY }] }]} 
         />
         <Text style={styles.heroText}>
-          Chatbot and User Platform for Intelligent Dating 💘
+          Chatbot and User Platform for Intelligent Dating. 💘
         </Text>
       </View>
       <View style={styles.auth}>
@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexDirection: 'column',
     padding: 25,
-    gap: 50,
+    gap: 25,
   },
   logo: {
     height: 250,

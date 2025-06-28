@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, Animated, Dimensions, Image, TouchableOpacity, 
 import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
+import LottieView from 'lottie-react-native';
 import { supabase, handleUserLike, getSwipeProfiles } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
 
@@ -228,7 +229,14 @@ export default function Swipe() {
   if (loadingPhotos || loadingProfiles) {
     return (
       <View style={styles.loadingContainer}>
-        <Text>Loading...</Text>
+        <LottieView
+          source={require('../../assets/animations/heart.json')}
+          autoPlay
+          loop
+          style={styles.lottieAnimation}
+          speed={1}
+        />
+        <Text style={styles.loadingText}>Loading profiles...</Text>
       </View>
     );
   }
@@ -417,6 +425,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  lottieAnimation: {
+    width: 200,
+    height: 200,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
   },
   insufficientPhotosContainer: {
     flex: 1,

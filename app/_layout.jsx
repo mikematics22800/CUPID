@@ -4,6 +4,7 @@ import { View, ActivityIndicator } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PaperProvider, MD3LightTheme } from 'react-native-paper';
 import { supabase } from '../lib/supabase';
+'../assets/images/heart.lottie';
 
 export default function Layout() {
   const router = useRouter();

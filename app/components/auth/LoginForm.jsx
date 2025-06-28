@@ -1,15 +1,13 @@
 import { useState, useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 import { TextInput } from 'react-native-paper';
-import { signInWithEmail, signInWithPhone } from '../../../lib/supabase';
+import { signInWithEmail } from '../../../lib/supabase';
 
 export default function LoginForm({ onBack }) {
   const [email, setEmail] = useState('michaeljmedina22800@gmail.com');
   const [password, setPassword] = useState('D7452m61457!');
-  const [phoneNumber, setPhoneNumber] = useState('5617159065');
   const [loading, setLoading] = useState(false);
   const [isEmailValid, setIsEmailValid] = useState(false);
-  const [isPhoneValid, setIsPhoneValid] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const handleSignInWithEmail = async () => {
@@ -17,43 +15,11 @@ export default function LoginForm({ onBack }) {
     await signInWithEmail(email, password, setLoading);
   };
 
-  const handleSignInWithPhone = async () => {
-    setLoading(true);
-    await signInWithPhone(phoneNumber);
-    setLoading(false);
-  };  
-
-  // Format phone number for better display
-  const formatPhoneNumber = (text) => {
-    // Remove all non-numeric characters
-    const cleaned = text.replace(/\D/g, '');
-    
-    // Format as (XXX) XXX-XXXX
-    if (cleaned.length <= 3) {
-      return cleaned;
-    } else if (cleaned.length <= 6) {
-      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3)}`;
-    } else {
-      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
-    }
-  };
-
-  const handlePhoneChange = (text) => {
-    // Remove formatting for storage, keep only digits
-    const cleaned = text.replace(/\D/g, '');
-    setPhoneNumber(cleaned);
-  };
-
   useEffect(() => {
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     setIsEmailValid(emailRegex.test(email) && password.length >= 6);
   }, [email, password]);
-
-  useEffect(() => {
-    // Phone validation
-    setIsPhoneValid(phoneNumber.length >= 10);
-  }, [phoneNumber]);
 
   return (
     <View style={styles.form}>
@@ -94,32 +60,42 @@ export default function LoginForm({ onBack }) {
         </TouchableOpacity>
       </View>
       <View style={styles.flexColGap10}>
-        <View style={styles.phoneInputContainer}>
-          <TextInput
+        <TextInput
+          mode="outlined"
+          label="Phone Number"
+          style={styles.emailInput} 
+          placeholder="Enter your phone number" 
+          onChangeText={setEmail}
+          value={email}
+          keyboardType="phone-pad"
+          autoCapitalize="none"
+        />
+        <View style={styles.passwordInputContainer}>
+          <TextInput 
             mode="outlined"
-            label="Phone Number"
-            style={styles.phoneInput}
-            placeholder="(555) 123-4567"
-            value={formatPhoneNumber(phoneNumber)}
-            onChangeText={handlePhoneChange}
-            keyboardType="numeric"
-            maxLength={14} // (XXX) XXX-XXXX format
-            left={
+            label="Password"
+            placeholder="Enter your password" 
+            onChangeText={setPassword} 
+            secureTextEntry={!showPassword} 
+            style={styles.passwordInput}
+            value={password}
+            right={
               <TextInput.Icon 
-                icon="phone" 
+                icon={showPassword ? "eye-off" : "eye"} 
+                onPress={() => setShowPassword(!showPassword)}
               />
             }
           />
         </View>
         <TouchableOpacity 
-          style={[styles.button, !isPhoneValid && styles.disabledButton]} 
-          onPress={handleSignInWithPhone}
-          disabled={!isPhoneValid}
+          style={[styles.button, !isEmailValid && styles.disabledButton]} 
+          onPress={handleSignInWithEmail}
+          disabled={!isEmailValid}
         >
           <Text style={styles.buttonText}>Login with Phone</Text>
         </TouchableOpacity>
       </View>
-        <TouchableOpacity style={styles.button} onPress={onBack}>
+      <TouchableOpacity style={styles.button} onPress={onBack}>
         <Text style={styles.buttonText}>Back</Text>
       </TouchableOpacity>
     </View>
@@ -151,12 +127,6 @@ const styles = StyleSheet.create({
   passwordInput: {
     width: '100%',
   },
-  phoneInputContainer: {
-    width: '100%',
-  },
-  phoneInput: {
-    width: '100%',
-  },
   button: {
     width: '100%',
     height: 50,
@@ -173,5 +143,13 @@ const styles = StyleSheet.create({
   disabledButton: {
     backgroundColor: '#ffb6c1',
     opacity: 0.7,
+  },
+  infoSection: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  infoText: {
+    color: 'gray',
+    fontSize: 12,
   },
 }); 

@@ -80,7 +80,7 @@ export default function ContactSection({
       ]}>
         <TextInput
           mode="outlined"
-          label="Phone Number"
+          label="Phone Number (Required for verification)"
           style={styles.phoneInput}
           placeholder="(555) 123-4567"
           value={formatPhoneNumber(phone)}
@@ -94,6 +94,11 @@ export default function ContactSection({
             />
           }
         />
+        {phone.length > 0 && !validationStatus.phone && (
+          <Text style={styles.errorText}>
+            Please enter a valid 10-digit phone number
+          </Text>
+        )}
       </View>
     </View>
   );
@@ -127,5 +132,10 @@ const styles = StyleSheet.create({
   invalidInput: {
     borderColor: 'red',
     borderWidth: 1,
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginTop: 5,
   },
 }); 
