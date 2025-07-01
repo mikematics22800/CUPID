@@ -1,9 +1,14 @@
-import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import LottieView from 'lottie-react-native';
 
 export default function Index() {
   return (
     <View style={styles.index}>
-      <ActivityIndicator size="large" color="#0000ff" />
+      <LottieView
+        source={require('../assets/animations/heart.json')}
+        autoPlay
+        loop
+      />
     </View>
   );
 }

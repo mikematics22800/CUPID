@@ -4,6 +4,10 @@
 ALTER TABLE users 
 ADD COLUMN IF NOT EXISTS strikes INTEGER DEFAULT 0;
 
+-- Add images column to users table to store image URLs
+ALTER TABLE users 
+ADD COLUMN IF NOT EXISTS images TEXT[] DEFAULT '{}';
+
 -- Create banned_users table with simplified structure
 CREATE TABLE IF NOT EXISTS banned_users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -1,142 +1,45 @@
 import { StyleSheet, View, Text, ScrollView, Alert, TouchableOpacity } from 'react-native';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import LottieView from 'lottie-react-native';
 import { supabase } from '../../lib/supabase';
 import { uploadPhotosToStorage } from '../../lib/supabase';
 import PhotoSection from '../components/auth/PhotoSection';
 import BioSection from '../components/auth/BioSection';
 import { useRouter } from 'expo-router';
+import { useProfile } from '../contexts/ProfileContext';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { 
+    user, 
+    profile, 
+    loading, 
+    photos, 
+    bio, 
+    interests, 
+    setBio, 
+    setInterests, 
+    setPhotos,
+    updateProfile,
+    updatePhotos,
+    removePhoto,
+    hasEnoughPhotos,
+    hasBio,
+    hasCompletedProfile,
+    refreshProfile
+  } = useProfile();
   const [saving, setSaving] = useState(false);
-  
-  // Form state
-  const [bio, setBio] = useState('');
-  const [interests, setInterests] = useState([]);
-  const [photos, setPhotos] = useState([]);
 
-  useEffect(() => {
-    loadUserProfile();
-  }, []);
-
-  const loadUserProfile = async () => {
-    try {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (!currentUser) {
-        router.replace('/auth');
-        return;
-      }
-      
-      setUser(currentUser);
-      console.log('Loading profile for user:', currentUser.id);
-
-      // Load profile data (excluding photos since they're in storage)
-      const { data: profileData, error } = await supabase
-        .from('users')
-        .select('id, bio, interests, name, birthday, sex, email, phone')
-        .eq('id', currentUser.id)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error loading profile:', error);
-        Alert.alert('Error', 'Failed to load profile data.');
-        return;
-      }
-
-      if (profileData) {
-        console.log('Profile data loaded:', profileData);
-        setProfile(profileData);
-        
-        // Load existing bio
-        setBio(profileData.bio || '');
-        console.log('Bio loaded:', profileData.bio || '');
-        
-        // Load existing interests
-        setInterests(profileData.interests || []);
-        console.log('Interests loaded:', profileData.interests || []);
-        
-        // Load photos from storage instead of database
-        await loadPhotosFromStorage(currentUser.id);
-      } else {
-        console.log('No profile data found, starting with empty profile');
-        setBio('');
-        setInterests([]);
-        setPhotos([]);
-      }
-    } catch (error) {
-      console.error('Error in loadUserProfile:', error);
-      Alert.alert('Error', 'Failed to load profile data.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadPhotosFromStorage = async (userId) => {
-    try {
-      console.log('Loading photos from storage for user:', userId);
-      
-      // List files in user's storage folder
-      const { data: files, error } = await supabase.storage
-        .from('users')
-        .list(`${userId}/`, {
-          limit: 100,
-          offset: 0,
-          sortBy: { column: 'name', order: 'asc' }
-        });
-
-      if (error) {
-        console.error('Error listing photos from storage:', error);
-        setPhotos([]);
-        return;
-      }
-
-      if (files && files.length > 0) {
-        // Convert storage files to photo objects
-        const photoObjects = files
-          .filter(file => file.name.match(/\.(jpg|jpeg|png|webp)$/i))
-          .map((file, index) => ({
-            id: `storage-${index}`,
-            uri: supabase.storage.from('users').getPublicUrl(`${userId}/${file.name}`).data.publicUrl,
-            isExisting: true,
-            fileName: file.name
-          }));
-        
-        setPhotos(photoObjects);
-        console.log('Photos loaded from storage:', photoObjects.length, 'photos');
-      } else {
-        console.log('No photos found in storage');
-        setPhotos([]);
-      }
-    } catch (error) {
-      console.error('Error loading photos from storage:', error);
-      setPhotos([]);
-    }
-  };
+  // Profile data is now loaded by the context
+  // No need for useEffect or loadUserProfile/loadPhotosFromStorage functions
 
   const handlePhotoRemove = async (photo) => {
     try {
-      if (photo.isExisting && photo.fileName) {
-        // Remove from storage
-        console.log('Removing photo from storage:', photo.fileName);
-        const { error } = await supabase.storage
-          .from('users')
-          .remove([`${user.id}/${photo.fileName}`]);
-
-        if (error) {
-          console.error('Error removing photo from storage:', error);
-          Alert.alert('Error', 'Failed to remove photo from storage.');
-          return;
-        }
-        
-        console.log('Photo removed from storage successfully');
+      const success = await removePhoto(photo);
+      if (!success) {
+        Alert.alert('Error', 'Failed to remove photo. Please try again.');
       }
-      
-      // Remove from local state
-      setPhotos(prev => prev.filter(p => p.id !== photo.id));
     } catch (error) {
       console.error('Error in handlePhotoRemove:', error);
       Alert.alert('Error', 'Failed to remove photo. Please try again.');
@@ -145,58 +48,57 @@ export default function ProfileScreen() {
 
   const saveProfile = async () => {
     try {
+      console.log('SaveProfile - Total photos:', photos.length);
+      console.log('SaveProfile - Photos:', photos);
+      
+      if (!hasEnoughPhotos()) {
+        Alert.alert('Not Enough Photos', 'Please upload at least 3 photos to save your profile.');
+        return;
+      }
+
+      if (!hasBio()) {
+        Alert.alert('Missing Bio', 'Please add a bio to save your profile.');
+        return;
+      }
       setSaving(true);
 
       // Upload new photos (only non-existing ones)
       const newPhotos = photos.filter(photo => !photo.isExisting);
-      let photoUrls = [];
+      let newlyUploadedUrls = [];
       
       if (newPhotos.length > 0) {
-        photoUrls = await uploadPhotosToStorage(newPhotos, user.id);
+        newlyUploadedUrls = await uploadPhotosToStorage(newPhotos, user.id);
+        console.log('SaveProfile - Newly uploaded URLs:', newlyUploadedUrls);
       }
 
-      // Check if profile exists first
-      const { data: existingProfile, error: checkError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('id', user.id)
-        .single();
+      // Build the complete images array:
+      // 1. Get existing photo URLs (photos that were already in storage/database)
+      const existingPhotoUrls = photos
+        .filter(photo => photo.isExisting && photo.uri && photo.uri.startsWith('http'))
+        .map(photo => photo.uri);
+      
+      // 2. Add newly uploaded URLs
+      const allPhotoUrls = [...existingPhotoUrls, ...newlyUploadedUrls];
 
-      if (checkError && checkError.code !== 'PGRST116') {
-        console.error('Error checking profile existence:', checkError);
-        throw checkError;
-      }
+      console.log('SaveProfile - Existing photo URLs:', existingPhotoUrls);
+      console.log('SaveProfile - Newly uploaded URLs:', newlyUploadedUrls);
+      console.log('SaveProfile - Complete images array:', allPhotoUrls);
+      console.log('SaveProfile - Total count:', allPhotoUrls.length);
 
-      let dbError;
-      if (existingProfile) {
-        // Profile exists, use UPDATE
-        const { error } = await supabase
-          .from('users')
-          .update({
-            bio: bio,
-            interests: interests,
-          })
-          .eq('id', user.id);
-        dbError = error;
+      // Use context method to update profile
+      const success = await updateProfile({
+        bio: bio,
+        interests: interests,
+        images: allPhotoUrls,
+      });
+
+      if (success) {
+        console.log('✅ Profile updated successfully with images array:', allPhotoUrls);
+        Alert.alert('Success', 'Profile updated successfully!');
+        router.back();
       } else {
-        // Profile doesn't exist, use INSERT
-        const { error } = await supabase
-          .from('users')
-          .insert({
-            id: user.id,
-            bio: bio,
-            interests: interests,
-          });
-        dbError = error;
+        throw new Error('Failed to update profile');
       }
-
-      if (dbError) {
-        console.error('Error updating profile:', dbError);
-        throw dbError;
-      }
-
-      Alert.alert('Success', 'Profile updated successfully!');
-      router.back();
     } catch (error) {
       console.error('Error saving profile:', error);
       Alert.alert('Error', 'Failed to save profile. Please try again.');
@@ -208,7 +110,13 @@ export default function ProfileScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <Text>Loading profile...</Text>
+        <LottieView
+          source={require('../../assets/animations/heart.json')}
+          autoPlay
+          loop
+          style={styles.lottieAnimation}
+          speed={1}
+        />
       </View>
     );
   }
@@ -286,6 +194,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#f5f5f5',
   },
   header: {
     flexDirection: 'row',
@@ -352,5 +261,9 @@ const styles = StyleSheet.create({
   profileValue: {
     color: '#222',
     fontSize: 15,
+  },
+  lottieAnimation: {
+    width: 200,
+    height: 200,
   },
 }); 

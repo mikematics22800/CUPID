@@ -1,5 +1,5 @@
-import { promptGemini } from './gemini.js';
-import { getUserProfileData } from './supabase.js';
+import { promptGemini } from '../../../lib/gemini.js';
+import { getUserProfileData } from '../../../lib/supabase.js';
 
 // Function to generate chat suggestions using Gemini AI
 export const generateChatSuggestions = async (currentUserId, matchUserId, recentMessages = [], suggestionType = 'general') => {

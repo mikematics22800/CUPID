@@ -1,24 +1,53 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   Image,
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
   Alert,
+  Animated,
+  Dimensions,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import LottieView from 'lottie-react-native';
 import { getUsersWhoLikedMe, handleUserLike, discardLike } from '../../lib/supabase';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const SWIPE_THRESHOLD = 120;
 
 export default function LikesScreen() {
   const [likes, setLikes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [processingAction, setProcessingAction] = useState(null);
+  const [currentLikeIndex, setCurrentLikeIndex] = useState(0);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+
+  // Animation values
+  const position = useRef(new Animated.ValueXY()).current;
+  const rotate = position.x.interpolate({
+    inputRange: [-SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2],
+    outputRange: ['-10deg', '0deg', '10deg'],
+    extrapolate: 'clamp'
+  });
+
+  // Opacity for swipe indicators
+  const leftOpacity = position.x.interpolate({
+    inputRange: [-SCREEN_WIDTH / 2, 0],
+    outputRange: [1, 0],
+    extrapolate: 'clamp'
+  });
+
+  const rightOpacity = position.x.interpolate({
+    inputRange: [0, SCREEN_WIDTH / 2],
+    outputRange: [0, 1],
+    extrapolate: 'clamp'
+  });
 
   const fetchLikes = async () => {
     try {
@@ -30,6 +59,8 @@ export default function LikesScreen() {
       console.log('📊 Number of likes:', likesData.length);
       
       setLikes(likesData);
+      setCurrentLikeIndex(0);
+      setCurrentPhotoIndex(0);
       console.log(`✅ Successfully loaded ${likesData.length} likes`);
 
     } catch (error) {
@@ -50,143 +81,143 @@ export default function LikesScreen() {
     fetchLikes();
   };
 
-  const handleLikeBack = async (userId) => {
-    try {
-      setProcessingAction(userId);
-      
-      const result = await handleUserLike(userId);
-      
-      if (result.success) {
-        if (result.isMatch) {
-          // Remove from likes list immediately since they're now a match
-          setLikes(prevLikes => prevLikes.filter(like => like.id !== userId));
+  const handleSwipe = async (direction) => {
+    if (!likes[currentLikeIndex]) return;
+    
+    const currentLike = likes[currentLikeIndex];
+    
+    // Animate card based on direction
+    const toValue = {
+      x: direction === 'left' ? -SCREEN_WIDTH * 1.5 : 
+         direction === 'right' ? SCREEN_WIDTH * 1.5 : 0,
+      y: 0
+    };
+
+    Animated.spring(position, {
+      toValue,
+      useNativeDriver: true,
+      tension: 40,
+      friction: 7
+    }).start(() => {
+      // Reset position and show next like
+      position.setValue({ x: 0, y: 0 });
+      loadNextLike();
+    });
+    
+    // Handle the swipe action
+    switch (direction) {
+      case 'left':
+        console.log(`Passed on like from ${currentLike.id}`);
+        try {
+          setProcessingAction(currentLike.id);
+          const result = await discardLike(currentLike.id);
           
-          Alert.alert(
-            '🎉 It\'s a Match!',
-            'You and this person have liked each other! They\'ll now appear in your matches.',
-            [
-              {
-                text: 'View Matches',
-                onPress: () => {
-                  // Navigate to matches tab
-                  // You could add navigation here if needed
-                }
-              },
-              {
-                text: 'Continue',
-                style: 'cancel'
-              }
-            ]
-          );
-        } else {
-          // Remove from likes list since they're no longer just a "like"
-          setLikes(prevLikes => prevLikes.filter(like => like.id !== userId));
-          Alert.alert('Success', 'You liked them back!');
+          if (result.success) {
+            // Remove from likes list
+            setLikes(prevLikes => prevLikes.filter(like => like.id !== currentLike.id));
+            
+            if (!result.alreadyDiscarded) {
+              Alert.alert('Passed', 'You passed on this like.');
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error discarding like:', error);
+          Alert.alert('Error', 'Failed to discard like. Please try again.');
+        } finally {
+          setProcessingAction(null);
         }
-      }
-    } catch (error) {
-      console.error('❌ Error liking back:', error);
-      Alert.alert('Error', 'Failed to like back. Please try again.');
-    } finally {
-      setProcessingAction(null);
+        break;
+      case 'right':
+        console.log(`Liked back ${currentLike.id}`);
+        try {
+          setProcessingAction(currentLike.id);
+          const result = await handleUserLike(currentLike.id);
+          
+          if (result.success) {
+            if (result.isMatch) {
+              // Remove from likes list immediately since they're now a match
+              setLikes(prevLikes => prevLikes.filter(like => like.id !== currentLike.id));
+              
+              Alert.alert(
+                '🎉 It\'s a Match!',
+                'You and this person have liked each other! They\'ll now appear in your matches.',
+                [
+                  {
+                    text: 'View Matches',
+                    onPress: () => {
+                      // Navigate to matches tab
+                      // You could add navigation here if needed
+                    }
+                  },
+                  {
+                    text: 'Continue',
+                    style: 'cancel'
+                  }
+                ]
+              );
+            } else {
+              // Remove from likes list since they're no longer just a "like"
+              setLikes(prevLikes => prevLikes.filter(like => like.id !== currentLike.id));
+              Alert.alert('Success', 'You liked them back!');
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error liking back:', error);
+          Alert.alert('Error', 'Failed to like back. Please try again.');
+        } finally {
+          setProcessingAction(null);
+        }
+        break;
     }
   };
 
-  const handleDiscard = async (userId) => {
-    try {
-      setProcessingAction(userId);
-      
-      const result = await discardLike(userId);
-      
-      if (result.success) {
-        // Remove from likes list
-        setLikes(prevLikes => prevLikes.filter(like => like.id !== userId));
-        
-        if (!result.alreadyDiscarded) {
-          Alert.alert('Discarded', 'You passed on this like.');
-        }
-      }
-    } catch (error) {
-      console.error('❌ Error discarding like:', error);
-      Alert.alert('Error', 'Failed to discard like. Please try again.');
-    } finally {
-      setProcessingAction(null);
+  const loadNextLike = () => {
+    const nextIndex = currentLikeIndex + 1;
+    
+    if (nextIndex < likes.length) {
+      setCurrentLikeIndex(nextIndex);
+      setCurrentPhotoIndex(0); // Reset photo index for new like
+    } else {
+      // No more likes, show empty state
+      setCurrentLikeIndex(-1);
     }
   };
 
-  const renderLikeItem = ({ item }) => (
-    <View style={styles.likeItem}>
-      <View style={styles.userInfo}>
-        <View style={styles.photoContainer}>
-          {item.image ? (
-            <Image source={{ uri: item.image }} style={styles.userPhoto} />
-          ) : (
-            <View style={styles.placeholderPhoto}>
-              <Ionicons name="person" size={40} color="#ccc" />
-            </View>
-          )}
-        </View>
-        <View style={styles.userDetails}>
-          <Text style={styles.userName}>
-            {item.name}, {item.age}
-          </Text>
-          <Text style={styles.userBio} numberOfLines={2}>
-            {item.bio}
-          </Text>
-          {item.interests && item.interests.length > 0 && (
-            <View style={styles.interestsContainer}>
-              {item.interests.slice(0, 3).map((interest, index) => (
-                <View key={index} style={styles.interestTag}>
-                  <Text style={styles.interestText}>{interest}</Text>
-                </View>
-              ))}
-              {item.interests.length > 3 && (
-                <Text style={styles.moreInterests}>+{item.interests.length - 3} more</Text>
-              )}
-            </View>
-          )}
-        </View>
-      </View>
-      <View style={styles.actionButtons}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.discardButton]}
-          onPress={() => handleDiscard(item.id)}
-          disabled={processingAction === item.id}
-        >
-          {processingAction === item.id ? (
-            <ActivityIndicator size="small" color="white" />
-          ) : (
-            <>
-              <Ionicons name="close" size={20} color="white" />
-              <Text style={styles.actionButtonText}>Pass</Text>
-            </>
-          )}
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.actionButton, styles.likeBackButton]}
-          onPress={() => handleLikeBack(item.id)}
-          disabled={processingAction === item.id}
-        >
-          {processingAction === item.id ? (
-            <ActivityIndicator size="small" color="white" />
-          ) : (
-            <>
-              <Ionicons name="heart" size={20} color="white" />
-              <Text style={styles.actionButtonText}>Like Back</Text>
-            </>
-          )}
-        </TouchableOpacity>
-      </View>
-    </View>
+  const onGestureEvent = Animated.event(
+    [{ nativeEvent: { translationX: position.x, translationY: position.y } }],
+    { useNativeDriver: true }
   );
 
-  const renderEmptyState = () => (
-    <View style={styles.emptyState}>
-      <Ionicons name="heart-outline" size={80} color="#ccc" />
-      <Text style={styles.emptyTitle}>No likes yet</Text>
-    </View>
-  );
+  const onHandlerStateChange = (event) => {
+    if (event.nativeEvent.state === State.END) {
+      const { translationX } = event.nativeEvent;
+      
+      // Determine swipe direction based on distance
+      const absX = Math.abs(translationX);
+      
+      if (absX > SWIPE_THRESHOLD) {
+        // Horizontal swipe
+        const direction = translationX > 0 ? 'right' : 'left';
+        handleSwipe(direction);
+      } else {
+        // Reset position if swipe wasn't long enough
+        Animated.spring(position, {
+          toValue: { x: 0, y: 0 },
+          useNativeDriver: true,
+          tension: 40,
+          friction: 7
+        }).start();
+      }
+    }
+  };
+
+  const cardStyle = {
+    transform: [
+      { translateX: position.x },
+      { translateY: position.y },
+      { rotate }
+    ]
+  };
 
   if (loading) {
     return (
@@ -198,28 +229,168 @@ export default function LikesScreen() {
           style={styles.lottieAnimation}
           speed={1}
         />
-        <Text style={styles.loadingText}>Loading likes...</Text>
       </View>
     );
   }
 
+  if (likes.length === 0) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.emptyState}>
+          <Ionicons name="heart-outline" size={80} color="hotpink" />
+          <Text style={styles.emptyTitle}>No likes yet</Text>
+          <Text style={styles.emptySubtitle}>When someone likes you, they'll appear here!</Text>
+          <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
+            <Ionicons name="refresh" size={60} color="hotpink" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  if (currentLikeIndex >= likes.length) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.emptyState}>
+          <Ionicons name="heart-outline" size={80} color="hotpink" />
+          <Text style={styles.emptyTitle}>No more likes</Text>
+          <Text style={styles.emptySubtitle}>You've gone through all your likes!</Text>
+          <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
+            <Ionicons name="refresh" size={60} color="hotpink" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  const currentLike = likes[currentLikeIndex];
+
   return (
     <View style={styles.container}>
-      <FlatList
-        data={likes}
-        renderItem={renderLikeItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContainer}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        ListEmptyComponent={renderEmptyState}
-        showsVerticalScrollIndicator={false}
-      />
-      <View style={styles.refreshContainer}>
-        <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
-          <Ionicons name="refresh" size={80} color="hotpink" />
-        </TouchableOpacity>
+      <View style={styles.cardContainer}>
+        {/* Swipe Indicators */}
+        <Animated.View style={[styles.swipeIndicator, styles.leftIndicator, { opacity: leftOpacity }]}>
+          <Ionicons name="close-circle" size={60} color="#ff0000" />
+          <Text style={[styles.indicatorText, { color: '#ff0000' }]}>PASS</Text>
+        </Animated.View>
+
+        <Animated.View style={[styles.swipeIndicator, styles.rightIndicator, { opacity: rightOpacity }]}>
+          <Ionicons name="heart" size={60} color="hotpink" />
+          <Text style={[styles.indicatorText, { color: 'hotpink' }]}>LIKE BACK</Text>
+        </Animated.View>
+
+        <PanGestureHandler
+          onGestureEvent={onGestureEvent}
+          onHandlerStateChange={onHandlerStateChange}
+          enabled={!processingAction}
+        >
+          <Animated.View style={[styles.likeCard, cardStyle]}>
+            {/* Photo Carousel */}
+            <View style={styles.photoCarouselContainer}>
+              {currentLike.images && currentLike.images.length > 0 ? (
+                <>
+                  <ScrollView
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    onMomentumScrollEnd={(event) => {
+                      const slideIndex = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+                      setCurrentPhotoIndex(slideIndex);
+                    }}
+                    style={styles.photoScrollView}
+                  >
+                    {currentLike.images.map((image, index) => (
+                      <View key={index} style={styles.photoSlide}>
+                        <Image 
+                          source={{ uri: image }} 
+                          style={styles.profileImage}
+                          resizeMode="cover"
+                          onError={() => {
+                            console.log('Failed to load image for like:', currentLike.id, 'photo:', index);
+                          }}
+                        />
+                      </View>
+                    ))}
+                  </ScrollView>
+                  
+                  {/* Photo Dots Indicator */}
+                  {currentLike.images.length > 1 && (
+                    <View style={styles.dotsContainer}>
+                      {currentLike.images.map((_, index) => (
+                        <View
+                          key={index}
+                          style={[
+                            styles.dot,
+                            index === currentPhotoIndex && styles.activeDot
+                          ]}
+                        />
+                      ))}
+                    </View>
+                  )}
+                  
+                  {/* Photo Counter */}
+                  {currentLike.images.length > 1 && (
+                    <View style={styles.photoCounter}>
+                      <Text style={styles.photoCounterText}>
+                        {currentPhotoIndex + 1} / {currentLike.images.length}
+                      </Text>
+                    </View>
+                  )}
+                </>
+              ) : currentLike.image ? (
+                // Fallback for single image
+                <Image 
+                  source={{ uri: currentLike.image }} 
+                  style={styles.profileImage}
+                  resizeMode="cover"
+                  onError={() => {
+                    console.log('Failed to load image for like:', currentLike.id);
+                  }}
+                />
+              ) : (
+                <View style={styles.profileImagePlaceholder}>
+                  <Ionicons name="person" size={80} color="#ccc" />
+                  <Text style={styles.placeholderText}>No Photo Available</Text>
+                </View>
+              )}
+            </View>
+            
+            <ScrollView 
+              style={styles.scrollContainer}
+              showsVerticalScrollIndicator={false}
+              nestedScrollEnabled={true}
+            >
+              <View style={styles.profileInfo}>
+                <Text style={styles.name}>{currentLike.name}, {currentLike.age}</Text>
+                <Text style={styles.bio}>{currentLike.bio}</Text>
+                {currentLike.interests && currentLike.interests.length > 0 && (
+                  <View style={styles.interestsContainer}>
+                    <View style={styles.interestsList}>
+                      {currentLike.interests.map((interest, index) => (
+                        <Text key={index} style={styles.interestTag}>{interest}</Text>
+                      ))}
+                    </View>
+                  </View>
+                )}
+              </View>
+            </ScrollView>
+
+            {/* Processing indicator */}
+            {processingAction === currentLike.id && (
+              <View style={styles.processingOverlay}>
+                <ActivityIndicator size="large" color="hotpink" />
+                <Text style={styles.processingText}>Processing...</Text>
+              </View>
+            )}
+          </Animated.View>
+        </PanGestureHandler>
+      </View>
+
+      {/* Like counter */}
+      <View style={styles.likeCounter}>
+        <Text style={styles.likeCounterText}>
+          {currentLikeIndex + 1} of {likes.length} likes
+        </Text>
       </View>
     </View>
   );
@@ -228,24 +399,170 @@ export default function LikesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    padding: 20,
     backgroundColor: '#f8f9fa',
   },
-  header: {
-    padding: 20,
-    paddingTop: 60,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+  cardContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  headerTitle: {
-    fontSize: 28,
+  swipeIndicator: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  leftIndicator: {
+    left: 20,
+  },
+  rightIndicator: {
+    right: 20,
+  },
+  indicatorText: {
+    fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
+    marginTop: 5,
   },
-  headerSubtitle: {
+  likeCard: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 20,
+    width: '100%',
+    height: '100%',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  photoCarouselContainer: {
+    position: 'relative',
+    height: 300,
+    marginBottom: 15,
+  },
+  photoScrollView: {
+    height: 300,
+  },
+  photoSlide: {
+    width: SCREEN_WIDTH - 80, // Account for container padding (20) + card padding (20) on each side
+    height: 300,
+  },
+  profileImage: {
+    width: '100%',
+    height: 300,
+    borderRadius: 10,
+  },
+  dotsContainer: {
+    position: 'absolute',
+    bottom: 15,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    marginHorizontal: 4,
+  },
+  activeDot: {
+    backgroundColor: 'white',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  photoCounter: {
+    position: 'absolute',
+    top: 15,
+    right: 15,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  photoCounterText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  profileInfo: {
+    alignItems: 'center',
+    paddingBottom: 20,
+  },
+  name: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  bio: {
     fontSize: 16,
     color: '#666',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  interestsContainer: {
+    width: '100%',
+    marginTop: 10,
+  },
+  interestsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 5,
+  },
+  interestTag: {
+    fontSize: 12,
+    color: 'hotpink',
+    backgroundColor: '#ffe6f0',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  processingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 15,
+  },
+  processingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
+  likeCounter: {
+    alignItems: 'center',
+    backgroundColor: 'white',
+    padding: 15,
+    borderRadius: 20,
+    marginTop: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  likeCounterText: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '600',
   },
   loadingContainer: {
     flex: 1,
@@ -257,127 +574,6 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
   },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#666',
-  },
-  listContainer: {
-    padding: 15,
-  },
-  likeItem: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  photoContainer: {
-    marginRight: 15,
-  },
-  userPhoto: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-  },
-  placeholderPhoto: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  userDetails: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
-  },
-  userBio: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-    lineHeight: 20,
-  },
-  interestsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-  },
-  interestTag: {
-    backgroundColor: '#f0f0f0',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginRight: 6,
-    marginBottom: 4,
-  },
-  interestText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  moreInterests: {
-    fontSize: 12,
-    color: '#999',
-    fontStyle: 'italic',
-  },
-  likeIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-  },
-  likedText: {
-    marginLeft: 5,
-    fontSize: 14,
-    color: 'hotpink',
-    fontWeight: '500',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 15,
-    gap: 10,
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 25,
-    gap: 8,
-  },
-  discardButton: {
-    backgroundColor: '#ff6b6b',
-  },
-  likeBackButton: {
-    backgroundColor: 'hotpink',
-  },
-  actionButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-  },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
@@ -388,8 +584,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
-    marginTop: 20,
-    marginBottom: 10,
+    marginTop: 10,
   },
   emptySubtitle: {
     fontSize: 16,
@@ -397,14 +592,23 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 40,
     lineHeight: 24,
-  },
-  refreshContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingBottom: 10,
+    marginBottom: 30,
   },
   refreshButton: {
     padding: 10,
+  },
+  profileImagePlaceholder: {
+    width: '100%',
+    height: 300,
+    borderRadius: 10,
+    marginBottom: 15,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderText: {
+    fontSize: 16,
+    color: '#ccc',
+    marginTop: 10,
   },
 }); 

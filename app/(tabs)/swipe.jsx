@@ -3,24 +3,26 @@ import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import LottieView from 'lottie-react-native';
-import { supabase, handleUserLike, getSwipeProfiles } from '../../lib/supabase';
+import { supabase, handleUserLike, getSwipeProfiles, getUserPhotos } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
+import { useProfile } from '../contexts/ProfileContext';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SWIPE_THRESHOLD = 120;
 
 export default function Swipe() {
   const router = useRouter();
+  const { user, profile, photos, hasCompletedProfile, getPhotoCount } = useProfile();
   const [canSwipe, setCanSwipe] = useState(true);
   const [timeLeft, setTimeLeft] = useState(10);
   const [isFirstSwipe, setIsFirstSwipe] = useState(true);
   const [swipeDirection, setSwipeDirection] = useState(null);
   const [currentProfile, setCurrentProfile] = useState(null);
-  const [userPhotoCount, setUserPhotoCount] = useState(0);
-  const [loadingPhotos, setLoadingPhotos] = useState(true);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [profiles, setProfiles] = useState([]);
   const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
+  const [photoLoadingError, setPhotoLoadingError] = useState(false);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
 
   // Animation values
   const position = useRef(new Animated.ValueXY()).current;
@@ -45,43 +47,14 @@ export default function Swipe() {
 
   // Load user's photo count and profiles on component mount
   useEffect(() => {
-    loadUserPhotoCount();
     loadProfiles();
   }, []);
-
-  const loadUserPhotoCount = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // List files in user's storage folder
-      const { data: files, error } = await supabase.storage
-        .from('users')
-        .list(`${user.id}/`, {
-          limit: 100,
-          offset: 0,
-          sortBy: { column: 'name', order: 'asc' }
-        });
-
-      if (error) {
-        console.error('Error loading photos:', error);
-        setUserPhotoCount(0);
-      } else {
-        const photoCount = files?.filter(file => file.name.match(/\.(jpg|jpeg|png|webp)$/i)).length || 0;
-        setUserPhotoCount(photoCount);
-      }
-    } catch (error) {
-      console.error('Error in loadUserPhotoCount:', error);
-      setUserPhotoCount(0);
-    } finally {
-      setLoadingPhotos(false);
-    }
-  };
 
   const loadProfiles = async () => {
     try {
       setLoadingProfiles(true);
-      const fetchedProfiles = await getSwipeProfiles(20); // Get 20 profiles
+      setPhotoLoadingError(false);
+      const fetchedProfiles = await getSwipeProfiles(10); // Get 20 profiles
       setProfiles(fetchedProfiles);
       
       if (fetchedProfiles.length > 0) {
@@ -90,7 +63,12 @@ export default function Swipe() {
       }
     } catch (error) {
       console.error('Error loading profiles:', error);
-      Alert.alert('Error', 'Failed to load profiles. Please try again.');
+      if (error.message?.includes('photo') || error.message?.includes('storage')) {
+        setPhotoLoadingError(true);
+        Alert.alert('Photo Loading Error', 'Some photos may not display properly. Please try again later.');
+      } else {
+        Alert.alert('Error', 'Failed to load profiles. Please try again.');
+      }
     } finally {
       setLoadingProfiles(false);
     }
@@ -118,6 +96,7 @@ export default function Swipe() {
     if (nextIndex < profiles.length) {
       setCurrentProfile(profiles[nextIndex]);
       setCurrentProfileIndex(nextIndex);
+      setCurrentPhotoIndex(0); // Reset photo index for new profile
     } else {
       // No more profiles, reload
       loadProfiles();
@@ -226,7 +205,7 @@ export default function Swipe() {
     ]
   };
 
-  if (loadingPhotos || loadingProfiles) {
+  if (loadingProfiles) {
     return (
       <View style={styles.loadingContainer}>
         <LottieView
@@ -236,12 +215,11 @@ export default function Swipe() {
           style={styles.lottieAnimation}
           speed={1}
         />
-        <Text style={styles.loadingText}>Loading profiles...</Text>
       </View>
     );
   }
 
-  if (userPhotoCount < 3) {
+  if (user && !hasCompletedProfile()) {
     return (
       <View style={styles.insufficientPhotosContainer}>
         <Ionicons name="camera-outline" size={80} color="#ccc" />
@@ -292,7 +270,80 @@ export default function Swipe() {
           enabled={canSwipe}
         >
           <Animated.View style={[styles.profileCard, cardStyle]}>
-            <Image source={{ uri: currentProfile.image }} style={styles.profileImage} />
+            {/* Photo Carousel */}
+            <View style={styles.photoCarouselContainer}>
+              {currentProfile.images && currentProfile.images.length > 0 ? (
+                <>
+                  <ScrollView
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    onMomentumScrollEnd={(event) => {
+                      const slideIndex = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+                      setCurrentPhotoIndex(slideIndex);
+                    }}
+                    style={styles.photoScrollView}
+                  >
+                    {currentProfile.images.map((image, index) => (
+                      <View key={index} style={styles.photoSlide}>
+                        <Image 
+                          source={{ uri: image }} 
+                          style={styles.profileImage}
+                          resizeMode="cover"
+                          onError={() => {
+                            console.log('Failed to load image for profile:', currentProfile.id, 'photo:', index);
+                            setPhotoLoadingError(true);
+                          }}
+                          onLoad={() => setPhotoLoadingError(false)}
+                        />
+                      </View>
+                    ))}
+                  </ScrollView>
+                  
+                  {/* Photo Dots Indicator */}
+                  {currentProfile.images.length > 1 && (
+                    <View style={styles.dotsContainer}>
+                      {currentProfile.images.map((_, index) => (
+                        <View
+                          key={index}
+                          style={[
+                            styles.dot,
+                            index === currentPhotoIndex && styles.activeDot
+                          ]}
+                        />
+                      ))}
+                    </View>
+                  )}
+                  
+                  {/* Photo Counter */}
+                  {currentProfile.images.length > 1 && (
+                    <View style={styles.photoCounter}>
+                      <Text style={styles.photoCounterText}>
+                        {currentPhotoIndex + 1} / {currentProfile.images.length}
+                      </Text>
+                    </View>
+                  )}
+                </>
+              ) : currentProfile.image ? (
+                // Fallback for single image
+                <Image 
+                  source={{ uri: currentProfile.image }} 
+                  style={styles.profileImage}
+                  resizeMode="cover"
+                  onError={() => {
+                    console.log('Failed to load image for profile:', currentProfile.id);
+                    setPhotoLoadingError(true);
+                  }}
+                  onLoad={() => setPhotoLoadingError(false)}
+                />
+              ) : (
+                <View style={styles.profileImagePlaceholder}>
+                  <Ionicons name="person" size={80} color="#ccc" />
+                  <Text style={styles.placeholderText}>No Photo Available</Text>
+                </View>
+              )}
+            </View>
+            
             <ScrollView 
               style={styles.scrollContainer}
               showsVerticalScrollIndicator={false}
@@ -319,6 +370,13 @@ export default function Swipe() {
       {!canSwipe && (
         <View style={styles.timerContainer}>
           <Text style={styles.timerText}>Next swipe in {timeLeft}s</Text>
+        </View>
+      )}
+      
+      {photoLoadingError && (
+        <View style={styles.photoErrorContainer}>
+          <Ionicons name="warning" size={16} color="#FF6B35" />
+          <Text style={styles.photoErrorText}>Some photos may not display properly</Text>
         </View>
       )}
     </View>
@@ -358,7 +416,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     padding: 20,
     width: '100%',
-    height: 450,
+    height: '100%',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -368,11 +426,58 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
+  photoCarouselContainer: {
+    position: 'relative',
+    height: 300,
+    marginBottom: 15,
+  },
+  photoScrollView: {
+    height: 300,
+  },
+  photoSlide: {
+    width: SCREEN_WIDTH - 80, // Account for container padding (20) + card padding (20) on each side
+    height: 300,
+  },
   profileImage: {
     width: '100%',
     height: 300,
     borderRadius: 10,
-    marginBottom: 15,
+  },
+  dotsContainer: {
+    position: 'absolute',
+    bottom: 15,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    marginHorizontal: 4,
+  },
+  activeDot: {
+    backgroundColor: 'white',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  photoCounter: {
+    position: 'absolute',
+    top: 15,
+    right: 15,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  photoCounterText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   scrollContainer: {
     flex: 1,
@@ -448,6 +553,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     textAlign: 'center',
   },
+  insufficientPhotosSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
   noProfilesContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -503,6 +614,36 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: 'white',
     textAlign: 'center',
+  },
+  profileImagePlaceholder: {
+    width: '100%',
+    height: 300,
+    borderRadius: 10,
+    marginBottom: 15,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderText: {
+    fontSize: 16,
+    color: '#ccc',
+    marginTop: 10,
+  },
+  photoErrorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff3cd',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#ffeaa7',
+  },
+  photoErrorText: {
+    fontSize: 14,
+    color: '#856404',
+    marginLeft: 5,
   },
 }); 
 

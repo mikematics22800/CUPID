@@ -16,8 +16,8 @@ import {
   subscribeToMessages,
   deleteMessage
 } from '../../lib/supabase';
-import { generateChatSuggestions, getSuggestionCategories } from '../../lib/chatSuggestions';
-import { detectViolentThreats, isUserBanned, getUserStrikes } from '../../lib/contentModeration';
+import { generateChatSuggestions, getSuggestionCategories } from '../components/matches/chatSuggestions';
+import { detectViolentThreats, isUserBanned, getUserStrikes } from '../components/matches/contentModeration';
 import { useRouter } from 'expo-router';
 
 export default function MatchesScreen() {
@@ -490,35 +490,38 @@ export default function MatchesScreen() {
     return (
       <View style={styles.matchCard}>
         <View style={styles.matchContent}>
-          <Image 
-            source={{ uri: item.photo || 'https://picsum.photos/150/150' }} 
-            style={styles.matchPhoto} 
-          />
+          {item.photo ? (
+            <Image 
+              source={{ uri: item.photo }} 
+              style={styles.matchPhoto}
+              resizeMode="cover"
+              onError={() => {
+                console.log('Failed to load image for match:', item.id);
+                // Could add state to track failed images and show placeholder
+              }}
+            />
+          ) : (
+            <View style={styles.matchPhotoPlaceholder}>
+              <Ionicons name="person" size={30} color="#ccc" />
+            </View>
+          )}
           <View style={styles.matchInfo}>
             <View style={styles.nameContainer}>
               <Text style={styles.matchName}>{item.name}, {item.age}</Text>
               {hasUnreadMessages && <View style={styles.unreadBadge} />}
             </View>
-            <Text style={styles.matchBio} numberOfLines={2}>{item.bio}</Text>
-            {item.interests && item.interests.length > 0 && (
-              <View style={styles.interestsContainer}>
-                {item.interests.slice(0, 2).map((interest, index) => (
-                  <Text key={index} style={styles.interestTag}>{interest}</Text>
-                ))}
-                {item.interests.length > 2 && (
-                  <Text style={styles.interestTag}>+{item.interests.length - 2} more</Text>
-                )}
-              </View>
-            )}
-            <Text style={[styles.lastMessage, hasUnreadMessages && styles.unreadMessage]} numberOfLines={1}>
-              {chatRoom?.lastMessage ? chatRoom.lastMessage.content : 'Start a conversation!'}
-            </Text>
+
           </View>
         </View>
         <View style={styles.matchActions}>
           <Text style={styles.timestamp}>
             {chatRoom?.lastMessage ? 
-              new Date(chatRoom.lastMessage.createdAt).toLocaleDateString() : 
+              new Date(chatRoom.lastMessage.createdAt).toLocaleString([], { 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit', 
+                minute: '2-digit' 
+              }) : 
               'Just matched!'
             }
           </Text>
@@ -635,7 +638,6 @@ export default function MatchesScreen() {
           style={styles.lottieAnimation}
           speed={1}
         />
-        <Text style={styles.loadingText}>Loading matches...</Text>
       </View>
     );
   }
@@ -654,10 +656,18 @@ export default function MatchesScreen() {
             <Ionicons name="arrow-back" size={24} color="#333" />
           </TouchableOpacity>
           <View style={styles.chatHeaderInfo}>
-            <Image 
-              source={{ uri: selectedMatch.photo || 'https://picsum.photos/150/150' }} 
-              style={styles.chatHeaderPhoto} 
-            />
+            {selectedMatch.photo ? (
+              <Image 
+                source={{ uri: selectedMatch.photo }} 
+                style={styles.chatHeaderPhoto}
+                resizeMode="cover"
+                onError={() => console.log('Failed to load image for chat header:', selectedMatch.id)}
+              />
+            ) : (
+              <View style={styles.chatHeaderPhotoPlaceholder}>
+                <Ionicons name="person" size={20} color="#ccc" />
+              </View>
+            )}
             <Text style={styles.chatHeaderName}>{selectedMatch.name}</Text>
           </View>
           <TouchableOpacity 
@@ -1215,5 +1225,23 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 14,
     color: '#666',
+  },
+  matchPhotoPlaceholder: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginRight: 15,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chatHeaderPhotoPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

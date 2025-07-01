@@ -1,4 +1,4 @@
-import { supabase } from './supabase.js';
+import { supabase } from '../../../lib/supabase.js';
 
 // Function to detect violent threats in messages
 export const detectViolentThreats = async (messageContent, senderId, recipientId) => {

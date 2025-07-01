@@ -10,6 +10,10 @@ export default function PhotoSection({
 }) {
 
   const pickImage = async () => {
+    if (photos.length >= 12) {
+      Alert.alert('Maximum Photos', 'You can upload a maximum of 12 photos.');
+      return;
+    }
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -59,7 +63,7 @@ export default function PhotoSection({
   // Render photo grid with uploaded photos
   const renderPhotoGrid = () => {
     const photoSlots = [];
-    const maxPhotos = 9;
+    const maxPhotos = 12;
     const numPhotos = photos.length;
     
     for (let i = 0; i < maxPhotos; i++) {
@@ -81,8 +85,8 @@ export default function PhotoSection({
       } else {
         // Render add photo button for remaining slots
         photoSlots.push(
-          <TouchableOpacity key={`add-${i}`} style={styles.addPhotoButton} onPress={pickImage}>
-            <Ionicons name="add" size={40} color="hotpink" />
+          <TouchableOpacity key={`add-${i}`} style={styles.addPhotoButton} onPress={pickImage} disabled={photos.length >= 12}>
+            <Ionicons name="add" size={40} color={photos.length >= 12 ? '#ccc' : 'hotpink'} />
             <Text style={styles.addPhotoText}>Add Photo</Text>
           </TouchableOpacity>
         );
@@ -92,13 +96,26 @@ export default function PhotoSection({
     return photoSlots;
   };
 
+  // Show warning if fewer than 3 photos
+  const showMinWarning = required && photos.length > 0 && photos.length < 3;
+
+  // Debug logging
+  console.log('PhotoSection - photos.length:', photos.length);
+  console.log('PhotoSection - showMinWarning:', showMinWarning);
+  console.log('PhotoSection - required:', required);
+
   return (
     <View style={styles.photoSection}>
       <View style={styles.header}>
         <Text style={styles.requirementText}>
-          {photos.length}/3 Minimum 
+          {photos.length}/3 Minimum, 12 Maximum
         </Text>
       </View>
+      {showMinWarning && (
+        <Text style={{ color: 'red', fontSize: 12, textAlign: 'center', marginBottom: 5 }}>
+          Please upload at least 3 photos to continue.
+        </Text>
+      )}
       <View style={styles.photoGrid}>
         {renderPhotoGrid().slice(0, 3)}
       </View>
@@ -107,6 +124,9 @@ export default function PhotoSection({
       </View>
       <View style={styles.photoGrid}>
         {renderPhotoGrid().slice(6, 9)}
+      </View>
+      <View style={styles.photoGrid}>
+        {renderPhotoGrid().slice(9, 12)}
       </View>
     </View>
   );
