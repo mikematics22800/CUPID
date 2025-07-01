@@ -208,4 +208,7 @@ export const getSuggestionCategories = (messageCount, hasSharedInterests) => {
   }
   
   return [...new Set(categories)]; // Remove duplicates
-}; 
+};
+
+// Default export
+export default generateChatSuggestions; 

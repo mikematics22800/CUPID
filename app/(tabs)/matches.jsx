@@ -14,11 +14,14 @@ import {
   getMessages,
   markMessagesAsRead,
   subscribeToMessages,
-  deleteMessage
+  deleteMessage,
+  markMatchesAsViewed
 } from '../../lib/supabase';
 import { generateChatSuggestions, getSuggestionCategories } from '../components/matches/chatSuggestions';
 import { detectViolentThreats, isUserBanned, getUserStrikes } from '../components/matches/contentModeration';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
+import React from 'react';
 
 export default function MatchesScreen() {
   const router = useRouter();
@@ -75,6 +78,21 @@ export default function MatchesScreen() {
     };
   }, [currentUserId]);
 
+  // Mark matches as viewed when the screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      const markAsViewed = async () => {
+        try {
+          await markMatchesAsViewed();
+        } catch (error) {
+          console.error('❌ Error marking matches as viewed:', error);
+        }
+      };
+      
+      markAsViewed();
+    }, [])
+  );
+
   const getCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
@@ -88,7 +106,6 @@ export default function MatchesScreen() {
       
       const matchesData = await getMatchesForUser();
       setMatches(matchesData);
-      console.log(`✅ Successfully loaded ${matchesData.length} matches`);
 
     } catch (error) {
       console.error('❌ Error loading matches:', error);
@@ -102,7 +119,6 @@ export default function MatchesScreen() {
     try {
       const roomsData = await getChatRooms();
       setChatRooms(roomsData);
-      console.log(`✅ Successfully loaded ${roomsData.length} chat rooms`);
     } catch (error) {
       console.error('❌ Error loading chat rooms:', error);
     }
@@ -115,7 +131,6 @@ export default function MatchesScreen() {
     }
     
     const subscription = subscribeToChatRooms((newRoom, event) => {
-      console.log(`🔔 Chat room ${event}:`, newRoom);
       loadChatRooms(); // Reload chat rooms when there are updates
     });
     setChatSubscription(subscription);
@@ -252,7 +267,7 @@ export default function MatchesScreen() {
       const threatCheck = await detectViolentThreats(messageContent, currentUserId, selectedMatch.id);
       
       if (threatCheck.isThreat) {
-        console.log('🚨 Message blocked due to explicit violent content');
+        // Message blocked due to explicit violent content
         
         // Update user strikes display
         const userStrikeInfo = await getUserStrikes(currentUserId);
@@ -395,26 +410,21 @@ export default function MatchesScreen() {
     const checkUserBanStatus = async () => {
       if (currentUserId) {
         try {
-          console.log(`🔍 Checking ban status for user: ${currentUserId}`);
-          const isBanned = await isUserBanned(currentUserId);
-          
-          if (isBanned) {
-            console.log(`🚫 User ${currentUserId} is banned, logging out`);
-            setUserBanned(true);
-            Alert.alert(
-              'Account Banned',
-              'Your account has been banned for using explicit violent language.',
-              [{ text: 'OK', onPress: () => router.replace('/auth') }]
-            );
-            return;
-          } else {
-            console.log(`✅ User ${currentUserId} is not banned`);
-          }
-          
-          // Load current strike count
-          const strikeInfo = await getUserStrikes(currentUserId);
-          setUserStrikes(strikeInfo.strikes);
-          console.log(`📊 User ${currentUserId} has ${strikeInfo.strikes} strikes`);
+                  const isBanned = await isUserBanned(currentUserId);
+        
+        if (isBanned) {
+          setUserBanned(true);
+          Alert.alert(
+            'Account Banned',
+            'Your account has been banned for using explicit violent language.',
+            [{ text: 'OK', onPress: () => router.replace('/auth') }]
+          );
+          return;
+        }
+        
+        // Load current strike count
+        const strikeInfo = await getUserStrikes(currentUserId);
+        setUserStrikes(strikeInfo.strikes);
           
         } catch (error) {
           console.error('❌ Error checking user ban status:', error);
@@ -496,8 +506,7 @@ export default function MatchesScreen() {
               style={styles.matchPhoto}
               resizeMode="cover"
               onError={() => {
-                console.log('Failed to load image for match:', item.id);
-                // Could add state to track failed images and show placeholder
+                // Failed to load image for match
               }}
             />
           ) : (
@@ -510,7 +519,12 @@ export default function MatchesScreen() {
               <Text style={styles.matchName}>{item.name}, {item.age}</Text>
               {hasUnreadMessages && <View style={styles.unreadBadge} />}
             </View>
-
+            {item.distance !== null && (
+              <View style={styles.distanceContainer}>
+                <Ionicons name="location" size={14} color="#666" />
+                <Text style={styles.distanceText}>{item.distance} miles away</Text>
+              </View>
+            )}
           </View>
         </View>
         <View style={styles.matchActions}>
@@ -661,7 +675,7 @@ export default function MatchesScreen() {
                 source={{ uri: selectedMatch.photo }} 
                 style={styles.chatHeaderPhoto}
                 resizeMode="cover"
-                onError={() => console.log('Failed to load image for chat header:', selectedMatch.id)}
+                onError={() => {/* Failed to load image for chat header */}}
               />
             ) : (
               <View style={styles.chatHeaderPhotoPlaceholder}>
@@ -797,12 +811,8 @@ export default function MatchesScreen() {
     <View style={styles.container}>
       {matches.length === 0 ? (
         <View style={styles.emptyState}>
-          <Ionicons name="heart-outline" size={64} color="#ccc" />
+          <Ionicons name="heart-outline" size={80} color="white" />
           <Text style={styles.emptyText}>No matches yet</Text>
-          <Text style={styles.emptySubtext}>Keep swiping to find your perfect match!</Text>
-          <TouchableOpacity style={styles.swipeButton} onPress={() => router.push('/(tabs)/swipe')}>
-            <Text style={styles.swipeButtonText}>Start Swiping</Text>
-          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
@@ -820,7 +830,7 @@ export default function MatchesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: 'hotpink',
   },
   header: {
     flexDirection: 'row',
@@ -860,9 +870,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#666',
-    marginTop: 20,
-    marginBottom: 10,
+    color: 'white',
   },
   emptySubtext: {
     fontSize: 16,
@@ -1243,5 +1251,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  distanceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  distanceText: {
+    marginLeft: 4,
+    fontSize: 12,
+    color: '#666',
   },
 });

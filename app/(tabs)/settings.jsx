@@ -1,9 +1,17 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Modal, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase, deleteUserAccount } from '../../lib/supabase';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
+import LottieView from 'lottie-react-native';
+import { useProfile } from '../contexts/ProfileContext';
+import PhotoSection from '../components/auth/PhotoSection';
+import BioSection from '../components/auth/BioSection';
+import LocationPicker from '../components/settings/LocationPicker';
+import PersonalInfoForm from '../components/settings/PersonalInfoForm';
+import { uploadPhotosToStorage } from '../../lib/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -22,6 +30,121 @@ export default function SettingsScreen() {
   const [tempAgeRange, setTempAgeRange] = useState({ min: 18, max: 50 });
   const [tempPreferredSex, setTempPreferredSex] = useState('all');
   const [tempMaxDistance, setTempMaxDistance] = useState(50);
+
+  // Profile editing state
+  const [showProfile, setShowProfile] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [gettingLocation, setGettingLocation] = useState(false);
+  const [locationPickerVisible, setLocationPickerVisible] = useState(false);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [validationStatus, setValidationStatus] = useState({
+    firstName: true,
+    lastName: true,
+    email: true,
+    phone: true,
+    residence: true
+  });
+
+  // Profile context
+  const { 
+    user, 
+    profile, 
+    loading, 
+    photos, 
+    bio, 
+    interests, 
+    residence,
+    name,
+    email,
+    phone,
+    setBio, 
+    setInterests, 
+    setPhotos,
+    setResidence,
+    setName,
+    setEmail,
+    setPhone,
+    updateProfile,
+    updatePhotos,
+    removePhoto,
+    hasEnoughPhotos,
+    hasBio,
+    hasName,
+    hasCompletedProfile,
+    refreshProfile
+  } = useProfile();
+
+  // Load user preferences from AsyncStorage
+  useEffect(() => {
+    loadUserPreferences();
+  }, [user]);
+
+  const loadUserPreferences = async () => {
+    if (!user) return;
+    
+    try {
+      const [storedMaxDistance, storedAgeRange, storedPreferredSex] = await Promise.all([
+        AsyncStorage.getItem(`maxDistance_${user.id}`),
+        AsyncStorage.getItem(`ageRange_${user.id}`),
+        AsyncStorage.getItem(`preferredSex_${user.id}`)
+      ]);
+
+      if (storedMaxDistance) {
+        setMaxDistance(parseInt(storedMaxDistance));
+        setTempMaxDistance(parseInt(storedMaxDistance));
+      }
+
+      if (storedAgeRange) {
+        const parsedAgeRange = JSON.parse(storedAgeRange);
+        setAgeRange(parsedAgeRange);
+        setTempAgeRange(parsedAgeRange);
+      }
+
+      if (storedPreferredSex) {
+        setPreferredSex(storedPreferredSex);
+        setTempPreferredSex(storedPreferredSex);
+      }
+    } catch (error) {
+      console.error('Error loading user preferences:', error);
+    }
+  };
+
+  const saveUserPreference = async (key, value) => {
+    if (!user) return;
+    
+    try {
+      const storageKey = `${key}_${user.id}`;
+      const storageValue = typeof value === 'object' ? JSON.stringify(value) : value.toString();
+      await AsyncStorage.setItem(storageKey, storageValue);
+      console.log(`✅ Saved preference ${key}: ${storageValue}`);
+    } catch (error) {
+      console.error(`❌ Error saving preference ${key}:`, error);
+    }
+  };
+
+  // Initialize first and last name from the name field
+  useEffect(() => {
+    if (name) {
+      const nameParts = name.split(' ');
+      setFirstName(nameParts[0] || '');
+      setLastName(nameParts.slice(1).join(' ') || '');
+    }
+  }, [name]);
+
+  // Validation logic
+  useEffect(() => {
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    const cleanedPhone = phone?.replace(/\D/g, '') || '';
+    
+    setValidationStatus({
+      firstName: firstName?.trim().length > 0,
+      lastName: lastName?.trim().length > 0,
+      email: email?.match(emailRegex) !== null,
+      phone: cleanedPhone.length >= 10 || cleanedPhone.length === 0,
+      residence: residence?.trim().length > 0
+    });
+  }, [firstName, lastName, email, phone, residence]);
 
   const handleLogout = async () => {
     try {
@@ -121,17 +244,130 @@ export default function SettingsScreen() {
       return;
     }
     setAgeRange(tempAgeRange);
+    saveUserPreference('ageRange', tempAgeRange);
     setShowAgeModal(false);
   };
 
   const saveSexPreference = () => {
     setPreferredSex(tempPreferredSex);
+    saveUserPreference('preferredSex', tempPreferredSex);
     setShowSexModal(false);
   };
 
   const saveDistance = () => {
     setMaxDistance(tempMaxDistance);
+    saveUserPreference('maxDistance', tempMaxDistance);
     setShowDistanceModal(false);
+  };
+
+  // Profile-related functions
+  const handlePhotoRemove = async (photo) => {
+    try {
+      const success = await removePhoto(photo);
+      if (!success) {
+        Alert.alert('Error', 'Failed to remove photo. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error in handlePhotoRemove:', error);
+      Alert.alert('Error', 'Failed to remove photo. Please try again.');
+    }
+  };
+
+  const handleLocationSelection = () => {
+    setLocationPickerVisible(true);
+  };
+
+  const handleLocationSelected = async (locationData) => {
+    try {
+              setResidence(locationData.locationString);
+      const success = await updateProfile({ residence: locationData.locationString });
+      
+      if (success) {
+        Alert.alert('Success', `Location set to: ${locationData.locationString}`);
+      } else {
+        Alert.alert('Warning', 'Location set locally but failed to save to server. Please try saving your profile.');
+      }
+    } catch (error) {
+      console.error('Error updating location:', error);
+      Alert.alert('Error', 'Failed to update location. Please try again.');
+    }
+  };
+
+  const saveProfile = async () => {
+    try {
+      if (!hasEnoughPhotos()) {
+        Alert.alert('Not Enough Photos', 'Please upload at least 3 photos to save your profile.');
+        return;
+      }
+
+      if (!hasBio()) {
+        Alert.alert('Missing Bio', 'Please add a bio to save your profile.');
+        return;
+      }
+
+      if (!hasName()) {
+        Alert.alert('Missing Name', 'Please enter your name to save your profile.');
+        return;
+      }
+
+      if (!validationStatus.firstName || !validationStatus.lastName) {
+        Alert.alert('Missing Name', 'Please enter both your first and last name.');
+        return;
+      }
+
+      if (!validationStatus.email) {
+        Alert.alert('Invalid Email', 'Please enter a valid email address.');
+        return;
+      }
+
+      if (phone && !validationStatus.phone) {
+        Alert.alert('Invalid Phone', 'Please enter a valid 10-digit phone number.');
+        return;
+      }
+
+      if (!validationStatus.residence) {
+                  Alert.alert('Missing Location', 'Please enter your location.');
+        return;
+      }
+      
+      setSaving(true);
+
+      const newPhotos = photos.filter(photo => !photo.isExisting);
+      let newlyUploadedUrls = [];
+      
+      if (newPhotos.length > 0) {
+        newlyUploadedUrls = await uploadPhotosToStorage(newPhotos, user.id);
+      }
+
+      const existingPhotoUrls = photos
+        .filter(photo => photo.isExisting && photo.uri && photo.uri.startsWith('http'))
+        .map(photo => photo.uri);
+      
+      const allPhotoUrls = [...existingPhotoUrls, ...newlyUploadedUrls];
+      const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+      
+      const success = await updateProfile({
+        bio: bio,
+        interests: interests,
+        residence: residence,
+        name: fullName,
+        email: email,
+        phone: phone,
+        images: allPhotoUrls,
+      });
+
+      if (success) {
+        Alert.alert('Success', 'Profile updated successfully!');
+        setShowProfile(false);
+      } else {
+        throw new Error('Failed to update profile');
+      }
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      Alert.alert('Error', 'Failed to save profile. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const getSexDisplayText = (sex) => {
@@ -180,7 +416,7 @@ export default function SettingsScreen() {
         <SettingItem
           icon="person-outline"
           title="Edit Profile"
-          onPress={() => router.push('/profile')}
+          onPress={() => setShowProfile(true)}
         />
         <SettingItem
           icon="mail-outline"
@@ -392,6 +628,86 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Profile Editing Modal */}
+      <Modal
+        visible={showProfile}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setShowProfile(false)}
+      >
+        <View style={styles.profileContainer}>
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <LottieView
+                source={require('../../assets/animations/heart.json')}
+                autoPlay
+                loop
+                style={styles.lottieAnimation}
+                speed={1}
+              />
+            </View>
+          ) : (
+            <ScrollView 
+              style={styles.profileForm} 
+              contentContainerStyle={styles.profileFormContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <PersonalInfoForm
+                firstName={firstName}
+                setFirstName={setFirstName}
+                lastName={lastName}
+                setLastName={setLastName}
+                email={email}
+                setEmail={setEmail}
+                phone={phone}
+                setPhone={setPhone}
+                residence={residence}
+                setResidence={setResidence}
+                validationStatus={validationStatus}
+              />
+              <PhotoSection
+                photos={photos}
+                setPhotos={setPhotos}
+                required={true}
+                onRemovePhoto={handlePhotoRemove}
+              />
+              <BioSection
+                bio={bio}
+                setBio={setBio}
+                interests={interests}
+                setInterests={setInterests}
+              />
+              
+              {/* Action Buttons */}
+              <View style={styles.actionButtonsContainer}>
+                <TouchableOpacity 
+                  onPress={saveProfile} 
+                  style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+                  disabled={saving}
+                >
+                  <Text style={[styles.saveButtonText, saving && styles.saveButtonTextDisabled]}>
+                    {saving ? 'Saving...' : 'Save'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.discardButton}
+                  onPress={() => setShowProfile(false)}
+                >
+                  <Text style={styles.discardButtonText}>Discard</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          )}
+
+          {/* Location Picker Modal */}
+          <LocationPicker
+            visible={locationPickerVisible}
+            onClose={() => setLocationPickerVisible(false)}
+            onLocationSelected={handleLocationSelected}
+          />
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -558,5 +874,88 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#eee',
     marginVertical: 10,
+  },
+  // Profile editing styles
+  profileContainer: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  backButton: {
+    padding: 5,
+  },
+  profileHeaderTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  saveButton: {
+    flex: 1,
+    backgroundColor: 'hotpink',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    width: '45%',
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  saveButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  saveButtonTextDisabled: {
+    color: '#999',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  lottieAnimation: {
+    width: 200,
+    height: 200,
+  },
+  profileForm: {
+    flex: 1,
+    paddingHorizontal: 25,
+    paddingVertical: 20,
+  },
+  profileFormContent: {
+    paddingVertical: 20,
+    gap: 25,
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 15,
+    marginTop: 20,
+    paddingHorizontal: 5,
+  },
+  discardButton: {
+    flex: 1,
+    backgroundColor: 'red',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    borderColor: '#ddd',
+    width: '45%',
+  },
+  discardButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

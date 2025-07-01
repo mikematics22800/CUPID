@@ -100,9 +100,7 @@ export default function PhotoSection({
   const showMinWarning = required && photos.length > 0 && photos.length < 3;
 
   // Debug logging
-  console.log('PhotoSection - photos.length:', photos.length);
-  console.log('PhotoSection - showMinWarning:', showMinWarning);
-  console.log('PhotoSection - required:', required);
+      // PhotoSection - photos.length
 
   return (
     <View style={styles.photoSection}>

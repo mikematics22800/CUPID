@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase, getCurrentLocationAndresidence } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
 
 const ProfileContext = createContext();
@@ -20,6 +20,11 @@ export const ProfileProvider = ({ children }) => {
   const [photos, setPhotos] = useState([]);
   const [bio, setBio] = useState('');
   const [interests, setInterests] = useState([]);
+  const [residence, setResidence] = useState('');
+  const [geolocation, setGeolocation] = useState(null);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
   // Load user profile data
@@ -34,12 +39,12 @@ export const ProfileProvider = ({ children }) => {
       }
       
       setUser(currentUser);
-      console.log('Loading profile for user:', currentUser.id);
+      // Loading profile for user
 
       // Load profile data including images from database
       const { data: profileData, error } = await supabase
         .from('users')
-        .select('id, bio, interests, name, birthday, sex, email, phone, images')
+        .select('id, bio, interests, name, birthday, sex, email, phone, images, residence, geolocation')
         .eq('id', currentUser.id)
         .single();
 
@@ -49,15 +54,32 @@ export const ProfileProvider = ({ children }) => {
       }
 
       if (profileData) {
-        console.log('Profile data loaded:', profileData);
+        // Profile data loaded
         setProfile(profileData);
         setBio(profileData.bio || '');
         setInterests(profileData.interests || []);
+        setResidence(profileData.residence || '');
+        setGeolocation(profileData.geolocation || null);
+        setName(profileData.name || '');
+        setEmail(profileData.email || '');
+        setPhone(profileData.phone || '');
         
         // Load photos from both database and storage
         await loadPhotosFromStorage(currentUser.id, profileData.images);
+        
+        // Initial geolocation ping when app starts
+        try {
+          console.log('📍 Initial geolocation ping on app start');
+          const location = await getCurrentLocationAndresidence();
+          if (location) {
+            console.log('✅ Initial geolocation updated:', location.geolocation);
+            await updateProfile({ geolocation: location.geolocation });
+          }
+        } catch (error) {
+          console.error('❌ Error in initial geolocation ping:', error);
+        }
       } else {
-        console.log('No profile data found, starting with empty profile');
+        // No profile data found, starting with empty profile
         setBio('');
         setInterests([]);
         setPhotos([]);
@@ -72,8 +94,7 @@ export const ProfileProvider = ({ children }) => {
   // Load photos from storage
   const loadPhotosFromStorage = async (userId, dbImages = []) => {
     try {
-      console.log('Loading photos for user:', userId);
-      console.log('Database images:', dbImages);
+          // Loading photos for user
       
       // Start with images from database if available
       let photoObjects = [];
@@ -85,7 +106,7 @@ export const ProfileProvider = ({ children }) => {
           isExisting: true,
           fileName: `db-image-${index}`
         }));
-        console.log('Photos loaded from database:', photoObjects.length, 'photos');
+        // Photos loaded from database
       }
       
       // Also check storage for any additional photos
@@ -115,11 +136,11 @@ export const ProfileProvider = ({ children }) => {
         const newStoragePhotos = storagePhotoObjects.filter(photo => !existingUrls.has(photo.uri));
         
         photoObjects = [...photoObjects, ...newStoragePhotos];
-        console.log('Additional photos loaded from storage:', newStoragePhotos.length, 'photos');
+        // Additional photos loaded from storage
       }
       
       setPhotos(photoObjects);
-      console.log('Total photos loaded:', photoObjects.length, 'photos');
+      // Total photos loaded
       
     } catch (error) {
       console.error('Error loading photos:', error);
@@ -155,6 +176,11 @@ export const ProfileProvider = ({ children }) => {
       // Update specific fields if they exist in updates
       if (updates.bio !== undefined) setBio(updates.bio);
       if (updates.interests !== undefined) setInterests(updates.interests);
+      if (updates.residence !== undefined) setResidence(updates.residence);
+      if (updates.geolocation !== undefined) setGeolocation(updates.geolocation);
+      if (updates.name !== undefined) setName(updates.name);
+      if (updates.email !== undefined) setEmail(updates.email);
+      if (updates.phone !== undefined) setPhone(updates.phone);
       if (updates.images !== undefined) {
         await loadPhotosFromStorage(user.id, updates.images);
       }
@@ -184,7 +210,7 @@ export const ProfileProvider = ({ children }) => {
       if (photo.isExisting && photo.fileName) {
         // Remove from storage if it's a storage file
         if (!photo.fileName.startsWith('db-image-')) {
-          console.log('Removing photo from storage:', photo.fileName);
+          // Removing photo from storage
           const { error } = await supabase.storage
             .from('users')
             .remove([`${user.id}/${photo.fileName}`]);
@@ -194,7 +220,7 @@ export const ProfileProvider = ({ children }) => {
             return false;
           }
           
-          console.log('Photo removed from storage successfully');
+          // Photo removed from storage successfully
         }
       }
       
@@ -225,9 +251,14 @@ export const ProfileProvider = ({ children }) => {
     return bio && bio.trim().length > 0;
   };
 
-  // Check if user has completed their profile (photos + bio)
+  // Check if user has a name
+  const hasName = () => {
+    return name && name.trim().length > 0;
+  };
+
+  // Check if user has completed their profile (photos + bio + name)
   const hasCompletedProfile = () => {
-    return hasEnoughPhotos() && hasBio();
+    return hasEnoughPhotos() && hasBio() && hasName();
   };
 
   // Get user's photo count
@@ -249,6 +280,11 @@ export const ProfileProvider = ({ children }) => {
     photos,
     bio,
     interests,
+    residence,
+    geolocation,
+    name,
+    email,
+    phone,
     
     // Actions
     loadUserProfile,
@@ -258,6 +294,7 @@ export const ProfileProvider = ({ children }) => {
     removePhoto,
     hasEnoughPhotos,
     hasBio,
+    hasName,
     hasCompletedProfile,
     getPhotoCount,
     
@@ -265,6 +302,11 @@ export const ProfileProvider = ({ children }) => {
     setBio,
     setInterests,
     setPhotos,
+    setResidence,
+    setGeolocation,
+    setName,
+    setEmail,
+    setPhone,
   };
 
   return (
@@ -272,4 +314,7 @@ export const ProfileProvider = ({ children }) => {
       {children}
     </ProfileContext.Provider>
   );
-}; 
+};
+
+// Default export
+export default ProfileProvider; 

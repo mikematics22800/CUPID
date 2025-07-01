@@ -4,6 +4,7 @@ import { View, ActivityIndicator } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PaperProvider, MD3LightTheme } from 'react-native-paper';
 import { supabase } from '../lib/supabase';
+import { ProfileProvider } from './contexts/ProfileContext';
 '../assets/images/heart.lottie';
 
 export default function Layout() {
@@ -84,32 +85,29 @@ export default function Layout() {
   return (
     <PaperProvider theme={MD3LightTheme}>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <Stack>
-          <Stack.Screen 
-            name="(tabs)" 
-            options={{
-              headerShown: false,
-            }}
-          />
-          <Stack.Screen 
-            name="auth" 
-            options={{
-              headerShown: false,
-            }}
-          />
-          <Stack.Screen 
-            name="index" 
-            options={{
-              headerShown: false,
-            }}
-          />
-          <Stack.Screen 
-            name="profile" 
-            options={{
-              headerShown: false,
-            }}
-          />
-        </Stack>
+        <ProfileProvider>
+          <Stack>
+            <Stack.Screen 
+              name="(tabs)" 
+              options={{
+                headerShown: false,
+              }}
+            />
+            <Stack.Screen 
+              name="auth" 
+              options={{
+                headerShown: false,
+              }}
+            />
+            <Stack.Screen 
+              name="index" 
+              options={{
+                headerShown: false,
+              }}
+            />
+
+          </Stack>
+        </ProfileProvider>
       </GestureHandlerRootView>
     </PaperProvider>
   );

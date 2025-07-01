@@ -32,7 +32,7 @@ export default function ProfileCard({
                     style={styles.profileImage}
                     resizeMode="cover"
                     onError={() => {
-                      console.log('Failed to load image for profile:', profile.id, 'photo:', index);
+                      // Failed to load image for profile
                     }}
                   />
                 </View>
@@ -70,7 +70,7 @@ export default function ProfileCard({
             style={styles.profileImage}
             resizeMode="cover"
             onError={() => {
-              console.log('Failed to load image for profile:', profile.id);
+              // Failed to load image for profile
             }}
           />
         ) : (
@@ -87,7 +87,15 @@ export default function ProfileCard({
         nestedScrollEnabled={true}
       >
         <View style={styles.profileInfo}>
-          <Text style={styles.name}>{profile.name}, {profile.age}</Text>
+          <View style={styles.nameRow}>
+            <Text style={styles.name}>{profile.name}, {profile.age}</Text>
+            {profile.distance && (
+              <View style={styles.distanceContainer}>
+                <Ionicons name="location" size={16} color="#666" />
+                <Text style={styles.distanceText}>{profile.distance} miles away</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.bio}>{profile.bio}</Text>
           {profile.interests && profile.interests.length > 0 && (
             <View style={styles.interestsContainer}>
@@ -180,10 +188,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingBottom: 20,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+    flexWrap: 'wrap',
+  },
   name: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginRight: 10,
+  },
+  distanceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  distanceText: {
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 4,
   },
   bio: {
     fontSize: 16,

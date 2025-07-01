@@ -20,7 +20,7 @@ export default function MatchCard({
             style={styles.matchPhoto}
             resizeMode="cover"
             onError={() => {
-              console.log('Failed to load image for match:', match.id);
+              // Failed to load image for match
             }}
           />
         ) : (

@@ -2,15 +2,15 @@ import { StyleSheet, ScrollView } from 'react-native';
 import { useState, useEffect } from 'react';
 import { register } from '../../../lib/supabase';
 import PersonalInfoSection from './PersonalInfoSection';
-import ContactSection from './ContactSection';
 import RegisterButton from './RegisterButton';
+import ContactSection from './ContactSection';
 
 export default function RegisterForm({ onBack, onRegistrationSuccess }) {
   const [isFormValid, setIsFormValid] = useState(false);
   const [firstName, setFirstName] = useState('Michael');
   const [lastName, setLastName] = useState('Medina');
   const [phone, setPhone] = useState('5617159065');
-  const [email, setEmail] = useState('michaeljmedina22800@gmail.com');
+  const [email, setEmail] = useState('mikematics22800@gmail.com');
   const [password, setPassword] = useState('D7452m61457!');
   const [sex, setSex] = useState('Male');
   const [birthday, setBirthday] = useState(new Date(new Date().setFullYear(new Date().getFullYear() - 18)));

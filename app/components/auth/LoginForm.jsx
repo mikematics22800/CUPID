@@ -1,56 +1,66 @@
 import { useState, useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
-import { TextInput } from 'react-native-paper';
-import { signInWithEmail } from '../../../lib/supabase';
+import { signInWithEmail, signInWithPhone } from '../../../lib/supabase';
+import EmailInput from './EmailInput';
+import PasswordInput from './PasswordInput';
+import PhoneInput from './PhoneInput';
 
 export default function LoginForm({ onBack }) {
-  const [email, setEmail] = useState('michaeljmedina22800@gmail.com');
+  const [email, setEmail] = useState('mikematics22800@gmail.com');
+  const [phone, setPhone] = useState('5617159065');
   const [password, setPassword] = useState('D7452m61457!');
   const [loading, setLoading] = useState(false);
   const [isEmailValid, setIsEmailValid] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const [validationStatus, setValidationStatus] = useState({
+    email: true,
+    password: true,
+    phone: true
+  });
 
   const handleSignInWithEmail = async () => {
     setLoading(true);
     await signInWithEmail(email, password, setLoading);
   };
 
+  const handleSignInWithPhone = async () => {
+    setLoading(true);
+    await signInWithPhone(phone, setLoading);
+  };
+
   useEffect(() => {
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    setIsEmailValid(emailRegex.test(email) && password.length >= 6);
-  }, [email, password]);
+    const isEmailValid = emailRegex.test(email);
+    
+    // Password validation
+    const isPasswordValid = password.length >= 6;
+    
+    // Phone validation
+    const isPhoneValid = phone.length === 10;
+    
+    setValidationStatus({
+      email: isEmailValid,
+      password: isPasswordValid,
+      phone: isPhoneValid
+    });
+    
+    setIsEmailValid(isEmailValid && isPasswordValid);
+  }, [email, password, phone]);
 
   return (
     <View style={styles.form}>
       <View style={styles.flexColGap10}>
-        <TextInput
-          mode="outlined"
-          label="Email"
-          style={styles.emailInput} 
-          placeholder="Enter your email address" 
-          onChangeText={setEmail}
-          value={email}
-          keyboardType="email-address"
-          autoCapitalize="none"
+        <EmailInput
+          email={email}
+          setEmail={setEmail}
+          validationStatus={validationStatus}
         />
-        <View style={styles.passwordInputContainer}>
-          <TextInput 
-            mode="outlined"
-            label="Password"
-            placeholder="Enter your password" 
-            onChangeText={setPassword} 
-            secureTextEntry={!showPassword} 
-            style={styles.passwordInput}
-            value={password}
-            right={
-              <TextInput.Icon 
-                icon={showPassword ? "eye-off" : "eye"} 
-                onPress={() => setShowPassword(!showPassword)}
-              />
-            }
-          />
-        </View>
+        <PasswordInput
+          password={password}
+          setPassword={setPassword}
+          validationStatus={validationStatus}
+          minLength={6}
+        />
         <TouchableOpacity 
           style={[styles.button, !isEmailValid && styles.disabledButton]} 
           onPress={handleSignInWithEmail}
@@ -60,37 +70,15 @@ export default function LoginForm({ onBack }) {
         </TouchableOpacity>
       </View>
       <View style={styles.flexColGap10}>
-        <TextInput
-          mode="outlined"
-          label="Phone Number"
-          style={styles.emailInput} 
-          placeholder="Enter your phone number" 
-          onChangeText={setEmail}
-          value={email}
-          keyboardType="phone-pad"
-          autoCapitalize="none"
+        <PhoneInput
+          phone={phone}
+          setPhone={setPhone}
+          validationStatus={validationStatus}
         />
-        <View style={styles.passwordInputContainer}>
-          <TextInput 
-            mode="outlined"
-            label="Password"
-            placeholder="Enter your password" 
-            onChangeText={setPassword} 
-            secureTextEntry={!showPassword} 
-            style={styles.passwordInput}
-            value={password}
-            right={
-              <TextInput.Icon 
-                icon={showPassword ? "eye-off" : "eye"} 
-                onPress={() => setShowPassword(!showPassword)}
-              />
-            }
-          />
-        </View>
         <TouchableOpacity 
-          style={[styles.button, !isEmailValid && styles.disabledButton]} 
-          onPress={handleSignInWithEmail}
-          disabled={!isEmailValid}
+          style={[styles.button, !validationStatus.phone && styles.disabledButton]} 
+          onPress={handleSignInWithPhone}
+          disabled={!validationStatus.phone}
         >
           <Text style={styles.buttonText}>Login with Phone</Text>
         </TouchableOpacity>
@@ -117,15 +105,6 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     gap: 10,
     marginBottom: 20,
-  },
-  emailInput: {
-    width: '100%',
-  },
-  passwordInputContainer: {
-    width: '100%',
-  },
-  passwordInput: {
-    width: '100%',
   },
   button: {
     width: '100%',

@@ -311,7 +311,7 @@ export default function ChatScreen() {
           onChangeText={setNewMessage}
           placeholder="Type a message..."
           multiline
-          maxLength={1000}
+          maxLength={100}
           editable={!sending}
         />
         <TouchableOpacity

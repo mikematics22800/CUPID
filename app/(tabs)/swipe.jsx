@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import LottieView from 'lottie-react-native';
-import { supabase, handleUserLike, getSwipeProfiles, getUserPhotos } from '../../lib/supabase';
+import { handleUserLike, getSwipeProfiles, getCurrentLocationAndresidence } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
 import { useProfile } from '../contexts/ProfileContext';
 
@@ -12,7 +12,7 @@ const SWIPE_THRESHOLD = 120;
 
 export default function Swipe() {
   const router = useRouter();
-  const { user, profile, photos, hasCompletedProfile, getPhotoCount } = useProfile();
+  const { user, profile, photos, hasCompletedProfile, getPhotoCount, updateProfile } = useProfile();
   const [canSwipe, setCanSwipe] = useState(true);
   const [timeLeft, setTimeLeft] = useState(10);
   const [isFirstSwipe, setIsFirstSwipe] = useState(true);
@@ -23,6 +23,7 @@ export default function Swipe() {
   const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
   const [photoLoadingError, setPhotoLoadingError] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [swipeCount, setSwipeCount] = useState(0);
 
   // Animation values
   const position = useRef(new Animated.ValueXY()).current;
@@ -135,11 +136,11 @@ export default function Swipe() {
     // Handle the swipe action
     switch (direction) {
       case 'left':
-        console.log(`Disliked profile ${currentProfile.id}`);
+        // Disliked profile
         // For dislikes, we don't need to do anything in the database
         break;
       case 'right':
-        console.log(`Liked profile ${currentProfile.id}`);
+                  // Liked profile
         try {
           const result = await handleUserLike(currentProfile.id);
           
@@ -167,6 +168,32 @@ export default function Swipe() {
         }
         break;
     }
+
+    // Increment swipe count and check for geolocation tracking
+    setSwipeCount(prevCount => {
+      const newCount = prevCount + 1;
+      
+      // Track geolocation every 10 swipes
+      if (newCount % 10 === 0) {
+        (async () => {
+          try {
+            console.log(`📍 Tracking geolocation after ${newCount} swipes`);
+            const location = await getCurrentLocationAndresidence();
+            if (location) {
+              console.log('✅ Geolocation updated:', location.geolocation);
+              // Update user's geolocation in database
+              await updateProfile({ geolocation: location.geolocation });
+            } else {
+              console.log('⚠️ No location data available');
+            }
+          } catch (error) {
+            console.error('❌ Error tracking geolocation:', error);
+          }
+        })();
+      }
+      
+      return newCount;
+    });
   };
 
   const onGestureEvent = Animated.event(
@@ -239,7 +266,12 @@ export default function Swipe() {
       <View style={styles.noProfilesContainer}>
         <Ionicons name="heart-outline" size={80} color="#ccc" />
         <Text style={styles.noProfilesTitle}>No more profiles to show</Text>
-        <Text style={styles.noProfilesText}>Check back later for new people!</Text>
+        <Text style={styles.noProfilesText}>
+          This could be because:
+          {'\n'}• No users are within your distance preference
+          {'\n'}• You've swiped through all available profiles
+          {'\n'}• Check back later for new people!
+        </Text>
         <TouchableOpacity   
           style={styles.button}
           onPress={loadProfiles}
@@ -350,7 +382,26 @@ export default function Swipe() {
               nestedScrollEnabled={true}
             >
               <View style={styles.profileInfo}>
-                <Text style={styles.name}>{currentProfile.name}, {currentProfile.age}</Text>
+                <View style={styles.nameRow}>
+                  <Text style={styles.name}>{currentProfile.name}</Text>
+                </View>
+                <View style={styles.locationRow}>
+                  <View style={styles.ageContainer}>
+                    <Text style={styles.ageText}>{currentProfile.age}</Text>
+                  </View>
+                  {currentProfile.distance !== null && (
+                    <View style={styles.distanceContainer}>
+                      <Ionicons name="location" size={16} color="hotpink" />
+                      <Text style={styles.distanceText}>{currentProfile.distance} miles away</Text>
+                    </View>
+                  )}
+                  {currentProfile.residence && !currentProfile.distance && (
+                    <View style={styles.residenceContainer}>
+                      <Ionicons name="location" size={16} color="hotpink" />
+                      <Text style={styles.residenceText}>{currentProfile.residence}</Text>
+                    </View>
+                  )}
+                </View>
                 <Text style={styles.bio}>{currentProfile.bio}</Text>
                 {currentProfile.interests && currentProfile.interests.length > 0 && (
                   <View style={styles.interestsContainer}>
@@ -387,7 +438,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: 'hotpink',
   },
   cardContainer: {
     flex: 1,
@@ -486,10 +537,46 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingBottom: 20,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 5,
+  },
   name: {
     fontSize: 24,
     fontWeight: 'bold',
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 10,
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  residenceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffe6f0',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  residenceText: {
+    fontSize: 12,
+    color: 'hotpink',
+    marginLeft: 4,
+  },
+  ageContainer: {
+    backgroundColor: '#ffe6f0',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  ageText: {
+    fontSize: 12,
+    color: 'hotpink'
   },
   bio: {
     fontSize: 16,
@@ -645,5 +732,18 @@ const styles = StyleSheet.create({
     color: '#856404',
     marginLeft: 5,
   },
-}); 
+  distanceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffe6f0',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  distanceText: {
+    fontSize: 12,
+    color: 'hotpink',
+    marginLeft: 4,
+  },
+});
 

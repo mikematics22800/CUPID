@@ -15,13 +15,17 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import LottieView from 'lottie-react-native';
-import { getUsersWhoLikedMe, handleUserLike, discardLike } from '../../lib/supabase';
+import { getUsersWhoLikedMe, handleUserLike, discardLike, markLikesAsViewed, getCurrentLocationAndresidence } from '../../lib/supabase';
+import { useFocusEffect } from '@react-navigation/native';
+import { useProfile } from '../contexts/ProfileContext';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SWIPE_THRESHOLD = 120;
 
 export default function LikesScreen() {
+  const { updateProfile } = useProfile();
   const [likes, setLikes] = useState([]);
+  const [swipeCount, setSwipeCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [processingAction, setProcessingAction] = useState(null);
@@ -52,16 +56,20 @@ export default function LikesScreen() {
   const fetchLikes = async () => {
     try {
       setLoading(true);
-      console.log('🔄 Starting to fetch likes...');
+      // Starting to fetch likes
       
       const likesData = await getUsersWhoLikedMe();
-      console.log('📊 Likes data received:', likesData);
-      console.log('📊 Number of likes:', likesData.length);
+              // Likes data received
       
       setLikes(likesData);
-      setCurrentLikeIndex(0);
-      setCurrentPhotoIndex(0);
-      console.log(`✅ Successfully loaded ${likesData.length} likes`);
+      if (likesData.length > 0) {
+        setCurrentLikeIndex(0);
+        setCurrentPhotoIndex(0);
+      } else {
+        setCurrentLikeIndex(-1);
+        setCurrentPhotoIndex(0);
+      }
+              // Successfully loaded likes
 
     } catch (error) {
       console.error('❌ Error in fetchLikes:', error);
@@ -71,6 +79,22 @@ export default function LikesScreen() {
       setRefreshing(false);
     }
   };
+
+  // Mark likes as viewed when the screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      const markAsViewed = async () => {
+        try {
+          await markLikesAsViewed();
+          // Likes marked as viewed
+        } catch (error) {
+          console.error('❌ Error marking likes as viewed:', error);
+        }
+      };
+      
+      markAsViewed();
+    }, [])
+  );
 
   useEffect(() => {
     fetchLikes();
@@ -82,7 +106,10 @@ export default function LikesScreen() {
   };
 
   const handleSwipe = async (direction) => {
-    if (!likes[currentLikeIndex]) return;
+    if (!likes[currentLikeIndex] || currentLikeIndex < 0 || currentLikeIndex >= likes.length) {
+              // No valid like to process
+      return;
+    }
     
     const currentLike = likes[currentLikeIndex];
     
@@ -107,7 +134,7 @@ export default function LikesScreen() {
     // Handle the swipe action
     switch (direction) {
       case 'left':
-        console.log(`Passed on like from ${currentLike.id}`);
+        // Passed on like
         try {
           setProcessingAction(currentLike.id);
           const result = await discardLike(currentLike.id);
@@ -128,7 +155,7 @@ export default function LikesScreen() {
         }
         break;
       case 'right':
-        console.log(`Liked back ${currentLike.id}`);
+                  // Liked back
         try {
           setProcessingAction(currentLike.id);
           const result = await handleUserLike(currentLike.id);
@@ -169,12 +196,38 @@ export default function LikesScreen() {
         }
         break;
     }
+
+    // Increment swipe count and check for geolocation tracking
+    setSwipeCount(prevCount => {
+      const newCount = prevCount + 1;
+      
+      // Track geolocation every 10 swipes
+      if (newCount % 10 === 0) {
+        (async () => {
+          try {
+            console.log(`📍 Tracking geolocation after ${newCount} swipes (likes screen)`);
+            const location = await getCurrentLocationAndresidence();
+            if (location) {
+              console.log('✅ Geolocation updated:', location.geolocation);
+              // Update user's geolocation in database
+              await updateProfile({ geolocation: location.geolocation });
+            } else {
+              console.log('⚠️ No location data available');
+            }
+          } catch (error) {
+            console.error('❌ Error tracking geolocation:', error);
+          }
+        })();
+      }
+      
+      return newCount;
+    });
   };
 
   const loadNextLike = () => {
     const nextIndex = currentLikeIndex + 1;
     
-    if (nextIndex < likes.length) {
+    if (nextIndex < likes.length && likes.length > 0) {
       setCurrentLikeIndex(nextIndex);
       setCurrentPhotoIndex(0); // Reset photo index for new like
     } else {
@@ -235,20 +288,26 @@ export default function LikesScreen() {
 
   if (likes.length === 0) {
     return (
-      <View style={styles.container}>
-        <View style={styles.emptyState}>
-          <Ionicons name="heart-outline" size={80} color="hotpink" />
-          <Text style={styles.emptyTitle}>No likes yet</Text>
-          <Text style={styles.emptySubtitle}>When someone likes you, they'll appear here!</Text>
-          <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
-            <Ionicons name="refresh" size={60} color="hotpink" />
-          </TouchableOpacity>
-        </View>
+      <View style={styles.emptyStateContainer}>
+        <Ionicons name="heart-outline" size={80} color="#ccc" />
+        <Text style={styles.emptyStateTitle}>No likes yet</Text>
+        <Text style={styles.emptyStateText}>
+          This could be because:
+          {'\n'}• No users within your distance preference have liked you
+          {'\n'}• Keep swiping to increase your chances!
+          {'\n'}• Check back later for new likes
+        </Text>
+        <TouchableOpacity   
+          style={styles.button}
+          onPress={onRefresh}
+        >
+          <Text style={styles.buttonText}>Refresh</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
-  if (currentLikeIndex >= likes.length) {
+  if (currentLikeIndex >= likes.length || currentLikeIndex < 0) {
     return (
       <View style={styles.container}>
         <View style={styles.emptyState}>
@@ -264,6 +323,21 @@ export default function LikesScreen() {
   }
 
   const currentLike = likes[currentLikeIndex];
+  
+  // Additional safety check
+  if (!currentLike) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.emptyState}>
+          <Ionicons name="heart-outline" size={80} color="hotpink" />
+          <Text style={styles.emptyTitle}>No likes available</Text>
+          <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
+            <Ionicons name="refresh" size={60} color="hotpink" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -276,7 +350,7 @@ export default function LikesScreen() {
 
         <Animated.View style={[styles.swipeIndicator, styles.rightIndicator, { opacity: rightOpacity }]}>
           <Ionicons name="heart" size={60} color="hotpink" />
-          <Text style={[styles.indicatorText, { color: 'hotpink' }]}>LIKE BACK</Text>
+          <Text style={[styles.indicatorText, { color: 'hotpink' }]}>LIKE</Text>
         </Animated.View>
 
         <PanGestureHandler
@@ -372,6 +446,23 @@ export default function LikesScreen() {
                     </View>
                   </View>
                 )}
+                <View style={styles.locationRow}>
+                  <View style={styles.ageContainer}>
+                    <Text style={styles.ageText}>{currentLike.age}</Text>
+                  </View>
+                  {currentLike.distance !== null && (
+                    <View style={styles.distanceContainer}>
+                      <Ionicons name="location" size={16} color="hotpink" />
+                      <Text style={styles.distanceText}>{currentLike.distance} miles away</Text>
+                    </View>
+                  )}
+                  {currentLike.residence && !currentLike.distance && (
+                    <View style={styles.residenceContainer}>
+                      <Ionicons name="location" size={16} color="hotpink" />
+                      <Text style={styles.residenceText}>{currentLike.residence}</Text>
+                    </View>
+                  )}
+                </View>
               </View>
             </ScrollView>
 
@@ -385,13 +476,6 @@ export default function LikesScreen() {
           </Animated.View>
         </PanGestureHandler>
       </View>
-
-      {/* Like counter */}
-      <View style={styles.likeCounter}>
-        <Text style={styles.likeCounterText}>
-          {currentLikeIndex + 1} of {likes.length} likes
-        </Text>
-      </View>
     </View>
   );
 }
@@ -400,7 +484,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: 'hotpink',
   },
   cardContainer: {
     flex: 1,
@@ -574,28 +658,30 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
   },
-  emptyState: {
+  emptyStateContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 60,
   },
-  emptyTitle: {
+  emptyStateTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: 'white',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: 'white',
+    textAlign: 'center',
     marginTop: 10,
   },
-  emptySubtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    paddingHorizontal: 40,
-    lineHeight: 24,
-    marginBottom: 30,
-  },
-  refreshButton: {
+  button: {
     padding: 10,
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
   },
   profileImagePlaceholder: {
     width: '100%',
@@ -610,5 +696,35 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#ccc',
     marginTop: 10,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  ageContainer: {
+    marginRight: 10,
+  },
+  ageText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  distanceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+  distanceText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  residenceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+  residenceText: {
+    fontSize: 16,
+    color: '#666',
   },
 }); 

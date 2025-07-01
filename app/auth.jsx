@@ -3,7 +3,6 @@ import { StyleSheet, View } from 'react-native';
 import WelcomeScreen from './components/auth/WelcomeScreen';
 import LoginForm from './components/auth/LoginForm';
 import RegisterForm from './components/auth/RegisterForm';
-import DualVerificationForm from './components/auth/DualVerificationForm';
 import FloatingHearts from './components/auth/FloatingHearts';
 
 export default function LoginScreen() {
@@ -50,14 +49,6 @@ export default function LoginScreen() {
         <RegisterForm
           onBack={handleBack}
           onRegistrationSuccess={handleRegistrationSuccess}
-        />
-      )}
-      {verificationForm && verificationData && (
-        <DualVerificationForm
-          email={verificationData.email}
-          phone={verificationData.phone}
-          onVerificationSuccess={handleVerificationSuccess}
-          onBack={handleBack}
         />
       )}
     </View>

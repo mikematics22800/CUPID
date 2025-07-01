@@ -187,7 +187,7 @@ const banUser = async (userId, userInfo) => {
 
     // Delete user's chat rooms
     await supabase
-      .from('chat_rooms')
+      .from('chats')
       .delete()
       .or(`user1_id.eq.${userId},user2_id.eq.${userId}`);
 
@@ -287,7 +287,7 @@ const notifyOtherUsers = async (userId, userInfo, action = 'strike') => {
   try {
     // Get all chat rooms where the user was involved
     const { data: chatRooms } = await supabase
-      .from('chat_rooms')
+      .from('chats')
       .select('user1_id, user2_id')
       .or(`user1_id.eq.${userId},user2_id.eq.${userId}`);
 
@@ -370,4 +370,7 @@ export const getUserStrikes = async (userId) => {
   } catch (error) {
     return { strikes: 0 };
   }
-}; 
+};
+
+// Default export
+export default detectViolentThreats; 
