@@ -52,8 +52,8 @@ export default function PersonalInfoForm({
       />
       
       <ResidenceInput
-        residence={residence}
-        setResidence={setResidence}
+        value={residence}
+        onChangeText={setResidence}
         validationStatus={validationStatus}
       />
     </View>

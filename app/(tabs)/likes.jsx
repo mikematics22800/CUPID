@@ -15,7 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import LottieView from 'lottie-react-native';
-import { getUsersWhoLikedMe, handleUserLike, discardLike, markLikesAsViewed, getCurrentLocationAndresidence } from '../../lib/supabase';
+import { getUsersWhoLikedMe, handleUserLike, discardLike, markLikesAsViewed, updateGeolocationAndFetchProfiles } from '../../lib/supabase';
 import { useFocusEffect } from '@react-navigation/native';
 import { useProfile } from '../contexts/ProfileContext';
 
@@ -53,23 +53,35 @@ export default function LikesScreen() {
     extrapolate: 'clamp'
   });
 
-  const fetchLikes = async () => {
+  const fetchLikes = async (shouldUpdateLocation = false) => {
     try {
       setLoading(true);
-      // Starting to fetch likes
+      console.log(`🔄 Fetching likes with location update: ${shouldUpdateLocation}`);
       
-      const likesData = await getUsersWhoLikedMe();
-              // Likes data received
+      let likesData;
+      if (shouldUpdateLocation) {
+        // Update geolocation and fetch likes
+        console.log('📍 Updating geolocation before fetching likes');
+        await updateGeolocationAndFetchProfiles(10); // This updates geolocation
+        likesData = await getUsersWhoLikedMe();
+      } else {
+        // Fetch likes without updating geolocation
+        likesData = await getUsersWhoLikedMe();
+      }
+      
+      console.log(`✅ Likes data received: ${likesData.length} likes`);
       
       setLikes(likesData);
       if (likesData.length > 0) {
         setCurrentLikeIndex(0);
         setCurrentPhotoIndex(0);
+        setSwipeCount(0); // Reset swipe count when loading new likes
       } else {
         setCurrentLikeIndex(-1);
         setCurrentPhotoIndex(0);
+        setSwipeCount(0); // Reset swipe count even when no likes
       }
-              // Successfully loaded likes
+      console.log('✅ Successfully loaded likes');
 
     } catch (error) {
       console.error('❌ Error in fetchLikes:', error);
@@ -86,7 +98,7 @@ export default function LikesScreen() {
       const markAsViewed = async () => {
         try {
           await markLikesAsViewed();
-          // Likes marked as viewed
+          console.log('✅ Likes marked as viewed');
         } catch (error) {
           console.error('❌ Error marking likes as viewed:', error);
         }
@@ -97,17 +109,17 @@ export default function LikesScreen() {
   );
 
   useEffect(() => {
-    fetchLikes();
+    fetchLikes(false); // Don't update location on initial load
   }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchLikes();
+    fetchLikes(false); // Don't update location on manual refresh
   };
 
   const handleSwipe = async (direction) => {
     if (!likes[currentLikeIndex] || currentLikeIndex < 0 || currentLikeIndex >= likes.length) {
-              // No valid like to process
+      console.log('❌ No valid like to process');
       return;
     }
     
@@ -155,7 +167,7 @@ export default function LikesScreen() {
         }
         break;
       case 'right':
-                  // Liked back
+        // Liked back
         try {
           setProcessingAction(currentLike.id);
           const result = await handleUserLike(currentLike.id);
@@ -197,27 +209,14 @@ export default function LikesScreen() {
         break;
     }
 
-    // Increment swipe count and check for geolocation tracking
+    // Increment swipe count
     setSwipeCount(prevCount => {
       const newCount = prevCount + 1;
+      console.log(`📊 Likes swipe count: ${newCount}/10`);
       
-      // Track geolocation every 10 swipes
-      if (newCount % 10 === 0) {
-        (async () => {
-          try {
-            console.log(`📍 Tracking geolocation after ${newCount} swipes (likes screen)`);
-            const location = await getCurrentLocationAndresidence();
-            if (location) {
-              console.log('✅ Geolocation updated:', location.geolocation);
-              // Update user's geolocation in database
-              await updateProfile({ geolocation: location.geolocation });
-            } else {
-              console.log('⚠️ No location data available');
-            }
-          } catch (error) {
-            console.error('❌ Error tracking geolocation:', error);
-          }
-        })();
+      // If we've reached 10 swipes, the next like fetch will update geolocation
+      if (newCount === 10) {
+        console.log('🎯 Reached 10 swipes in likes - next fetch will update geolocation');
       }
       
       return newCount;
@@ -231,8 +230,10 @@ export default function LikesScreen() {
       setCurrentLikeIndex(nextIndex);
       setCurrentPhotoIndex(0); // Reset photo index for new like
     } else {
-      // No more likes, show empty state
-      setCurrentLikeIndex(-1);
+      // No more likes, check if we need to update geolocation and fetch new likes
+      const shouldUpdateLocation = swipeCount >= 10;
+      console.log(`🔄 No more likes, fetching new batch with location update: ${shouldUpdateLocation}`);
+      fetchLikes(shouldUpdateLocation);
     }
   };
 
@@ -289,19 +290,13 @@ export default function LikesScreen() {
   if (likes.length === 0) {
     return (
       <View style={styles.emptyStateContainer}>
-        <Ionicons name="heart-outline" size={80} color="#ccc" />
+        <Ionicons name="heart-outline" size={80} color="white" />
         <Text style={styles.emptyStateTitle}>No likes yet</Text>
-        <Text style={styles.emptyStateText}>
-          This could be because:
-          {'\n'}• No users within your distance preference have liked you
-          {'\n'}• Keep swiping to increase your chances!
-          {'\n'}• Check back later for new likes
-        </Text>
         <TouchableOpacity   
           style={styles.button}
           onPress={onRefresh}
         >
-          <Text style={styles.buttonText}>Refresh</Text>
+          <Ionicons name="refresh" size={60} color="white" />
         </TouchableOpacity>
       </View>
     );
@@ -663,6 +658,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 60,
+    backgroundColor: 'hotpink',
   },
   emptyStateTitle: {
     fontSize: 24,

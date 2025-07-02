@@ -17,7 +17,8 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
    EXPO_PUBLIC_SUPABASE_KEY=your_supabase_anon_key
    SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-   EXPO_PUBLIC_GEMINI_KEY=your_gemini_api_key_here
+   EXPO_PUBLIC_GEMINI_KEY=your_gemini_api_key
+   EXPO_PUBLIC_GOOGLE_MAPS_KEY=your_google_maps_api_key
    ```
 
    **To get your Gemini API key:**
@@ -100,15 +101,82 @@ The app now includes an AI-powered bio generation feature that helps users creat
 - The AI prompt is optimized for dating app context and character limits
 - Error handling includes network connectivity checks and user-friendly error messages
 
-## Get a fresh project
+## Distance Filtering Feature
 
-When you're ready, run:
+### Features:
+- **Residence-based Distance**: Filter users by distance from your residence using Google Maps Distance Matrix API
+- **GPS-based Distance**: Calculate distances using precise GPS coordinates when available
+- **Flexible Distance Options**: Choose from 5, 10, 25, 50, or 100 miles
+- **Smart Fallback**: Automatically falls back to residence comparison if distance calculation fails
+- **Visual Distance Display**: See exact distances when using distance filters
 
-```bash
-npm run reset-project
+### How Distance Filtering Works
+1. **Primary Method**: Uses Google Maps Distance Matrix API to calculate driving distance between residences
+2. **Secondary Method**: Uses GPS coordinates with Haversine formula for precise distance calculation
+3. **Fallback Method**: Compares residence strings for exact matches (0 miles)
+4. **User Experience**: Shows distance in miles on profile cards when filter is active
+
+### Technical Implementation
+- **Google Maps Integration**: Distance Matrix API for accurate address-based distance calculation
+- **Geolocation Support**: GPS coordinates for precise location-based matching
+- **Residence Storage**: Stores user residence as formatted address strings
+- **Distance Preferences**: User-configurable maximum distance settings
+- **Real-time Updates**: Automatic distance recalculation when location changes
+
+## Getting Started
+
+### Prerequisites
+- Node.js (v16 or higher)
+- React Native development environment
+- Supabase account
+- Google Maps API key
+
+### Environment Variables
+```env
+EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+EXPO_PUBLIC_SUPABASE_KEY=your_supabase_anon_key
+EXPO_PUBLIC_GOOGLE_MAPS_KEY=your_google_maps_api_key
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Installation
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Set up environment variables
+4. Run the app: `npx expo start`
+
+## Usage
+
+### Distance Filtering
+1. Set your residence in Settings > Edit Profile
+2. Go to the Everyone tab
+3. Tap the "Distance Filter" button
+4. Choose your desired distance (5-100 miles)
+5. View users within that distance from your residence
+6. Clear the filter anytime to see all users
+
+### Location Sharing
+- Enable location sharing for more accurate distance calculations
+- Residence setting works as a fallback when GPS is unavailable
+- Both methods provide distance-based user filtering
+
+## API Endpoints
+
+### Distance Calculation
+- `getUsersWithinDistance(maxDistance, limit)`: Get users within specified distance
+- `calculateAddressDistance(origin, destination)`: Calculate distance between addresses
+- `calculateDistance(lat1, lon1, lat2, lon2)`: Calculate distance using coordinates
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License.
 
 ## Learn more
 

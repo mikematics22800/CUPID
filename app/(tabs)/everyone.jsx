@@ -3,16 +3,16 @@ import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import LottieView from 'lottie-react-native';
-import { handleUserLike, getSwipeProfiles, getCurrentLocationAndresidence } from '../../lib/supabase';
+import { handleUserLike, getSwipeProfilesWithGeolocationUpdate, getUsersWithinDistance } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
 import { useProfile } from '../contexts/ProfileContext';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SWIPE_THRESHOLD = 120;
 
-export default function Swipe() {
+export default function Everyone() {
   const router = useRouter();
-  const { user, profile, photos, hasCompletedProfile, getPhotoCount, updateProfile } = useProfile();
+  const { user, profile, photos, hasCompletedProfile, getPhotoCount, updateProfile, loading } = useProfile();
   const [canSwipe, setCanSwipe] = useState(true);
   const [timeLeft, setTimeLeft] = useState(10);
   const [isFirstSwipe, setIsFirstSwipe] = useState(true);
@@ -24,6 +24,9 @@ export default function Swipe() {
   const [photoLoadingError, setPhotoLoadingError] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [swipeCount, setSwipeCount] = useState(0);
+  const [showDistanceFilter, setShowDistanceFilter] = useState(false);
+  const [distanceFilter, setDistanceFilter] = useState(50);
+  const [isDistanceFilterActive, setIsDistanceFilterActive] = useState(false);
 
   // Animation values
   const position = useRef(new Animated.ValueXY()).current;
@@ -48,31 +51,89 @@ export default function Swipe() {
 
   // Load user's photo count and profiles on component mount
   useEffect(() => {
-    loadProfiles();
+    loadProfiles(false); // Don't update location on initial load since it's done in ProfileContext
   }, []);
 
-  const loadProfiles = async () => {
+  const loadProfiles = async (shouldUpdateLocation = false) => {
     try {
       setLoadingProfiles(true);
       setPhotoLoadingError(false);
-      const fetchedProfiles = await getSwipeProfiles(10); // Get 20 profiles
+      
+      console.log(`🔄 Loading profiles with location update: ${shouldUpdateLocation}`);
+      let fetchedProfiles;
+      
+      if (isDistanceFilterActive) {
+        console.log(`📍 Loading profiles within ${distanceFilter} miles of residence`);
+        try {
+          fetchedProfiles = await getUsersWithinDistance(distanceFilter, 10);
+          if (fetchedProfiles.length === 0) {
+            Alert.alert(
+              'No Users Found',
+              `No users found within ${distanceFilter} miles of your residence. Try increasing the distance or check your residence setting.`,
+              [
+                { text: 'Clear Filter', onPress: clearDistanceFilter },
+                { text: 'OK', style: 'cancel' }
+              ]
+            );
+          }
+        } catch (distanceError) {
+          console.error('Distance filter error:', distanceError);
+          Alert.alert(
+            'Distance Filter Error',
+            'Unable to filter by distance. Please check your residence setting in your profile.',
+            [
+              { text: 'Clear Filter', onPress: clearDistanceFilter },
+              { text: 'OK', style: 'cancel' }
+            ]
+          );
+          return;
+        }
+      } else {
+        fetchedProfiles = await getSwipeProfilesWithGeolocationUpdate(10, shouldUpdateLocation);
+      }
+      
       setProfiles(fetchedProfiles);
       
       if (fetchedProfiles.length > 0) {
         setCurrentProfile(fetchedProfiles[0]);
         setCurrentProfileIndex(0);
+        setCurrentPhotoIndex(0);
+        // Reset swipe count when loading new profiles
+        setSwipeCount(0);
+        console.log('🔄 Swipe count reset to 0');
       }
+      
+      console.log(`✅ Loaded ${fetchedProfiles.length} new profiles`);
     } catch (error) {
       console.error('Error loading profiles:', error);
       if (error.message?.includes('photo') || error.message?.includes('storage')) {
         setPhotoLoadingError(true);
         Alert.alert('Photo Loading Error', 'Some photos may not display properly. Please try again later.');
+      } else if (error.message?.includes('residence')) {
+        Alert.alert('Location Required', 'Please set your residence in settings to use distance filtering.');
       } else {
         Alert.alert('Error', 'Failed to load profiles. Please try again.');
       }
     } finally {
       setLoadingProfiles(false);
     }
+  };
+
+  const toggleDistanceFilter = () => {
+    setShowDistanceFilter(!showDistanceFilter);
+  };
+
+  const applyDistanceFilter = (distance) => {
+    setDistanceFilter(distance);
+    setIsDistanceFilterActive(true);
+    setShowDistanceFilter(false);
+    loadProfiles(false);
+  };
+
+  const clearDistanceFilter = () => {
+    setIsDistanceFilterActive(false);
+    setShowDistanceFilter(false);
+    loadProfiles(false);
   };
 
   useEffect(() => {
@@ -99,8 +160,10 @@ export default function Swipe() {
       setCurrentProfileIndex(nextIndex);
       setCurrentPhotoIndex(0); // Reset photo index for new profile
     } else {
-      // No more profiles, reload
-      loadProfiles();
+      // No more profiles, check if we need to update geolocation
+      const shouldUpdateLocation = swipeCount >= 10;
+      console.log(`🔄 Reached end of current profiles, loading new batch with location update: ${shouldUpdateLocation}`);
+      loadProfiles(shouldUpdateLocation);
     }
   };
 
@@ -140,7 +203,7 @@ export default function Swipe() {
         // For dislikes, we don't need to do anything in the database
         break;
       case 'right':
-                  // Liked profile
+        // Liked profile
         try {
           const result = await handleUserLike(currentProfile.id);
           
@@ -169,27 +232,14 @@ export default function Swipe() {
         break;
     }
 
-    // Increment swipe count and check for geolocation tracking
+    // Increment swipe count
     setSwipeCount(prevCount => {
       const newCount = prevCount + 1;
+      console.log(`📊 Swipe count: ${newCount}/10`);
       
-      // Track geolocation every 10 swipes
-      if (newCount % 10 === 0) {
-        (async () => {
-          try {
-            console.log(`📍 Tracking geolocation after ${newCount} swipes`);
-            const location = await getCurrentLocationAndresidence();
-            if (location) {
-              console.log('✅ Geolocation updated:', location.geolocation);
-              // Update user's geolocation in database
-              await updateProfile({ geolocation: location.geolocation });
-            } else {
-              console.log('⚠️ No location data available');
-            }
-          } catch (error) {
-            console.error('❌ Error tracking geolocation:', error);
-          }
-        })();
+      // If we've reached 10 swipes, the next profile load will update geolocation
+      if (newCount === 10) {
+        console.log('🎯 Reached 10 swipes - next profile load will update geolocation');
       }
       
       return newCount;
@@ -246,9 +296,9 @@ export default function Swipe() {
     );
   }
 
-  if (user && !hasCompletedProfile()) {
+  if (user && !loading && !hasCompletedProfile()) {
     return (
-      <View style={styles.insufficientPhotosContainer}>
+      <View style={styles.incompleteProfileContainer}>
         <Ionicons name="camera-outline" size={80} color="#ccc" />
         <Text style={styles.insufficientPhotosTitle}>Please complete your profile before continuing.</Text>
         <TouchableOpacity   
@@ -264,19 +314,13 @@ export default function Swipe() {
   if (!currentProfile) {
     return (
       <View style={styles.noProfilesContainer}>
-        <Ionicons name="heart-outline" size={80} color="#ccc" />
-        <Text style={styles.noProfilesTitle}>No more profiles to show</Text>
-        <Text style={styles.noProfilesText}>
-          This could be because:
-          {'\n'}• No users are within your distance preference
-          {'\n'}• You've swiped through all available profiles
-          {'\n'}• Check back later for new people!
-        </Text>
+        <Ionicons name="heart-outline" size={80} color="white" />
+        <Text style={styles.noProfilesTitle}>That's everyone!</Text>
         <TouchableOpacity   
           style={styles.button}
-          onPress={loadProfiles}
+          onPress={() => loadProfiles(false)}
         >
-          <Text style={styles.buttonText}>Refresh</Text>
+          <Ionicons name="refresh" size={60} color="white" />
         </TouchableOpacity>
       </View>
     );
@@ -389,13 +433,13 @@ export default function Swipe() {
                   <View style={styles.ageContainer}>
                     <Text style={styles.ageText}>{currentProfile.age}</Text>
                   </View>
-                  {currentProfile.distance !== null && (
+                  {isDistanceFilterActive && currentProfile.distance !== null && (
                     <View style={styles.distanceContainer}>
                       <Ionicons name="location" size={16} color="hotpink" />
                       <Text style={styles.distanceText}>{currentProfile.distance} miles away</Text>
                     </View>
                   )}
-                  {currentProfile.residence && !currentProfile.distance && (
+                  {currentProfile.residence && !isDistanceFilterActive && (
                     <View style={styles.residenceContainer}>
                       <Ionicons name="location" size={16} color="hotpink" />
                       <Text style={styles.residenceText}>{currentProfile.residence}</Text>
@@ -437,13 +481,110 @@ export default function Swipe() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     backgroundColor: 'hotpink',
+  },
+  filterHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: 'white',
+    marginBottom: 10,
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderWidth: 2,
+    borderColor: 'hotpink',
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+  },
+  filterButtonActive: {
+    backgroundColor: 'hotpink',
+  },
+  filterButtonText: {
+    marginLeft: 8,
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'hotpink',
+  },
+  filterButtonTextActive: {
+    color: 'white',
+  },
+  clearFilterButton: {
+    backgroundColor: '#ff6b6b',
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterModal: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  filterContent: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 25,
+    width: '85%',
+    alignItems: 'center',
+  },
+  filterTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    color: '#333',
+  },
+  distanceOptions: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  distanceOption: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  distanceOptionActive: {
+    backgroundColor: 'hotpink',
+  },
+  distanceOptionText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  distanceOptionTextActive: {
+    color: 'white',
+  },
+  cancelButton: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
   },
   cardContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
   swipeIndicator: {
     position: 'absolute',
@@ -587,6 +728,7 @@ const styles = StyleSheet.create({
   interestsContainer: {
     width: '100%',
     marginTop: 10,
+    height: 100,
   },
   interestsList: {
     flexDirection: 'row',
@@ -613,6 +755,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'red',
   },
+  profilesCounterContainer: {
+    alignItems: 'center',
+    backgroundColor: 'white',
+    padding: 15,
+    borderRadius: 20,
+    marginTop: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  profilesCounterText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '600',
+    marginBottom: 5,
+  },
+  swipeCounterText: {
+    fontSize: 12,
+    color: 'hotpink',
+    fontWeight: 'bold',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -628,7 +796,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
-  insufficientPhotosContainer: {
+  incompleteProfileContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
@@ -651,22 +819,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    backgroundColor: 'hotpink',
   },
   noProfilesTitle: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 10,
     textAlign: 'center',
+    color: 'white',
   },
   noProfilesText: {
     fontSize: 16,
     color: '#666',
-    marginBottom: 20,
     textAlign: 'center',
   },
   button: {
     backgroundColor: 'hotpink',
-    padding: 15,
     borderRadius: 10,
   },
   buttonText: {

@@ -27,6 +27,11 @@ export const ProfileProvider = ({ children }) => {
   const [phone, setPhone] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
+  // Helper function to check if location sharing is enabled
+  const isLocationSharingEnabled = () => {
+    return geolocation !== null;
+  };
+
   // Load user profile data
   const loadUserProfile = async () => {
     try {
@@ -67,22 +72,33 @@ export const ProfileProvider = ({ children }) => {
         // Load photos from both database and storage
         await loadPhotosFromStorage(currentUser.id, profileData.images);
         
-        // Initial geolocation ping when app starts
-        try {
-          console.log('📍 Initial geolocation ping on app start');
-          const location = await getCurrentLocationAndresidence();
-          if (location) {
-            console.log('✅ Initial geolocation updated:', location.geolocation);
-            await updateProfile({ geolocation: location.geolocation });
+        // Update geolocation on app start/login only if location sharing is enabled
+        if (profileData.geolocation) {
+          try {
+            console.log('📍 Updating geolocation on app start/login');
+            const location = await getCurrentLocationAndresidence();
+            if (location) {
+              console.log('✅ Geolocation updated on app start:', location.geolocation);
+              await updateProfile({ geolocation: location.geolocation });
+            }
+          } catch (error) {
+            console.error('❌ Error updating geolocation on app start:', error);
           }
-        } catch (error) {
-          console.error('❌ Error in initial geolocation ping:', error);
+        } else {
+          console.log('📍 Location sharing disabled (geolocation is null), skipping geolocation update');
         }
       } else {
         // No profile data found, starting with empty profile
         setBio('');
         setInterests([]);
-        setPhotos([]);
+        setResidence('');
+        setGeolocation(null);
+        setName('');
+        setEmail('');
+        setPhone('');
+        
+        // Don't update geolocation for new users until they explicitly enable location sharing
+        console.log('📍 New user, location sharing disabled by default (geolocation is null)');
       }
     } catch (error) {
       console.error('Error in loadUserProfile:', error);
@@ -266,6 +282,23 @@ export const ProfileProvider = ({ children }) => {
     return photos.length;
   };
 
+  // Function to update geolocation
+  const updateGeolocation = async () => {
+    try {
+      console.log('📍 Manually updating geolocation');
+      const location = await getCurrentLocationAndresidence();
+      if (location) {
+        console.log('✅ Geolocation updated manually:', location.geolocation);
+        await updateProfile({ geolocation: location.geolocation });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('❌ Error manually updating geolocation:', error);
+      return false;
+    }
+  };
+
   // Initialize profile on mount
   useEffect(() => {
     loadUserProfile();
@@ -297,6 +330,8 @@ export const ProfileProvider = ({ children }) => {
     hasName,
     hasCompletedProfile,
     getPhotoCount,
+    updateGeolocation,
+    isLocationSharingEnabled,
     
     // Setters for form state
     setBio,

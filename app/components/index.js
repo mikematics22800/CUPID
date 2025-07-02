@@ -5,7 +5,7 @@ export { MatchCard, MessageBubble, ChatHeader, MessageInput, EmptyState as Match
 export { LikeCard, SwipeIndicators as LikesSwipeIndicators, LikeCounter, EmptyState as LikesEmptyState } from './likes';
 
 // Swipe components
-export { ProfileCard, SwipeIndicators as SwipeSwipeIndicators, TimerDisplay, PhotoErrorDisplay, InsufficientPhotosState, NoProfilesState } from './swipe';
+export { ProfileCard, SwipeIndicators as SwipeSwipeIndicators, TimerDisplay, PhotoErrorDisplay, InsufficientPhotosState, NoProfilesState } from './everyone';
 
 
 // Settings components

@@ -2,7 +2,7 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { getUnreadMessageCount, getNewLikesCount, getNewMatchesCount, supabase } from '../../lib/supabase';
+import { getNewLikesCount, getNewMatchesCount, supabase } from '../../lib/supabase';
 import { ProfileProvider } from '../contexts/ProfileContext';
 import { useFocusEffect } from '@react-navigation/native';
 import React from 'react';
@@ -103,7 +103,7 @@ export default function TabLayout() {
         headerTitle: ''
       }}>
         <Tabs.Screen
-          name="swipe"
+          name="everyone"
           options={{
             title: 'Everyone',
             tabBarIcon: ({ color, size }) => (

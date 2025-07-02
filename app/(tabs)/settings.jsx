@@ -8,7 +8,6 @@ import LottieView from 'lottie-react-native';
 import { useProfile } from '../contexts/ProfileContext';
 import PhotoSection from '../components/auth/PhotoSection';
 import BioSection from '../components/auth/BioSection';
-import LocationPicker from '../components/settings/LocationPicker';
 import PersonalInfoForm from '../components/settings/PersonalInfoForm';
 import { uploadPhotosToStorage } from '../../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -34,8 +33,6 @@ export default function SettingsScreen() {
   // Profile editing state
   const [showProfile, setShowProfile] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [gettingLocation, setGettingLocation] = useState(false);
-  const [locationPickerVisible, setLocationPickerVisible] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [validationStatus, setValidationStatus] = useState({
@@ -55,6 +52,7 @@ export default function SettingsScreen() {
     bio, 
     interests, 
     residence,
+    geolocation,
     name,
     email,
     phone,
@@ -62,6 +60,7 @@ export default function SettingsScreen() {
     setInterests, 
     setPhotos,
     setResidence,
+    setGeolocation,
     setName,
     setEmail,
     setPhone,
@@ -72,7 +71,8 @@ export default function SettingsScreen() {
     hasBio,
     hasName,
     hasCompletedProfile,
-    refreshProfile
+    refreshProfile,
+    isLocationSharingEnabled
   } = useProfile();
 
   // Load user preferences from AsyncStorage
@@ -260,6 +260,58 @@ export default function SettingsScreen() {
     setShowDistanceModal(false);
   };
 
+  // Location sharing functions
+  const handleLocationSharingToggle = async () => {
+    const currentlyEnabled = isLocationSharingEnabled();
+    
+    if (currentlyEnabled) {
+      // Disable location sharing
+      Alert.alert(
+        'Disable Location Sharing',
+        'This will stop sharing your location with other users. You can still use the app with your residence setting.',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          },
+          {
+            text: 'Disable',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await updateProfile({ geolocation: null });
+                Alert.alert('Location Sharing Disabled', 'Your location is no longer being shared.');
+              } catch (error) {
+                console.error('Error disabling location sharing:', error);
+                Alert.alert('Error', 'Failed to disable location sharing. Please try again.');
+              }
+            }
+          }
+        ]
+      );
+    } else {
+      // Enable location sharing
+      try {
+        const { getCurrentLocationAndresidence } = await import('../../lib/supabase');
+        const location = await getCurrentLocationAndresidence();
+        
+        if (location) {
+          await updateProfile({ geolocation: location.geolocation });
+          Alert.alert('Location Sharing Enabled', 'Your location is now being shared to help you find better matches nearby!');
+        } else {
+          Alert.alert(
+            'Location Error',
+            'We couldn\'t determine your current location. Please check your location settings and try again.',
+            [{ text: 'OK' }]
+          );
+        }
+      } catch (error) {
+        console.error('Error enabling location sharing:', error);
+        Alert.alert('Error', 'Failed to enable location sharing. Please try again.');
+      }
+    }
+  };
+
   // Profile-related functions
   const handlePhotoRemove = async (photo) => {
     try {
@@ -273,23 +325,19 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleLocationSelection = () => {
-    setLocationPickerVisible(true);
-  };
-
   const handleLocationSelected = async (locationData) => {
     try {
-              setResidence(locationData.locationString);
+      setResidence(locationData.locationString);
       const success = await updateProfile({ residence: locationData.locationString });
       
       if (success) {
-        Alert.alert('Success', `Location set to: ${locationData.locationString}`);
+        Alert.alert('Success', `Residence updated to: ${locationData.locationString}`);
       } else {
-        Alert.alert('Warning', 'Location set locally but failed to save to server. Please try saving your profile.');
+        Alert.alert('Warning', 'Residence set locally but failed to save to server. Please try again.');
       }
     } catch (error) {
-      console.error('Error updating location:', error);
-      Alert.alert('Error', 'Failed to update location. Please try again.');
+      console.error('Error updating residence:', error);
+      Alert.alert('Error', 'Failed to update residence. Please try again.');
     }
   };
 
@@ -486,6 +534,13 @@ export default function SettingsScreen() {
           title="Show Online Status"
           value={showOnlineStatus}
           onPress={() => setShowOnlineStatus(!showOnlineStatus)}
+          showSwitch
+        />
+        <SettingItem
+          icon="location-outline"
+          title="Location Sharing"
+          value={isLocationSharingEnabled()}
+          onPress={handleLocationSharingToggle}
           showSwitch
         />
       </View>
@@ -699,13 +754,6 @@ export default function SettingsScreen() {
               </View>
             </ScrollView>
           )}
-
-          {/* Location Picker Modal */}
-          <LocationPicker
-            visible={locationPickerVisible}
-            onClose={() => setLocationPickerVisible(false)}
-            onLocationSelected={handleLocationSelected}
-          />
         </View>
       </Modal>
     </ScrollView>
