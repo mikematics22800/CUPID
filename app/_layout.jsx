@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PaperProvider, MD3LightTheme } from 'react-native-paper';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 import { ProfileProvider, useProfile } from './contexts/ProfileContext';
 import LocationPermissionHandler from './components/LocationPermissionHandler';
@@ -10,15 +11,42 @@ import LocationPermissionHandler from './components/LocationPermissionHandler';
 
 // Component to handle location permission on first launch
 function LocationPermissionHandlerWrapper() {
-  const { isLocationSharingEnabled, updateProfile } = useProfile();
+  const { isLocationSharingEnabled, updateProfile, user, hasCompletedProfile, loading } = useProfile();
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [hasShownLocationModal, setHasShownLocationModal] = useState(false);
+  const [locationPromptDisabled, setLocationPromptDisabled] = useState(false);
+
+  // Load location prompt preference from AsyncStorage
+  useEffect(() => {
+    const loadLocationPromptPreference = async () => {
+      try {
+        const disabled = await AsyncStorage.getItem('location_prompt_disabled');
+        setLocationPromptDisabled(disabled === 'true');
+      } catch (error) {
+        console.error('Error loading location prompt preference:', error);
+      }
+    };
+    
+    loadLocationPromptPreference();
+  }, []);
 
   useEffect(() => {
-    // Show location permission modal if user is authenticated, has completed profile, 
-    // location sharing is not enabled, and we haven't shown the modal yet
-    if (isLocationSharingEnabled() === false && !hasShownLocationModal) {
-      // Add a small delay to ensure the app is fully loaded
+    // Only show location permission modal if:
+    // 1. User is authenticated (user exists)
+    // 2. Profile is loaded (not loading)
+    // 3. User has completed their profile
+    // 4. Location sharing is not enabled
+    // 5. Location prompt is not disabled
+    // 6. We haven't shown the modal yet
+    if (
+      user && 
+      !loading && 
+      hasCompletedProfile() && 
+      isLocationSharingEnabled() === false && 
+      !locationPromptDisabled && 
+      !hasShownLocationModal
+    ) {
+      // Add a small delay to ensure the app is fully loaded and avoid useInsertionEffect warning
       const timer = setTimeout(() => {
         setShowLocationModal(true);
         setHasShownLocationModal(true);
@@ -26,7 +54,7 @@ function LocationPermissionHandlerWrapper() {
 
       return () => clearTimeout(timer);
     }
-  }, [isLocationSharingEnabled, hasShownLocationModal]);
+  }, [user, loading, hasCompletedProfile, isLocationSharingEnabled, locationPromptDisabled, hasShownLocationModal]);
 
   const handleLocationEnabled = async (locationData) => {
     try {
@@ -38,8 +66,18 @@ function LocationPermissionHandlerWrapper() {
     }
   };
 
-  const handleLocationDisabled = () => {
+  const handleLocationDisabled = async (neverAskAgain = false) => {
     setShowLocationModal(false);
+    
+    if (neverAskAgain) {
+      try {
+        await AsyncStorage.setItem('location_prompt_disabled', 'true');
+        setLocationPromptDisabled(true);
+        console.log('✅ Location prompt disabled permanently');
+      } catch (error) {
+        console.error('❌ Error saving location prompt preference:', error);
+      }
+    }
   };
 
   return (

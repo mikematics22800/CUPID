@@ -27,6 +27,7 @@ export default function Everyone() {
   const [showDistanceFilter, setShowDistanceFilter] = useState(false);
   const [distanceFilter, setDistanceFilter] = useState(50);
   const [isDistanceFilterActive, setIsDistanceFilterActive] = useState(false);
+  const [nextProfileReady, setNextProfileReady] = useState(false);
 
   // Animation values
   const position = useRef(new Animated.ValueXY()).current;
@@ -63,24 +64,24 @@ export default function Everyone() {
       let fetchedProfiles;
       
       if (isDistanceFilterActive) {
-        console.log(`📍 Loading profiles within ${distanceFilter} miles of residence`);
+        console.log(`📍 Loading profiles within ${distanceFilter} miles using distance filtering`);
         try {
           fetchedProfiles = await getUsersWithinDistance(distanceFilter, 10);
           if (fetchedProfiles.length === 0) {
-            Alert.alert(
-              'No Users Found',
-              `No users found within ${distanceFilter} miles of your residence. Try increasing the distance or check your residence setting.`,
-              [
-                { text: 'Clear Filter', onPress: clearDistanceFilter },
-                { text: 'OK', style: 'cancel' }
-              ]
-            );
+                      Alert.alert(
+            'No Users Found',
+            `No users found within ${distanceFilter} miles. Try increasing the distance or check your location settings.`,
+            [
+              { text: 'Clear Filter', onPress: clearDistanceFilter },
+              { text: 'OK', style: 'cancel' }
+            ]
+          );
           }
         } catch (distanceError) {
           console.error('Distance filter error:', distanceError);
           Alert.alert(
             'Distance Filter Error',
-            'Unable to filter by distance. Please check your residence setting in your profile.',
+            'Unable to filter by distance. Please check your location settings in your profile.',
             [
               { text: 'Clear Filter', onPress: clearDistanceFilter },
               { text: 'OK', style: 'cancel' }
@@ -100,6 +101,7 @@ export default function Everyone() {
         setCurrentPhotoIndex(0);
         // Reset swipe count when loading new profiles
         setSwipeCount(0);
+        setNextProfileReady(fetchedProfiles.length > 1); // Next profile ready if there's more than one
         console.log('🔄 Swipe count reset to 0');
       }
       
@@ -159,11 +161,13 @@ export default function Everyone() {
       setCurrentProfile(profiles[nextIndex]);
       setCurrentProfileIndex(nextIndex);
       setCurrentPhotoIndex(0); // Reset photo index for new profile
+      setNextProfileReady(true); // Next profile is ready
     } else {
       // No more profiles, check if we need to update geolocation
       const shouldUpdateLocation = swipeCount >= 10;
       console.log(`🔄 Reached end of current profiles, loading new batch with location update: ${shouldUpdateLocation}`);
       loadProfiles(shouldUpdateLocation);
+      setNextProfileReady(false); // No next profile ready while loading
     }
   };
 
@@ -461,17 +465,15 @@ export default function Everyone() {
           </Animated.View>
         </PanGestureHandler>
       </View>
-
-      {!canSwipe && (
+      {!canSwipe && nextProfileReady && (
         <View style={styles.timerContainer}>
-          <Text style={styles.timerText}>Next swipe in {timeLeft}s</Text>
-        </View>
-      )}
-      
-      {photoLoadingError && (
-        <View style={styles.photoErrorContainer}>
-          <Ionicons name="warning" size={16} color="#FF6B35" />
-          <Text style={styles.photoErrorText}>Some photos may not display properly</Text>
+          <LottieView
+            source={require('../../assets/animations/hourglass.json')}
+            autoPlay
+            loop
+            style={styles.hourglassAnimation}
+            speed={1}
+          />
         </View>
       )}
     </View>
@@ -482,6 +484,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'hotpink',
+    padding: 20,
   },
   filterHeader: {
     flexDirection: 'row',
@@ -579,12 +582,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#666',
-  },
-  cardContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
   },
   swipeIndicator: {
     position: 'absolute',
@@ -744,43 +741,6 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 12,
   },
-  timerContainer: {
-    alignItems: 'center',
-    backgroundColor: 'pink',
-    padding: 15,
-    borderRadius: 20,
-    marginTop: 20,
-  },
-  timerText: {
-    fontSize: 16,
-    color: 'red',
-  },
-  profilesCounterContainer: {
-    alignItems: 'center',
-    backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 20,
-    marginTop: 10,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  profilesCounterText: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '600',
-    marginBottom: 5,
-  },
-  swipeCounterText: {
-    fontSize: 12,
-    color: 'hotpink',
-    fontWeight: 'bold',
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -912,6 +872,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'hotpink',
     marginLeft: 4,
+  },
+  timerContainer: {
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hourglassAnimation: {
+    width: 50,
+    height: 50
   },
 });
 

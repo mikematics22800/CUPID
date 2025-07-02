@@ -32,7 +32,7 @@ export const generateChatSuggestions = async (currentUserId, matchUserId, recent
     // Parse the response to extract suggestions
     const suggestions = parseSuggestions(response);
     
-    console.log(`✅ Generated ${suggestions.length} chat suggestions`);
+    console.log(`✅ Generated ${suggestions.length} chat suggestions for type: ${suggestionType}`);
     return suggestions;
     
   } catch (error) {
@@ -44,16 +44,22 @@ export const generateChatSuggestions = async (currentUserId, matchUserId, recent
 
 // Function to create a comprehensive prompt for Gemini
 const createSuggestionPrompt = (currentUser, matchUser, conversationContext, suggestionType) => {
-  const currentUserInterests = currentUser.interests.join(', ') || 'No specific interests listed';
-  const matchUserInterests = matchUser.interests.join(', ') || 'No specific interests listed';
+  const currentUserInterests = currentUser.interests?.join(', ') || 'No specific interests listed';
+  const matchUserInterests = matchUser.interests?.join(', ') || 'No specific interests listed';
+  const currentUserResidence = currentUser.residence || 'Location not specified';
+  const matchUserResidence = matchUser.residence || 'Location not specified';
   
-  const sharedInterests = currentUser.interests.filter(interest => 
-    matchUser.interests.includes(interest)
-  );
+  const sharedInterests = currentUser.interests?.filter(interest => 
+    matchUser.interests?.includes(interest)
+  ) || [];
   
   const sharedInterestsText = sharedInterests.length > 0 
     ? `Shared interests: ${sharedInterests.join(', ')}`
     : 'No shared interests identified';
+
+  const locationContext = currentUserResidence === matchUserResidence 
+    ? `Both users are in ${currentUserResidence}`
+    : `Current user is in ${currentUserResidence}, match is in ${matchUserResidence}`;
 
   let contextPrompt = '';
   if (conversationContext) {
@@ -66,16 +72,41 @@ Based on this conversation context, `;
 
   let typeSpecificPrompt = '';
   switch (suggestionType) {
+    case 'icebreaker':
+      typeSpecificPrompt = `generate 3 creative icebreaker messages that are:
+- Personalized using their interests, bio, or residence
+- Fun and attention-grabbing without being cheesy
+- Designed to stand out and spark immediate interest
+- Reference specific details from their profile (interests, bio, location)
+- Under 80 characters for quick impact`;
+      break;
+    case 'casual':
+      typeSpecificPrompt = `generate 3 casual conversation starters that are:
+- Based on their interests, bio, or shared interests
+- Natural and conversational in tone
+- Designed to learn more about them personally
+- Reference their residence or location if relevant
+- Open-ended to encourage detailed responses`;
+      break;
+    case 'date-idea':
+      typeSpecificPrompt = `generate 3 specific date ideas that are:
+- Based on shared interests or their individual interests
+- Tailored to their residence/location and what's available there
+- Realistic and achievable for a first or second date
+- Creative and fun while being appropriate
+- Include specific venues or activities relevant to their area`;
+      break;
     case 'opener':
       typeSpecificPrompt = `generate 3 engaging conversation starters that are:
-- Personalized based on their interests and bio
+- Personalized based on their interests, bio, and residence
 - Natural and not overly formal
 - Designed to spark meaningful conversation
+- Reference specific details from their profile
 - Respectful and appropriate for a dating app context`;
       break;
     case 'question':
       typeSpecificPrompt = `generate 3 thoughtful questions that are:
-- Based on their interests, bio, or shared interests
+- Based on their interests, bio, residence, or shared interests
 - Designed to learn more about them
 - Open-ended to encourage detailed responses
 - Appropriate for getting to know someone better`;
@@ -96,7 +127,7 @@ Based on this conversation context, `;
       break;
     default:
       typeSpecificPrompt = `generate 3 engaging message suggestions that are:
-- Personalized based on their interests and bio
+- Personalized based on their interests, bio, and residence
 - Natural and conversational
 - Designed to spark meaningful conversation
 - Appropriate for the current stage of conversation`;
@@ -108,12 +139,15 @@ Current user profile:
 - Name: ${currentUser.name}
 - Bio: ${currentUser.bio || 'No bio provided'}
 - Interests: ${currentUserInterests}
+- Residence: ${currentUserResidence}
 
 Match's profile:
 - Name: ${matchUser.name}
 - Bio: ${matchUser.bio || 'No bio provided'}
 - Interests: ${matchUserInterests}
+- Residence: ${matchUserResidence}
 - ${sharedInterestsText}
+- ${locationContext}
 
 ${contextPrompt}${typeSpecificPrompt}
 
@@ -123,11 +157,11 @@ Please provide exactly 3 suggestions in this format:
 3. [Third suggestion]
 
 Make sure each suggestion is:
-- Under 100 characters
 - Natural and conversational
-- Personalized to their interests or bio
+- Personalized to their interests, bio, or residence
 - Appropriate for a dating app context
-- Not generic or overly formal`;
+- Not generic or overly formal
+- Specific and actionable`;
 };
 
 // Function to parse Gemini's response into structured suggestions
@@ -161,6 +195,21 @@ const parseSuggestions = (response) => {
 // Fallback suggestions if Gemini fails
 const getFallbackSuggestions = (suggestionType) => {
   const fallbackSuggestions = {
+    icebreaker: [
+      "Hey! I noticed you love [interest] - what's your favorite [related activity]?",
+      "Hi there! Your bio about [bio detail] caught my attention - tell me more!",
+      "Hey! Fellow [location] resident here - what's your go-to spot in the area?"
+    ],
+    casual: [
+      "What's something you're passionate about that most people don't know?",
+      "If you could travel anywhere right now, where would you go?",
+      "What's the best book or movie you've experienced recently?"
+    ],
+    'date-idea': [
+      "We should grab coffee at [local coffee shop] and chat more about [shared interest]!",
+      "I'd love to explore [local activity/venue] together - what do you think?",
+      "We could check out that new [local restaurant/activity] - interested?"
+    ],
     opener: [
       "Hey! I loved your profile - what's your favorite way to spend a weekend?",
       "Hi there! I noticed we both love [interest] - what got you into that?",
@@ -196,18 +245,31 @@ export const getSuggestionCategories = (messageCount, hasSharedInterests) => {
   const categories = [];
   
   if (messageCount === 0) {
-    categories.push('opener');
+    // For new conversations, prioritize icebreakers
+    categories.push('icebreaker', 'casual');
   } else if (messageCount < 5) {
-    categories.push('question', 'response');
+    // Early conversation - focus on getting to know each other
+    categories.push('casual', 'question');
   } else {
-    categories.push('response', 'activity');
+    // Established conversation - move toward meeting
+    categories.push('casual', 'date-idea');
   }
   
+  // Always include date ideas if there are shared interests
   if (hasSharedInterests) {
-    categories.push('activity');
+    categories.push('date-idea');
   }
   
-  return [...new Set(categories)]; // Remove duplicates
+  // Remove duplicates and ensure we have at least 3 categories
+  const uniqueCategories = [...new Set(categories)];
+  
+  // If we don't have enough categories, add some defaults
+  if (uniqueCategories.length < 3) {
+    if (!uniqueCategories.includes('casual')) uniqueCategories.push('casual');
+    if (!uniqueCategories.includes('date-idea')) uniqueCategories.push('date-idea');
+  }
+  
+  return uniqueCategories.slice(0, 4); // Return max 4 categories
 };
 
 // Default export

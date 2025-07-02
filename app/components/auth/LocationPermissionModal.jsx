@@ -61,9 +61,9 @@ export default function LocationPermissionModal({
     }
   };
 
-  const handleSkipLocation = () => {
-    console.log('📍 User chose to skip location sharing');
-    onLocationDisabled();
+  const handleSkipLocation = (neverAskAgain = false) => {
+    console.log('📍 User chose to skip location sharing', neverAskAgain ? '(never ask again)' : '');
+    onLocationDisabled(neverAskAgain);
   };
 
   if (!visible) return null;
@@ -81,15 +81,10 @@ export default function LocationPermissionModal({
             <Ionicons name="location" size={60} color="hotpink" />
           </View>
           
-          <Text style={styles.title}>Enable Location Sharing</Text>
-          
-          <Text style={styles.description}>
-            Share your location to find people nearby and get more accurate distance calculations. 
-            This helps you discover potential matches in your area.
-          </Text>
+          <Text style={styles.title}>Share your location?</Text>
           
           <Text style={styles.subDescription}>
-            You can change this setting anytime in your profile settings.
+            This will allow CUPID to use your exact location for distance filtering. Otherwise, your residence will be used. You can toggle this anytime in your settings.
           </Text>
 
           <View style={styles.buttonContainer}>
@@ -110,9 +105,16 @@ export default function LocationPermissionModal({
 
             <TouchableOpacity
               style={styles.secondaryButton}
-              onPress={handleSkipLocation}
+              onPress={() => handleSkipLocation(false)}
             >
               <Text style={styles.secondaryButtonText}>Skip for Now</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.tertiaryButton}
+              onPress={() => handleSkipLocation(true)}
+            >
+              <Text style={styles.tertiaryButtonText}>Do not ask again</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -198,6 +200,16 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 16,
     textAlign: 'center',
+  },
+  tertiaryButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  tertiaryButtonText: {
+    color: '#999',
+    fontSize: 14,
+    textAlign: 'center',
+    textDecorationLine: 'underline',
   },
   buttonDisabled: {
     opacity: 0.6,

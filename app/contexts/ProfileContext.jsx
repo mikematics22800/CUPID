@@ -73,17 +73,21 @@ export const ProfileProvider = ({ children }) => {
         await loadPhotosFromStorage(currentUser.id, profileData.images);
         
         // Update geolocation on app start/login only if location sharing is enabled
-        if (profileData.geolocation) {
-          try {
-            console.log('📍 Updating geolocation on app start/login');
-            const location = await getCurrentLocationAndresidence();
-            if (location) {
-              console.log('✅ Geolocation updated on app start:', location.geolocation);
-              await updateProfile({ geolocation: location.geolocation });
+        // Check if geolocation is not null (meaning location sharing is enabled)
+        if (profileData.geolocation !== null) {
+          // Use setTimeout to defer the geolocation update to avoid useInsertionEffect warning
+          setTimeout(async () => {
+            try {
+              console.log('📍 Updating geolocation on app start/login');
+              const location = await getCurrentLocationAndresidence();
+              if (location) {
+                console.log('✅ Geolocation updated on app start:', location.geolocation);
+                await updateProfile({ geolocation: location.geolocation });
+              }
+            } catch (error) {
+              console.error('❌ Error updating geolocation on app start:', error);
             }
-          } catch (error) {
-            console.error('❌ Error updating geolocation on app start:', error);
-          }
+          }, 0);
         } else {
           console.log('📍 Location sharing disabled (geolocation is null), skipping geolocation update');
         }
@@ -190,13 +194,17 @@ export const ProfileProvider = ({ children }) => {
       setProfile(prev => ({ ...prev, ...updates }));
       
       // Update specific fields if they exist in updates
-      if (updates.bio !== undefined) setBio(updates.bio);
-      if (updates.interests !== undefined) setInterests(updates.interests);
-      if (updates.residence !== undefined) setResidence(updates.residence);
-      if (updates.geolocation !== undefined) setGeolocation(updates.geolocation);
-      if (updates.name !== undefined) setName(updates.name);
-      if (updates.email !== undefined) setEmail(updates.email);
-      if (updates.phone !== undefined) setPhone(updates.phone);
+      // Use setTimeout to defer state updates to avoid useInsertionEffect warning
+      setTimeout(() => {
+        if (updates.bio !== undefined) setBio(updates.bio);
+        if (updates.interests !== undefined) setInterests(updates.interests);
+        if (updates.residence !== undefined) setResidence(updates.residence);
+        if (updates.geolocation !== undefined) setGeolocation(updates.geolocation);
+        if (updates.name !== undefined) setName(updates.name);
+        if (updates.email !== undefined) setEmail(updates.email);
+        if (updates.phone !== undefined) setPhone(updates.phone);
+      }, 0);
+      
       if (updates.images !== undefined) {
         await loadPhotosFromStorage(user.id, updates.images);
       }

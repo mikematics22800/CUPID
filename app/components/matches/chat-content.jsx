@@ -13,6 +13,7 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import LottieView from 'lottie-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   getOrCreateChatRoom,
@@ -206,17 +207,11 @@ export default function ChatScreen() {
           styles.messageBubble,
           isMyMessage ? styles.myBubble : styles.theirBubble
         ]}>
-          <Text style={[
-            styles.messageText,
-            isMyMessage ? styles.myMessageText : styles.theirMessageText
-          ]}>
+          <Text style={styles.messageText}>
             {item.content}
           </Text>
           <View style={styles.messageFooter}>
-            <Text style={[
-              styles.messageTime,
-              isMyMessage ? styles.myMessageTime : styles.theirMessageTime
-            ]}>
+                      <Text style={styles.messageTime}>
               {new Date(item.created_at).toLocaleTimeString([], { 
                 hour: '2-digit', 
                 minute: '2-digit' 
@@ -262,8 +257,12 @@ export default function ChatScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="hotpink" />
-        <Text style={styles.loadingText}>Loading chat...</Text>
+        <LottieView
+          source={require('../../../assets/animations/heart.json')}
+          autoPlay
+          loop
+          style={styles.loadingAnimation}
+        />
       </View>
     );
   }
@@ -292,7 +291,7 @@ export default function ChatScreen() {
       </View>
 
       {/* Messages */}
-      <FlatList
+      <FlatList 
         ref={flatListRef}
         data={messages}
         renderItem={renderMessage}
@@ -342,6 +341,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingAnimation: {
+    width: 100,
+    height: 100,
   },
   loadingText: {
     marginTop: 10,
@@ -403,8 +406,13 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   myBubble: {
-    backgroundColor: 'hotpink',
+    backgroundColor: 'white',
     borderBottomRightRadius: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   theirBubble: {
     backgroundColor: 'white',
@@ -418,12 +426,7 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: 16,
     lineHeight: 20,
-  },
-  myMessageText: {
-    color: 'white',
-  },
-  theirMessageText: {
-    color: '#333',
+    color: 'hotpink',
   },
   messageFooter: {
     flexDirection: 'row',
@@ -433,14 +436,8 @@ const styles = StyleSheet.create({
   },
   messageTime: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginRight: 4,
-  },
-  myMessageTime: {
-    color: 'rgba(255, 255, 255, 0.7)',
-  },
-  theirMessageTime: {
     color: 'rgba(0, 0, 0, 0.5)',
+    marginRight: 4,
   },
   messageStatus: {
     marginLeft: 4,
@@ -467,14 +464,6 @@ const styles = StyleSheet.create({
     marginRight: 10,
     maxHeight: 100,
     fontSize: 16,
-  },
-  sendButton: {
-    backgroundColor: 'hotpink',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   sendButtonDisabled: {
     backgroundColor: '#ccc',

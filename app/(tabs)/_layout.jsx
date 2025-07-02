@@ -3,7 +3,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { getNewLikesCount, getNewMatchesCount, supabase } from '../../lib/supabase';
-import { ProfileProvider } from '../contexts/ProfileContext';
 import { useFocusEffect } from '@react-navigation/native';
 import React from 'react';
 
@@ -92,63 +91,61 @@ export default function TabLayout() {
   };
 
   return (
-    <ProfileProvider>
-      <Tabs screenOptions={{
-        tabBarActiveTintColor: 'hotpink',
-        tabBarInactiveTintColor: 'gray',
-        tabBarStyle: {
-          borderTopWidth: 1,
-          borderTopColor: '#eee',
-        },
-        headerTitle: ''
-      }}>
-        <Tabs.Screen
-          name="everyone"
-          options={{
-            title: 'Everyone',
-            tabBarIcon: ({ color, size }) => (
-              <MaterialIcons name="diversity-1" size={size} color={color} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="likes"
-          options={{
-            title: 'Likes',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="heart" size={size} color={color} />
-            ),
-            tabBarBadge: newLikes > 0 ? newLikes : undefined,
-            tabBarBadgeStyle: {
-              backgroundColor: 'hotpink',
-              color: 'white',
-            },
-          }}
-        />
-        <Tabs.Screen
-          name="matches"
-          options={{
-            title: 'Matches',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="chatbubbles" size={size} color={color} />
-            ),
-            tabBarBadge: newMatches > 0 ? newMatches : undefined,
-            tabBarBadgeStyle: {
-              backgroundColor: 'hotpink',
-              color: 'white',
-            },
-          }}
-        />
-        <Tabs.Screen
-          name="settings"
-          options={{
-            title: 'Settings',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="settings" size={size} color={color} />
-            ),
-          }}
-        />
-      </Tabs>
-    </ProfileProvider>
+    <Tabs screenOptions={{
+      tabBarActiveTintColor: 'hotpink',
+      tabBarInactiveTintColor: 'gray',
+      tabBarStyle: {
+        borderTopWidth: 1,
+        borderTopColor: '#eee',
+      },
+      headerTitle: ''
+    }}>
+      <Tabs.Screen
+        name="everyone"
+        options={{
+          title: 'Everyone',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="diversity-1" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="likes"
+        options={{
+          title: 'Likes',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="heart" size={size} color={color} />
+          ),
+          tabBarBadge: newLikes > 0 ? newLikes : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: 'hotpink',
+            color: 'white',
+          },
+        }}
+      />
+      <Tabs.Screen
+        name="matches"
+        options={{
+          title: 'Matches',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="chatbubbles" size={size} color={color} />
+          ),
+          tabBarBadge: newMatches > 0 ? newMatches : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: 'hotpink',
+            color: 'white',
+          },
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Settings',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="settings" size={size} color={color} />
+          ),
+        }}
+      />
+    </Tabs>
   );
 }

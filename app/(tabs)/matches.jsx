@@ -44,7 +44,7 @@ export default function MatchesScreen() {
   // Chat suggestions state
   const [suggestions, setSuggestions] = useState([]);
   const [suggestionCategories, setSuggestionCategories] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('general');
+  const [selectedCategory, setSelectedCategory] = useState('icebreaker');
   const [generatingSuggestions, setGeneratingSuggestions] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestionsEnabled, setSuggestionsEnabled] = useState(true);
@@ -400,8 +400,8 @@ export default function MatchesScreen() {
 
   useEffect(() => {
     if (selectedMatch && messages.length === 0 && showSuggestions) {
-      // Auto-generate opener suggestions for new conversations when suggestions are shown
-      generateSuggestions('opener');
+      // Auto-generate icebreaker suggestions for new conversations when suggestions are shown
+      generateSuggestions('icebreaker');
     }
   }, [selectedMatch, messages.length, showSuggestions]);
 
@@ -634,11 +634,63 @@ export default function MatchesScreen() {
       
       const categories = getSuggestionCategories(messageCount, hasSharedInterests);
       setSuggestionCategories(categories);
+      
+      // Set default category based on conversation stage
+      if (messageCount === 0) {
+        setSelectedCategory('icebreaker');
+      } else if (messageCount < 5) {
+        setSelectedCategory('casual');
+      } else {
+        setSelectedCategory('date-idea');
+      }
     } catch (error) {
       console.error('❌ Error updating suggestion categories:', error);
       // Fallback to basic categories
       const categories = getSuggestionCategories(messages.length, false);
       setSuggestionCategories(categories);
+    }
+  };
+
+  // Helper functions for category display
+  const getCategoryIcon = (category) => {
+    switch (category) {
+      case 'icebreaker':
+        return 'sparkles';
+      case 'casual':
+        return 'chatbubble-ellipses';
+      case 'date-idea':
+        return 'heart';
+      case 'question':
+        return 'help-circle';
+      case 'response':
+        return 'arrow-forward';
+      case 'activity':
+        return 'bicycle';
+      case 'opener':
+        return 'rocket';
+      default:
+        return 'bulb';
+    }
+  };
+
+  const getCategoryLabel = (category) => {
+    switch (category) {
+      case 'icebreaker':
+        return 'Icebreaker';
+      case 'casual':
+        return 'Casual Chat';
+      case 'date-idea':
+        return 'Date Ideas';
+      case 'question':
+        return 'Questions';
+      case 'response':
+        return 'Responses';
+      case 'activity':
+        return 'Activities';
+      case 'opener':
+        return 'Openers';
+      default:
+        return category.charAt(0).toUpperCase() + category.slice(1);
     }
   };
 
@@ -698,7 +750,13 @@ export default function MatchesScreen() {
         {/* Messages */}
         {chatLoading ? (
           <View style={styles.chatLoadingContainer}>
-            <ActivityIndicator size="large" color="hotpink" />
+            <LottieView
+              source={require('../../assets/animations/heart.json')}
+              autoPlay
+              loop
+              style={styles.chatLoadingAnimation}
+              speed={1}
+            />
             <Text style={styles.chatLoadingText}>Loading chat...</Text>
           </View>
         ) : (
@@ -751,9 +809,15 @@ export default function MatchesScreen() {
           </View>
         )}
 
-        {/* Chat Suggestions */}
+        {/* AI Chat Assistance */}
         {showSuggestions && (
           <View style={styles.suggestionsContainer}>
+            {/* AI Assistance Header */}
+            <View style={styles.aiHeader}>
+              <Ionicons name="sparkles" size={16} color="hotpink" />
+              <Text style={styles.aiHeaderText}>AI Chat Assistant</Text>
+            </View>
+            
             {/* Suggestion Categories */}
             <ScrollView 
               horizontal 
@@ -771,11 +835,17 @@ export default function MatchesScreen() {
                   onPress={() => generateSuggestions(category)}
                   disabled={generatingSuggestions}
                 >
+                  <Ionicons 
+                    name={getCategoryIcon(category)} 
+                    size={16} 
+                    color={selectedCategory === category ? "hotpink" : "#666"} 
+                    style={styles.categoryIcon}
+                  />
                   <Text style={[
                     styles.categoryText,
                     selectedCategory === category && styles.categoryTextActive
                   ]}>
-                    {category.charAt(0).toUpperCase() + category.slice(1)}
+                    {getCategoryLabel(category)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -785,7 +855,9 @@ export default function MatchesScreen() {
             {generatingSuggestions ? (
               <View style={styles.suggestionsLoading}>
                 <ActivityIndicator size="small" color="hotpink" />
-                <Text style={styles.suggestionsLoadingText}>Generating suggestions...</Text>
+                <Text style={styles.suggestionsLoadingText}>
+                  AI is crafting {getCategoryLabel(selectedCategory).toLowerCase()}...
+                </Text>
               </View>
             ) : (
               <View style={styles.suggestionsList}>
@@ -1095,6 +1167,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  chatLoadingAnimation: {
+    width: 100,
+    height: 100,
+  },
   chatLoadingText: {
     marginTop: 10,
     fontSize: 16,
@@ -1142,6 +1218,19 @@ const styles = StyleSheet.create({
     borderTopColor: '#eee',
     paddingVertical: 10,
   },
+  aiHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+  },
+  aiHeaderText: {
+    marginLeft: 6,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
   categoryScrollView: {
     maxHeight: 50,
   },
@@ -1154,6 +1243,8 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   categoryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 8,
     borderWidth: 1,
@@ -1164,6 +1255,9 @@ const styles = StyleSheet.create({
   categoryButtonActive: {
     borderColor: 'hotpink',
     backgroundColor: '#ffe6f0',
+  },
+  categoryIcon: {
+    marginRight: 6,
   },
   categoryText: {
     fontSize: 14,
