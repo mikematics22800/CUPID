@@ -1,6 +1,20 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 
+// Function to get user-friendly category display names
+const getCategoryDisplayName = (category) => {
+  const displayNames = {
+    'icebreaker': 'Ice Breaker',
+    'casual': 'Casual Chat',
+    'date-idea': 'Date Ideas',
+    'question': 'Questions',
+    'activity': 'Activities',
+    'opener': 'Openers',
+    'response': 'Responses'
+  };
+  return displayNames[category] || category.charAt(0).toUpperCase() + category.slice(1);
+};
+
 export default function ChatSuggestions({ 
   showSuggestions,
   suggestions,
@@ -35,7 +49,7 @@ export default function ChatSuggestions({
               styles.categoryText,
               selectedCategory === category && styles.categoryTextActive
             ]}>
-              {category.charAt(0).toUpperCase() + category.slice(1)}
+              {getCategoryDisplayName(category)}
             </Text>
           </TouchableOpacity>
         ))}
@@ -47,7 +61,7 @@ export default function ChatSuggestions({
           <ActivityIndicator size="small" color="hotpink" />
           <Text style={styles.suggestionsLoadingText}>Generating suggestions...</Text>
         </View>
-      ) : (
+      ) : suggestions.length > 0 ? (
         <View style={styles.suggestionsList}>
           {suggestions.map((suggestion, index) => (
             <TouchableOpacity
@@ -58,6 +72,12 @@ export default function ChatSuggestions({
               <Text style={styles.suggestionText}>{suggestion}</Text>
             </TouchableOpacity>
           ))}
+        </View>
+      ) : (
+        <View style={styles.suggestionsEmpty}>
+          <Text style={styles.suggestionsEmptyText}>
+            Tap a category above to get AI suggestions!
+          </Text>
         </View>
       )}
     </View>
@@ -128,5 +148,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     lineHeight: 20,
+  },
+  suggestionsEmpty: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  suggestionsEmptyText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 }); 

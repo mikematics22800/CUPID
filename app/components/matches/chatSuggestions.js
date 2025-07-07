@@ -242,32 +242,20 @@ const getFallbackSuggestions = (suggestionType) => {
 
 // Function to get suggestion categories based on conversation context
 export const getSuggestionCategories = (messageCount, hasSharedInterests) => {
-  const categories = [];
+  // Always include the three main categories: icebreaker, casual, and date-idea
+  const categories = ['icebreaker', 'casual', 'date-idea'];
   
-  if (messageCount === 0) {
-    // For new conversations, prioritize icebreakers
-    categories.push('icebreaker', 'casual');
-  } else if (messageCount < 5) {
-    // Early conversation - focus on getting to know each other
-    categories.push('casual', 'question');
-  } else {
-    // Established conversation - move toward meeting
-    categories.push('casual', 'date-idea');
+  // Add additional categories based on conversation context
+  if (messageCount > 0 && messageCount < 5) {
+    // Early conversation - add questions to get to know each other
+    categories.push('question');
+  } else if (messageCount >= 5) {
+    // Established conversation - add activity suggestions
+    categories.push('activity');
   }
   
-  // Always include date ideas if there are shared interests
-  if (hasSharedInterests) {
-    categories.push('date-idea');
-  }
-  
-  // Remove duplicates and ensure we have at least 3 categories
+  // Remove duplicates and return the categories
   const uniqueCategories = [...new Set(categories)];
-  
-  // If we don't have enough categories, add some defaults
-  if (uniqueCategories.length < 3) {
-    if (!uniqueCategories.includes('casual')) uniqueCategories.push('casual');
-    if (!uniqueCategories.includes('date-idea')) uniqueCategories.push('date-idea');
-  }
   
   return uniqueCategories.slice(0, 4); // Return max 4 categories
 };

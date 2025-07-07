@@ -3,11 +3,11 @@ import { View, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from
 import { Ionicons } from '@expo/vector-icons';
 
 export default function MessageInput({ 
-  newMessage, 
+  newMessage = '', 
   setNewMessage, 
   onSendMessage, 
   sending, 
-  moderatingMessage 
+  moderatingMessage = false
 }) {
   return (
     <View style={styles.inputContainer}>
@@ -23,10 +23,10 @@ export default function MessageInput({
       <TouchableOpacity
         style={[
           styles.sendButton,
-          (!newMessage.trim() || sending || moderatingMessage) && styles.sendButtonDisabled
+          (!newMessage?.trim() || sending || moderatingMessage) && styles.sendButtonDisabled
         ]}
         onPress={onSendMessage}
-        disabled={!newMessage.trim() || sending || moderatingMessage}
+        disabled={!newMessage?.trim() || sending || moderatingMessage}
       >
         {sending || moderatingMessage ? (
           <ActivityIndicator size="small" color="white" />
@@ -43,23 +43,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     padding: 15,
-    backgroundColor: 'white',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
+    backgroundColor: 'hotpink',
   },
   textInput: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 20,
     paddingHorizontal: 15,
     paddingVertical: 10,
     marginRight: 10,
     maxHeight: 100,
     fontSize: 16,
+    backgroundColor: 'white',
   },
   sendButton: {
-    backgroundColor: 'hotpink',
+    backgroundColor: 'pink',
     width: 40,
     height: 40,
     borderRadius: 20,

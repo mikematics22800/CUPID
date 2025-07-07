@@ -1,4 +1,4 @@
-import { StyleSheet, Text, TouchableOpacity, View, Image, Animated } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
 import { useEffect, useRef } from 'react';
 
 export default function WelcomeScreen({ onLoginPress, onRegisterPress }) {

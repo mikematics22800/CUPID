@@ -1,9 +1,11 @@
 export { default as MatchCard } from './MatchCard';
-export { default as MessageBubble } from './MessageBubble';
 export { default as ChatHeader } from './ChatHeader';
+export { default as MessageBubble } from './MessageBubble';
 export { default as MessageInput } from './MessageInput';
-export { default as ChatSuggestions } from './ChatSuggestions';
+export { default as ChatSuggestions } from './ChatSuggestions.jsx';
 export { default as EmptyState } from './EmptyState';
-
-// Default export
-export { default } from './MatchCard'; 
+export { default as MatchesList } from './MatchesList';
+export { default as MessagesList } from './MessagesList';
+export { default as ChatInterface } from './ChatInterface';
+export { default as StrikeIndicator } from './StrikeIndicator';
+export { default as LoadingScreen } from './LoadingScreen';

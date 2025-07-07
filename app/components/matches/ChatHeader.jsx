@@ -4,9 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function ChatHeader({ 
   match, 
-  showSuggestions, 
-  onBack, 
-  onToggleSuggestions 
+  onBack,
+  showSuggestions,
+  onToggleSuggestions
 }) {
   return (
     <View style={styles.chatHeader}>
@@ -28,16 +28,6 @@ export default function ChatHeader({
         )}
         <Text style={styles.chatHeaderName}>{match.name}</Text>
       </View>
-      <TouchableOpacity 
-        style={styles.moreButton}
-        onPress={onToggleSuggestions}
-      >
-        <Ionicons 
-          name={showSuggestions ? "bulb" : "bulb-outline"} 
-          size={24} 
-          color={showSuggestions ? "hotpink" : "#333"} 
-        />
-      </TouchableOpacity>
     </View>
   );
 }

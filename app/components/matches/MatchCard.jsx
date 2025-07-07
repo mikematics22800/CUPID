@@ -28,12 +28,18 @@ export default function MatchCard({
             <Ionicons name="person" size={30} color="#ccc" />
           </View>
         )}
-        <View style={styles.matchInfo}>
-          <View style={styles.nameContainer}>
-            <Text style={styles.matchName}>{match.name}, {match.age}</Text>
-            {hasUnreadMessages && <View style={styles.unreadBadge} />}
+                  <View style={styles.matchInfo}>
+            <View style={styles.nameContainer}>
+              <Text style={styles.matchName}>{match.name}, {match.age}</Text>
+              {hasUnreadMessages && <View style={styles.unreadBadge} />}
+            </View>
+            {match.distance !== null && (
+              <View style={styles.distanceContainer}>
+                <Ionicons name="location" size={14} color="#666" />
+                <Text style={styles.distanceText}>{match.distance} miles away</Text>
+              </View>
+            )}
           </View>
-        </View>
       </View>
       <View style={styles.matchActions}>
         <Text style={styles.timestamp}>
@@ -161,5 +167,15 @@ const styles = StyleSheet.create({
   },
   processingButton: {
     backgroundColor: '#ccc',
+  },
+  distanceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  distanceText: {
+    marginLeft: 4,
+    fontSize: 12,
+    color: '#666',
   },
 }); 

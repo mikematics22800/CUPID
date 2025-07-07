@@ -54,7 +54,7 @@ export default function MessageBubble({
           style={styles.deleteButton}
           onPress={() => onDeleteMessage(message.id)}
         >
-          <Ionicons name="trash-outline" size="16" color="#999" />
+          <Ionicons name="trash-outline" size="16" color="white" />
         </TouchableOpacity>
       )}
     </View>
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   myBubble: {
-    backgroundColor: 'hotpink',
+    backgroundColor: 'pink',
     borderBottomRightRadius: 4,
   },
   theirBubble: {
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   theirMessageText: {
-    color: '#333',
+    color: 'hotpink',
   },
   messageFooter: {
     flexDirection: 'row',
@@ -109,14 +109,14 @@ const styles = StyleSheet.create({
   },
   messageTime: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: 'hotpink',
     marginRight: 4,
   },
   myMessageTime: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: 'white',
   },
   theirMessageTime: {
-    color: 'rgba(0, 0, 0, 0.5)',
+    color: 'hotpink',
   },
   messageStatus: {
     marginLeft: 4,

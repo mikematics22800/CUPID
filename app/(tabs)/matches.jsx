@@ -1,7 +1,5 @@
-import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, Alert, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, StyleSheet, Alert } from 'react-native';
 import { useState, useEffect, useRef } from 'react';
-import LottieView from 'lottie-react-native';
 import { 
   getMatchesForUser, 
   unmatchUsers, 
@@ -17,11 +15,16 @@ import {
   deleteMessage,
   markMatchesAsViewed
 } from '../../lib/supabase';
-import { generateChatSuggestions, getSuggestionCategories } from '../components/matches/chatSuggestions';
+import { generateChatSuggestions, getSuggestionCategories } from '../components/matches/chatSuggestions.js';
 import { detectViolentThreats, isUserBanned, getUserStrikes } from '../components/matches/contentModeration';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import React from 'react';
+import { 
+  MatchesList, 
+  ChatInterface, 
+  LoadingScreen 
+} from '../components/matches';
 
 export default function MatchesScreen() {
   const router = useRouter();
@@ -47,7 +50,6 @@ export default function MatchesScreen() {
   const [selectedCategory, setSelectedCategory] = useState('icebreaker');
   const [generatingSuggestions, setGeneratingSuggestions] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [suggestionsEnabled, setSuggestionsEnabled] = useState(true);
 
   // Content moderation state
   const [moderatingMessage, setModeratingMessage] = useState(false);
@@ -63,9 +65,9 @@ export default function MatchesScreen() {
 
   useEffect(() => {
     if (currentUserId) {
-    loadMatches();
-    loadChatRooms();
-    setupChatSubscription();
+      loadMatches();
+      loadChatRooms();
+      setupChatSubscription();
     }
 
     return () => {
@@ -78,7 +80,6 @@ export default function MatchesScreen() {
     };
   }, [currentUserId]);
 
-  // Mark matches as viewed when the screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       const markAsViewed = async () => {
@@ -103,10 +104,8 @@ export default function MatchesScreen() {
   const loadMatches = async () => {
     try {
       setLoading(true);
-      
       const matchesData = await getMatchesForUser();
       setMatches(matchesData);
-
     } catch (error) {
       console.error('❌ Error loading matches:', error);
       Alert.alert('Error', 'Failed to load matches. Please try again.');
@@ -125,13 +124,12 @@ export default function MatchesScreen() {
   };
 
   const setupChatSubscription = () => {
-    // Unsubscribe from existing subscription if it exists
     if (chatSubscription) {
       unsubscribeFromChannel(chatSubscription);
     }
     
     const subscription = subscribeToChatRooms((newRoom, event) => {
-      loadChatRooms(); // Reload chat rooms when there are updates
+      loadChatRooms();
     });
     setChatSubscription(subscription);
   };
@@ -140,7 +138,6 @@ export default function MatchesScreen() {
     try {
       setProcessingUnmatch(userId);
       
-      // Get current user
       const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser();
       
       if (authError || !currentUser) {
@@ -149,7 +146,6 @@ export default function MatchesScreen() {
       
       await unmatchUsers(currentUser.id, userId);
       
-      // Remove from local state
       setMatches(prevMatches => prevMatches.filter(match => match.id !== userId));
       
       Alert.alert('Unmatched', `You have unmatched with ${userName}`);
@@ -185,23 +181,18 @@ export default function MatchesScreen() {
       setChatLoading(true);
       setSelectedMatch(match);
       
-      // Get or create chat room
       const chatRoomId = await getOrCreateChatRoom(currentUserId, match.id);
       setRoomId(chatRoomId);
 
-      // Load existing messages
       const messagesData = await getMessages(chatRoomId);
       setMessages(messagesData);
 
-      // Mark messages as read
       await markMessagesAsRead(chatRoomId);
 
-      // Unsubscribe from existing message subscription if it exists
       if (messageSubscription) {
         unsubscribeFromChannel(messageSubscription);
       }
 
-      // Subscribe to real-time messages
       const subscription = subscribeToMessages(chatRoomId, (newMessage, event) => {
         if (event === 'update') {
           setMessages(prev => 
@@ -268,8 +259,6 @@ export default function MatchesScreen() {
       
       if (threatCheck.isThreat) {
         // Message blocked due to explicit violent content
-        
-        // Update user strikes display
         const userStrikeInfo = await getUserStrikes(currentUserId);
         setUserStrikes(userStrikeInfo.strikes);
         
@@ -309,8 +298,8 @@ export default function MatchesScreen() {
         sender_id: currentUserId,
         created_at: new Date().toISOString(),
         is_read: false,
-        sender_name: 'You', // Add sender name for consistency
-        isTemp: true, // Flag to identify temporary messages
+        sender_name: 'You',
+        isTemp: true,
       };
       
       setMessages(prev => [...prev, tempMessage]);
@@ -398,37 +387,30 @@ export default function MatchesScreen() {
     }
   }, [messages, selectedMatch, currentUserId]);
 
-  useEffect(() => {
-    if (selectedMatch && messages.length === 0 && showSuggestions) {
-      // Auto-generate icebreaker suggestions for new conversations when suggestions are shown
-      generateSuggestions('icebreaker');
-    }
-  }, [selectedMatch, messages.length, showSuggestions]);
+  // Removed automatic suggestion generation - now only generates when user selects a category
 
   // Check user ban status and load strikes
   useEffect(() => {
     const checkUserBanStatus = async () => {
       if (currentUserId) {
         try {
-                  const isBanned = await isUserBanned(currentUserId);
-        
-        if (isBanned) {
-          setUserBanned(true);
-          Alert.alert(
-            'Account Banned',
-            'Your account has been banned for using explicit violent language.',
-            [{ text: 'OK', onPress: () => router.replace('/auth') }]
-          );
-          return;
-        }
-        
-        // Load current strike count
-        const strikeInfo = await getUserStrikes(currentUserId);
-        setUserStrikes(strikeInfo.strikes);
+          const isBanned = await isUserBanned(currentUserId);
+          
+          if (isBanned) {
+            setUserBanned(true);
+            Alert.alert(
+              'Account Banned',
+              'Your account has been banned for using explicit violent language.',
+              [{ text: 'OK', onPress: () => router.replace('/auth') }]
+            );
+            return;
+          }
+          
+          const strikeInfo = await getUserStrikes(currentUserId);
+          setUserStrikes(strikeInfo.strikes);
           
         } catch (error) {
           console.error('❌ Error checking user ban status:', error);
-          // Don't log out user on error, just log the issue
         }
       }
     };
@@ -436,136 +418,7 @@ export default function MatchesScreen() {
     checkUserBanStatus();
   }, [currentUserId]);
 
-  const renderMessage = ({ item }) => {
-    const isMyMessage = item.sender_id === currentUserId;
-    const isTempMessage = item.isTemp || item.id.startsWith('temp-');
 
-    return (
-      <View style={[
-        styles.messageContainer,
-        isMyMessage ? styles.myMessage : styles.theirMessage
-      ]}>
-        <View style={[
-          styles.messageBubble,
-          isMyMessage ? styles.myBubble : styles.theirBubble
-        ]}>
-          <Text style={[
-            styles.messageText,
-            isMyMessage ? styles.myMessageText : styles.theirMessageText
-          ]}>
-            {item.content}
-          </Text>
-          <View style={styles.messageFooter}>
-            <Text style={[
-              styles.messageTime,
-              isMyMessage ? styles.myMessageTime : styles.theirMessageTime
-            ]}>
-              {new Date(item.created_at).toLocaleTimeString([], { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-              })}
-            </Text>
-            {isMyMessage && (
-              <View style={styles.messageStatus}>
-                {isTempMessage ? (
-                  <ActivityIndicator size="small" color="rgba(255, 255, 255, 0.7)" />
-                ) : (
-                  <Ionicons 
-                    name={item.is_read ? "checkmark-done" : "checkmark"} 
-                    size={16} 
-                    color={item.is_read ? "#007AFF" : "rgba(255, 255, 255, 0.7)"} 
-                  />
-                )}
-              </View>
-            )}
-          </View>
-        </View>
-        {isMyMessage && !isTempMessage && (
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={() => handleDeleteMessage(item.id)}
-          >
-            <Ionicons name="trash-outline" size="16" color="#999" />
-          </TouchableOpacity>
-        )}
-      </View>
-    );
-  };
-
-  const renderMatch = ({ item }) => {
-    // Find if there's a chat room for this match
-    const chatRoom = chatRooms.find(room => room.otherUser.id === item.id);
-    const hasUnreadMessages = chatRoom?.lastMessage && !chatRoom.lastMessage.isFromMe && !chatRoom.lastMessage.isRead;
-
-    return (
-      <View style={styles.matchCard}>
-        <View style={styles.matchContent}>
-          {item.photo ? (
-            <Image 
-              source={{ uri: item.photo }} 
-              style={styles.matchPhoto}
-              resizeMode="cover"
-              onError={() => {
-                // Failed to load image for match
-              }}
-            />
-          ) : (
-            <View style={styles.matchPhotoPlaceholder}>
-              <Ionicons name="person" size={30} color="#ccc" />
-            </View>
-          )}
-          <View style={styles.matchInfo}>
-            <View style={styles.nameContainer}>
-              <Text style={styles.matchName}>{item.name}, {item.age}</Text>
-              {hasUnreadMessages && <View style={styles.unreadBadge} />}
-            </View>
-            {item.distance !== null && (
-              <View style={styles.distanceContainer}>
-                <Ionicons name="location" size={14} color="#666" />
-                <Text style={styles.distanceText}>{item.distance} miles away</Text>
-              </View>
-            )}
-          </View>
-        </View>
-        <View style={styles.matchActions}>
-          <Text style={styles.timestamp}>
-            {chatRoom?.lastMessage ? 
-              new Date(chatRoom.lastMessage.createdAt).toLocaleString([], { 
-                month: 'short', 
-                day: 'numeric',
-                hour: '2-digit', 
-                minute: '2-digit' 
-              }) : 
-              'Just matched!'
-            }
-          </Text>
-          <View style={styles.actionButtons}>
-            <TouchableOpacity 
-              style={[styles.messageButton, hasUnreadMessages && styles.unreadButton]}
-              onPress={() => openChat(item)}
-            >
-              <Ionicons 
-                name={hasUnreadMessages ? "chatbubble" : "chatbubble-outline"} 
-                size={20} 
-                color={hasUnreadMessages ? "white" : "hotpink"} 
-              />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.unmatchButton, processingUnmatch === item.id && styles.processingButton]}
-              onPress={() => confirmUnmatch(item.id, item.name)}
-              disabled={processingUnmatch === item.id}
-            >
-              {processingUnmatch === item.id ? (
-                <Ionicons name="ellipsis-horizontal" size={20} color="white" />
-              ) : (
-                <Ionicons name="close" size={20} color="white" />
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    );
-  };
 
   const generateSuggestions = async (category = 'general') => {
     if (!selectedMatch || !currentUserId || generatingSuggestions) return;
@@ -574,9 +427,7 @@ export default function MatchesScreen() {
       setGeneratingSuggestions(true);
       setSelectedCategory(category);
       
-      // Get recent messages for context
       const recentMessages = messages.slice(-10);
-      
       const newSuggestions = await generateChatSuggestions(
         currentUserId,
         selectedMatch.id,
@@ -601,15 +452,10 @@ export default function MatchesScreen() {
 
   const toggleSuggestions = async () => {
     if (showSuggestions) {
-      // Hide suggestions
       setShowSuggestions(false);
     } else {
-      // Show suggestions and generate them
       setShowSuggestions(true);
-      if (suggestions.length === 0) {
-        // Generate suggestions if none exist
-        await generateSuggestions(selectedCategory);
-      }
+      // Don't generate suggestions automatically - wait for user to select a category
     }
   };
 
@@ -617,7 +463,6 @@ export default function MatchesScreen() {
     if (!selectedMatch || !currentUserId) return;
     
     try {
-      // Get current user's profile to check for shared interests
       const { data: currentUserProfile } = await supabase
         .from('users')
         .select('interests')
@@ -635,7 +480,6 @@ export default function MatchesScreen() {
       const categories = getSuggestionCategories(messageCount, hasSharedInterests);
       setSuggestionCategories(categories);
       
-      // Set default category based on conversation stage
       if (messageCount === 0) {
         setSelectedCategory('icebreaker');
       } else if (messageCount < 5) {
@@ -645,256 +489,57 @@ export default function MatchesScreen() {
       }
     } catch (error) {
       console.error('❌ Error updating suggestion categories:', error);
-      // Fallback to basic categories
       const categories = getSuggestionCategories(messages.length, false);
       setSuggestionCategories(categories);
     }
   };
 
-  // Helper functions for category display
-  const getCategoryIcon = (category) => {
-    switch (category) {
-      case 'icebreaker':
-        return 'sparkles';
-      case 'casual':
-        return 'chatbubble-ellipses';
-      case 'date-idea':
-        return 'heart';
-      case 'question':
-        return 'help-circle';
-      case 'response':
-        return 'arrow-forward';
-      case 'activity':
-        return 'bicycle';
-      case 'opener':
-        return 'rocket';
-      default:
-        return 'bulb';
-    }
-  };
 
-  const getCategoryLabel = (category) => {
-    switch (category) {
-      case 'icebreaker':
-        return 'Icebreaker';
-      case 'casual':
-        return 'Casual Chat';
-      case 'date-idea':
-        return 'Date Ideas';
-      case 'question':
-        return 'Questions';
-      case 'response':
-        return 'Responses';
-      case 'activity':
-        return 'Activities';
-      case 'opener':
-        return 'Openers';
-      default:
-        return category.charAt(0).toUpperCase() + category.slice(1);
-    }
-  };
 
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <LottieView
-          source={require('../../assets/animations/heart.json')}
-          autoPlay
-          loop
-          style={styles.lottieAnimation}
-          speed={1}
-        />
-      </View>
-    );
+    return <LoadingScreen />;
   }
 
   // Show chat interface if a match is selected
   if (selectedMatch) {
     return (
-      <KeyboardAvoidingView 
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-      >
-        {/* Chat Header */}
-        <View style={styles.chatHeader}>
-          <TouchableOpacity onPress={closeChat} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#333" />
-          </TouchableOpacity>
-          <View style={styles.chatHeaderInfo}>
-            {selectedMatch.photo ? (
-              <Image 
-                source={{ uri: selectedMatch.photo }} 
-                style={styles.chatHeaderPhoto}
-                resizeMode="cover"
-                onError={() => {/* Failed to load image for chat header */}}
-              />
-            ) : (
-              <View style={styles.chatHeaderPhotoPlaceholder}>
-                <Ionicons name="person" size={20} color="#ccc" />
-              </View>
-            )}
-            <Text style={styles.chatHeaderName}>{selectedMatch.name}</Text>
-          </View>
-          <TouchableOpacity 
-            style={styles.moreButton}
-            onPress={toggleSuggestions}
-          >
-            <Ionicons 
-              name={showSuggestions ? "bulb" : "bulb-outline"} 
-              size={24} 
-              color={showSuggestions ? "hotpink" : "#333"} 
-            />
-          </TouchableOpacity>
-        </View>
-        {/* Messages */}
-        {chatLoading ? (
-          <View style={styles.chatLoadingContainer}>
-            <LottieView
-              source={require('../../assets/animations/heart.json')}
-              autoPlay
-              loop
-              style={styles.chatLoadingAnimation}
-              speed={1}
-            />
-            <Text style={styles.chatLoadingText}>Loading chat...</Text>
-          </View>
-        ) : (
-          <FlatList
-            ref={flatListRef}
-            data={messages}
-            renderItem={renderMessage}
-            keyExtractor={(item) => item.id}
-            style={styles.messagesList}
-            contentContainerStyle={styles.messagesContainer}
-            showsVerticalScrollIndicator={false}
-            onContentSizeChange={scrollToBottom}
-          />
-        )}
-
-        {/* Message Input */}
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.textInput}
-            value={newMessage}
-            onChangeText={setNewMessage}
-            placeholder={moderatingMessage ? "Checking message..." : "Type a message..."}
-            multiline
-            maxLength={1000}
-            editable={!sending && !moderatingMessage}
-          />
-          <TouchableOpacity
-            style={[
-              styles.sendButton,
-              (!newMessage.trim() || sending || moderatingMessage) && styles.sendButtonDisabled
-            ]}
-            onPress={handleSendMessage}
-            disabled={!newMessage.trim() || sending || moderatingMessage}
-          >
-            {sending || moderatingMessage ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <Ionicons name="send" size={20} color="white" />
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {/* Strike Indicator */}
-        {userStrikes > 0 && (
-          <View style={styles.strikeIndicator}>
-            <Ionicons name="warning" size={16} color="#FF6B35" />
-            <Text style={styles.strikeText}>
-              {userStrikes}/3 strikes - {3 - userStrikes} remaining before ban
-            </Text>
-          </View>
-        )}
-
-        {/* AI Chat Assistance */}
-        {showSuggestions && (
-          <View style={styles.suggestionsContainer}>
-            {/* AI Assistance Header */}
-            <View style={styles.aiHeader}>
-              <Ionicons name="sparkles" size={16} color="hotpink" />
-              <Text style={styles.aiHeaderText}>AI Chat Assistant</Text>
-            </View>
-            
-            {/* Suggestion Categories */}
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              style={styles.categoryScrollView}
-              contentContainerStyle={styles.categoryContainer}
-            >
-              {suggestionCategories.map((category) => (
-                <TouchableOpacity
-                  key={category}
-                  style={[
-                    styles.categoryButton,
-                    selectedCategory === category && styles.categoryButtonActive
-                  ]}
-                  onPress={() => generateSuggestions(category)}
-                  disabled={generatingSuggestions}
-                >
-                  <Ionicons 
-                    name={getCategoryIcon(category)} 
-                    size={16} 
-                    color={selectedCategory === category ? "hotpink" : "#666"} 
-                    style={styles.categoryIcon}
-                  />
-                  <Text style={[
-                    styles.categoryText,
-                    selectedCategory === category && styles.categoryTextActive
-                  ]}>
-                    {getCategoryLabel(category)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            {/* Suggestions */}
-            {generatingSuggestions ? (
-              <View style={styles.suggestionsLoading}>
-                <ActivityIndicator size="small" color="hotpink" />
-                <Text style={styles.suggestionsLoadingText}>
-                  AI is crafting {getCategoryLabel(selectedCategory).toLowerCase()}...
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.suggestionsList}>
-                {suggestions.map((suggestion, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={styles.suggestionButton}
-                    onPress={() => handleSuggestionSelect(suggestion)}
-                  >
-                    <Text style={styles.suggestionText}>{suggestion}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-          </View>
-        )}
-      </KeyboardAvoidingView>
+      <ChatInterface
+        selectedMatch={selectedMatch}
+        messages={messages}
+        newMessage={newMessage}
+        setNewMessage={setNewMessage}
+        sending={sending}
+        moderatingMessage={moderatingMessage}
+        chatLoading={chatLoading}
+        showSuggestions={showSuggestions}
+        suggestions={suggestions}
+        suggestionCategories={suggestionCategories}
+        selectedCategory={selectedCategory}
+        generatingSuggestions={generatingSuggestions}
+        userStrikes={userStrikes}
+        currentUserId={currentUserId}
+        flatListRef={flatListRef}
+        onCloseChat={closeChat}
+        onSendMessage={handleSendMessage}
+        onDeleteMessage={handleDeleteMessage}
+        onToggleSuggestions={toggleSuggestions}
+        onGenerateSuggestions={generateSuggestions}
+        onSuggestionSelect={handleSuggestionSelect}
+        scrollToBottom={scrollToBottom}
+      />
     );
   }
 
   // Show matches list
   return (
     <View style={styles.container}>
-      {matches.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Ionicons name="heart-outline" size={80} color="white" />
-          <Text style={styles.emptyText}>No matches yet</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={matches}
-          renderItem={renderMatch}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
+      <MatchesList
+        matches={matches}
+        chatRooms={chatRooms}
+        processingUnmatch={processingUnmatch}
+        onOpenChat={openChat}
+        onUnmatch={confirmUnmatch}
+      />
     </View>
   );
 }
@@ -903,457 +548,5 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'hotpink',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-  },
-  lottieAnimation: {
-    width: 200,
-    height: 200,
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#666',
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  emptyText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  emptySubtext: {
-    fontSize: 16,
-    color: '#999',
-    textAlign: 'center',
-    marginBottom: 30,
-  },
-  swipeButton: {
-    backgroundColor: 'hotpink',
-    paddingHorizontal: 30,
-    paddingVertical: 15,
-    borderRadius: 25,
-  },
-  swipeButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  listContainer: {
-    padding: 20,
-  },
-  matchCard: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  matchContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  matchPhoto: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginRight: 15,
-  },
-  matchInfo: {
-    flex: 1,
-  },
-  nameContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  matchName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  unreadBadge: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'hotpink',
-    marginLeft: 8,
-  },
-  matchBio: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-  },
-  interestsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 8,
-    gap: 4,
-  },
-  interestTag: {
-    fontSize: 10,
-    color: 'hotpink',
-    backgroundColor: '#ffe6f0',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  lastMessage: {
-    fontSize: 14,
-    color: '#999',
-  },
-  unreadMessage: {
-    color: '#333',
-    fontWeight: '600',
-  },
-  matchActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-  },
-  timestamp: {
-    fontSize: 12,
-    color: '#999',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  messageButton: {
-    padding: 8,
-    backgroundColor: '#f8f8f8',
-    borderRadius: 20,
-  },
-  unreadButton: {
-    backgroundColor: 'hotpink',
-  },
-  unmatchButton: {
-    padding: 8,
-    backgroundColor: '#ff6b6b',
-    borderRadius: 20,
-  },
-  processingButton: {
-    backgroundColor: '#ccc',
-  },
-  messageContainer: {
-    marginBottom: 10,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-  },
-  myMessage: {
-    justifyContent: 'flex-end',
-  },
-  theirMessage: {
-    justifyContent: 'flex-start',
-  },
-  messageBubble: {
-    maxWidth: '80%',
-    padding: 12,
-    borderRadius: 18,
-  },
-  myBubble: {
-    backgroundColor: 'hotpink',
-    borderBottomRightRadius: 4,
-  },
-  theirBubble: {
-    backgroundColor: 'white',
-    borderBottomLeftRadius: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  messageText: {
-    fontSize: 16,
-    lineHeight: 20,
-  },
-  myMessageText: {
-    color: 'white',
-  },
-  theirMessageText: {
-    color: '#333',
-  },
-  messageFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    marginTop: 4,
-  },
-  messageTime: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginRight: 4,
-  },
-  myMessageTime: {
-    color: 'rgba(255, 255, 255, 0.7)',
-  },
-  theirMessageTime: {
-    color: 'rgba(0, 0, 0, 0.5)',
-  },
-  messageStatus: {
-    marginLeft: 4,
-  },
-  deleteButton: {
-    padding: 8,
-    marginLeft: 8,
-  },
-  chatHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  backButton: {
-    padding: 5,
-  },
-  chatHeaderInfo: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 10,
-  },
-  chatHeaderPhoto: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 10,
-  },
-  chatHeaderName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  moreButton: {
-    padding: 5,
-  },
-  chatLoadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  chatLoadingAnimation: {
-    width: 100,
-    height: 100,
-  },
-  chatLoadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#666',
-  },
-  messagesList: {
-    flex: 1,
-  },
-  messagesContainer: {
-    padding: 15,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    padding: 15,
-    backgroundColor: 'white',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-  },
-  textInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    marginRight: 10,
-    maxHeight: 100,
-    fontSize: 16,
-  },
-  sendButton: {
-    backgroundColor: 'hotpink',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sendButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  suggestionsContainer: {
-    backgroundColor: 'white',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    paddingVertical: 10,
-  },
-  aiHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-  },
-  aiHeaderText: {
-    marginLeft: 6,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-  },
-  categoryScrollView: {
-    maxHeight: 50,
-  },
-  categoryContainer: {
-    display: 'flex',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    width: '100%',
-  },
-  categoryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 20,
-    backgroundColor: '#f8f8f8',
-  },
-  categoryButtonActive: {
-    borderColor: 'hotpink',
-    backgroundColor: '#ffe6f0',
-  },
-  categoryIcon: {
-    marginRight: 6,
-  },
-  categoryText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-  },
-  categoryTextActive: {
-    color: 'hotpink',
-  },
-  suggestionsLoading: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  suggestionsLoadingText: {
-    marginTop: 8,
-    fontSize: 14,
-    color: '#666',
-  },
-  suggestionsList: {
-    paddingHorizontal: 15,
-    paddingTop: 10,
-    gap: 8,
-  },
-  suggestionButton: {
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 12,
-    backgroundColor: '#f9f9f9',
-  },
-  suggestionText: {
-    fontSize: 14,
-    color: '#333',
-    lineHeight: 20,
-  },
-  closeSuggestionsButton: {
-    position: 'absolute',
-    top: 10,
-    right: 15,
-    padding: 8,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 15,
-  },
-  strikeIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    backgroundColor: 'white',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-  },
-  strikeText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: '#666',
-  },
-  safetyNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    backgroundColor: 'white',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-  },
-  safetyNoticeText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: '#666',
-  },
-  matchPhotoPlaceholder: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginRight: 15,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  chatHeaderPhotoPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 10,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  distanceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  distanceText: {
-    marginLeft: 4,
-    fontSize: 12,
-    color: '#666',
   },
 });
