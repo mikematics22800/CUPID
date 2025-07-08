@@ -63,7 +63,7 @@ export default function ChatInterface({
 
   const translateY = floatAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, -10],
+    outputRange: [0, -5],
   });
 
   const handleCupidPress = () => {
@@ -166,7 +166,6 @@ const styles = StyleSheet.create({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 20, 
-    minHeight: 140, 
+    paddingTop: 20, 
   },
 }); 

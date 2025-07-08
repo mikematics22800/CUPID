@@ -445,8 +445,7 @@ export default function MatchesScreen() {
     }
   };
 
-  const handleSuggestionSelect = (suggestion) => {
-    setNewMessage(suggestion);
+  const handleSuggestionSelect = () => {
     setShowSuggestions(false);
   };
 

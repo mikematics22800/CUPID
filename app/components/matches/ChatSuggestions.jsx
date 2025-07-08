@@ -59,26 +59,22 @@ export default function ChatSuggestions({
       {generatingSuggestions ? (
         <View style={styles.suggestionsLoading}>
           <ActivityIndicator size="small" color="hotpink" />
-          <Text style={styles.suggestionsLoadingText}>Generating suggestions...</Text>
         </View>
-      ) : suggestions.length > 0 ? (
-        <View style={styles.suggestionsList}>
+      ) : suggestions.length > 0 && (
+        <ScrollView style={styles.suggestionsList}>
+          <Text style={styles.suggestionsListTitle}>I am here to spark chemistry, not chat on your behalf. Be original and type from the heart!</Text>
           {suggestions.map((suggestion, index) => (
-            <TouchableOpacity
+            <View
               key={index}
-              style={styles.suggestionButton}
-              onPress={() => onSuggestionSelect(suggestion)}
+              style={[
+                styles.suggestionButton,
+                index > 0 && styles.suggestionButtonWithMargin
+              ]}
             >
               <Text style={styles.suggestionText}>{suggestion}</Text>
-            </TouchableOpacity>
+            </View>
           ))}
-        </View>
-      ) : (
-        <View style={styles.suggestionsEmpty}>
-          <Text style={styles.suggestionsEmptyText}>
-            Tap a category above to get AI suggestions!
-          </Text>
-        </View>
+        </ScrollView>
       )}
     </View>
   );
@@ -100,7 +96,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    width: '100%',
+    paddingHorizontal: 10,
   },
   categoryButton: {
     paddingHorizontal: 15,
@@ -134,7 +130,6 @@ const styles = StyleSheet.create({
   suggestionsList: {
     paddingHorizontal: 15,
     paddingTop: 10,
-    gap: 8,
   },
   suggestionButton: {
     paddingHorizontal: 15,
@@ -143,6 +138,9 @@ const styles = StyleSheet.create({
     borderColor: '#e0e0e0',
     borderRadius: 12,
     backgroundColor: '#f9f9f9',
+  },
+  suggestionButtonWithMargin: {
+    marginTop: 10,
   },
   suggestionText: {
     fontSize: 14,
@@ -158,5 +156,12 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  suggestionsListTitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    paddingBottom: 10,
   },
 }); 

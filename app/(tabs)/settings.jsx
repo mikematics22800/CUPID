@@ -460,30 +460,31 @@ export default function SettingsScreen() {
       <Text style={styles.title}>Settings</Text>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Account</Text>
+        <Text style={styles.sectionTitle}>General</Text>
         <SettingItem
           icon="person-outline"
           title="Edit Profile"
           onPress={() => setShowProfile(true)}
         />
         <SettingItem
-          icon="mail-outline"
-          title="Email Settings"
-          onPress={() => {}}
+          icon="location-outline"
+          title="Location Sharing"
+          value={isLocationSharingEnabled()}
+          onPress={handleLocationSharingToggle}
+          showSwitch
         />
         <SettingItem
-          icon="lock-closed-outline"
-          title="Privacy"
-          onPress={() => {}}
+          icon="log-out-outline"
+          title="Log Out"
+          onPress={handleLogout}
         />
-              <SettingItem
+        <SettingItem
           icon="trash-outline"
           title="Delete Account"
           onPress={handleDeleteAccount}
           destructive
         />
       </View>
-
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Filtering</Text>
         <SettingItem
@@ -507,45 +508,6 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Preferences</Text>
-        <SettingItem
-          icon="notifications-outline"
-          title="Push Notifications"
-          value={notifications}
-          onPress={() => setNotifications(!notifications)}
-          showSwitch
-        />
-        <SettingItem
-          icon="mail-outline"
-          title="Email Notifications"
-          value={emailNotifications}
-          onPress={() => setEmailNotifications(!emailNotifications)}
-          showSwitch
-        />
-        <SettingItem
-          icon="location-outline"
-          title="Show Distance"
-          value={showDistance}
-          onPress={() => setShowDistance(!showDistance)}
-          showSwitch
-        />
-        <SettingItem
-          icon="wifi-outline"
-          title="Show Online Status"
-          value={showOnlineStatus}
-          onPress={() => setShowOnlineStatus(!showOnlineStatus)}
-          showSwitch
-        />
-        <SettingItem
-          icon="location-outline"
-          title="Location Sharing"
-          value={isLocationSharingEnabled()}
-          onPress={handleLocationSharingToggle}
-          showSwitch
-        />
-      </View>
-
-      <View style={styles.section}>
         <Text style={styles.sectionTitle}>Support</Text>
         <SettingItem
           icon="help-circle-outline"
@@ -563,10 +525,6 @@ export default function SettingsScreen() {
           onPress={() => {}}
         />
       </View>
-
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Log Out</Text>
-      </TouchableOpacity>
 
       <Text style={styles.version}>Version 1.0.0</Text>
 
@@ -808,18 +766,6 @@ const styles = StyleSheet.create({
   settingValue: {
     marginRight: 12,
     color: '#333',
-  },
-  logoutButton: {
-    margin: 20,
-    padding: 15,
-    backgroundColor: '#ff3b30',
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  logoutText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
   version: {
     textAlign: 'center',
