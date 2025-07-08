@@ -30,6 +30,7 @@
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="CUPID"/>
         <data android:scheme="exp+cupid"/>
+        <data android:scheme="myapp"/>
       </intent-filter>
     </activity>
   </application>

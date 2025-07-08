@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.CUPID.app'
+    namespace 'com.anonymous.CUPID'
     defaultConfig {
-        applicationId 'com.CUPID.app'
+        applicationId 'com.anonymous.CUPID'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

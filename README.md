@@ -1,19 +1,49 @@
-# Welcome to your Expo app 👋
+# CUPID - Modern Dating App 🏹
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A React Native dating application built with Expo, featuring AI-powered bio generation, intelligent distance filtering, and seamless photo management.
 
-## Get started
+## 📋 Table of Contents
 
-1. Install dependencies
+- [Features](#-features)
+- [Prerequisites](#-prerequisites)
+- [Quick Start](#-quick-start)
+- [Environment Setup](#-environment-setup)
+- [Features Overview](#-features-overview)
+- [API Reference](#-api-reference)
+- [Development](#-development)
+- [Contributing](#-contributing)
+- [License](#-license)
 
+## ✨ Features
+
+- **🤖 AI Bio Generation** - Create engaging bios using Google's Gemini AI
+- **📍 Smart Distance Filtering** - Find matches within your preferred radius
+- **📸 Photo Management** - Upload and manage profile photos with ease
+- **🎯 Interest Matching** - Connect based on shared hobbies and interests
+- **💬 Real-time Chat** - Built-in messaging system for matched users
+- **🔒 Secure Authentication** - Supabase-powered user management
+- **📱 Cross-platform** - Works on iOS, Android, and Web
+
+## 🔧 Prerequisites
+
+- Node.js (v16 or higher)
+- React Native development environment
+- [Supabase](https://supabase.com) account
+- [Google AI Studio](https://makersuite.google.com/app/apikey) API key
+- [Google Maps Platform](https://developers.google.com/maps) API key
+
+## 🚀 Quick Start
+
+1. **Clone and install**
    ```bash
+   git clone <repository-url>
+   cd CUPID
    npm install
    ```
 
-2. Set up environment variables
-
-   Create a `.env` file in the root directory with your Supabase credentials and Gemini API key:
-   ```
+2. **Set up environment variables**
+   Create a `.env` file in the root directory:
+   ```env
    EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
    EXPO_PUBLIC_SUPABASE_KEY=your_supabase_anon_key
    SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
@@ -21,173 +51,222 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    EXPO_PUBLIC_GOOGLE_MAPS_KEY=your_google_maps_api_key
    ```
 
-   **To get your Gemini API key:**
-   - Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
-   - Sign in with your Google account
-   - Click "Create API Key"
-   - Copy the generated key and paste it in your `.env` file
-
-3. Set up Supabase storage for photo uploads
-
+3. **Configure Supabase storage**
    ```bash
    npm run setup-storage
    ```
 
-4. Start the app
-
+4. **Start the development server**
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+5. **Run on your preferred platform**
+   - **iOS Simulator**: Press `i` in the terminal or scan QR code with Expo Go
+   - **Android Emulator**: Press `a` in the terminal
+   - **Web**: Press `w` in the terminal
+   - **Physical Device**: Scan the QR code with Expo Go app
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## 🔑 Environment Setup
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+### Getting API Keys
 
-## Photo Upload Feature
+#### Google AI Studio (Gemini)
+1. Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Sign in with your Google account
+3. Click "Create API Key"
+4. Copy the generated key to your `.env` file
 
-The app now requires users to upload at least 5 photos before they can register. Here's how it works:
+#### Google Maps Platform
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select existing one
+3. Enable the following APIs:
+   - Maps JavaScript API
+   - Distance Matrix API
+   - Geocoding API
+4. Create credentials (API Key)
+5. Add the key to your `.env` file
 
-### Features:
-- **Photo Selection**: Users can select photos from their device gallery
-- **Photo Preview**: Selected photos are displayed in a grid with numbered indicators
-- **Photo Removal**: Users can remove individual photos by tapping the X button
-- **Photo Counter**: Shows current photo count (X/5) with a warning if less than 5
-- **Upload Progress**: Shows "Uploading Photos..." during the registration process
-- **Storage Integration**: Photos are uploaded to Supabase storage and URLs are stored in the user profile
+#### Supabase
+1. Create a new project at [Supabase](https://supabase.com)
+2. Go to Settings > API
+3. Copy your project URL and anon key
+4. Add them to your `.env` file
 
-### Technical Details:
-- Photos are stored in Supabase storage bucket `users`
-- Each user gets their own folder: `users/{user_id}/`
-- Photos are automatically resized to 1:1 aspect ratio for consistency
-- Maximum file size: 50MB per photo
-- Supported formats: JPEG, PNG, WebP
-- Photo URLs are generated dynamically from storage, not stored in database
+## 🎯 Features Overview
 
-### Database Schema:
-The `users` table should contain basic profile information (name, bio, birthday, etc.) but does not need a `photos` column since photos are managed entirely through Supabase storage.
+### AI Bio Generation
 
-## AI Bio Generation Feature
+Create compelling dating profiles with AI assistance based on your interests.
 
-The app now includes an AI-powered bio generation feature that helps users create engaging dating app bios based on their interests and hobbies.
+**How it works:**
+1. Navigate to Profile screen
+2. Tap "AI Bio Generator" in the About Me section
+3. Select interests from 5 categories:
+   - 🏃‍♂️ Sports & Fitness
+   - 🎨 Arts & Culture
+   - 💻 Technology & Gaming
+   - 🌲 Nature & Outdoors
+   - 🤝 Social & Lifestyle
+4. Generate personalized bio suggestions
+5. One-click integration into your profile
 
-### Features:
-- **Interest Selection**: Users can select from 5 categories of interests and hobbies:
-  - Sports & Fitness (Running, Gym, Yoga, etc.)
-  - Arts & Culture (Photography, Music, Travel, etc.)
-  - Technology & Gaming (Programming, Gaming, AI/ML, etc.)
-  - Nature & Outdoors (Camping, Hiking, Gardening, etc.)
-  - Social & Lifestyle (Networking, Volunteering, Foodie, etc.)
-- **Multi-Selection**: Users can select multiple interests across different categories
-- **AI Bio Generation**: Uses Google's Gemini AI to generate personalized bio suggestions
-- **Character Limit**: Generated bios are kept under 150 characters for optimal dating app performance
-- **One-Click Integration**: Generated bios are automatically added to the bio text field
-
-### How to Use:
-1. Navigate to the Profile screen
-2. Tap the "AI Bio Generator" button in the About Me section
-3. Select your interests and hobbies from the available categories
-4. Tap "Generate Bio Suggestion"
-5. The AI will create a personalized bio based on your selections
-6. The generated bio will be automatically added to your bio text field
-
-### Technical Details:
-- Uses Google's Gemini 2.0 Flash model via direct API calls for React Native compatibility
-- Interests are categorized for better organization and user experience
-- The AI prompt is optimized for dating app context and character limits
-- Error handling includes network connectivity checks and user-friendly error messages
-
-## Distance Filtering Feature
-
-### Features:
-- **Residence-based Distance**: Filter users by distance from your residence using Google Maps Distance Matrix API
-- **GPS-based Distance**: Calculate distances using precise GPS coordinates when available
-- **Flexible Distance Options**: Choose from 5, 10, 25, 50, or 100 miles
-- **Smart Fallback**: Automatically falls back to residence comparison if distance calculation fails
-- **Visual Distance Display**: See exact distances when using distance filters
-
-### How Distance Filtering Works
-1. **Primary Method**: Uses Google Maps Distance Matrix API to calculate driving distance between residences
-2. **Secondary Method**: Uses GPS coordinates with Haversine formula for precise distance calculation
-3. **Fallback Method**: Compares residence strings for exact matches (0 miles)
-4. **User Experience**: Shows distance in miles on profile cards when filter is active
-
-### Technical Implementation
-- **Google Maps Integration**: Distance Matrix API for accurate address-based distance calculation
-- **Geolocation Support**: GPS coordinates for precise location-based matching
-- **Residence Storage**: Stores user residence as formatted address strings
-- **Distance Preferences**: User-configurable maximum distance settings
-- **Real-time Updates**: Automatic distance recalculation when location changes
-
-## Getting Started
-
-### Prerequisites
-- Node.js (v16 or higher)
-- React Native development environment
-- Supabase account
-- Google Maps API key
-
-### Environment Variables
-```env
-EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
-EXPO_PUBLIC_SUPABASE_KEY=your_supabase_anon_key
-EXPO_PUBLIC_GOOGLE_MAPS_KEY=your_google_maps_api_key
-```
-
-### Installation
-1. Clone the repository
-2. Install dependencies: `npm install`
-3. Set up environment variables
-4. Run the app: `npx expo start`
-
-## Usage
+**Technical Details:**
+- Uses Google Gemini 2.0 Flash model
+- Optimized for 150-character limit
+- Categorized interest selection
+- Network error handling
 
 ### Distance Filtering
+
+Find matches within your preferred distance using advanced location services.
+
+**Features:**
+- **Residence-based filtering** - Uses Google Maps Distance Matrix API
+- **GPS-based calculation** - Precise coordinate-based distance
+- **Flexible options** - 5, 10, 25, 50, or 100 miles
+- **Smart fallback** - Automatic method switching
+- **Real-time updates** - Dynamic distance recalculation
+
+**How to use:**
 1. Set your residence in Settings > Edit Profile
-2. Go to the Everyone tab
-3. Tap the "Distance Filter" button
-4. Choose your desired distance (5-100 miles)
-5. View users within that distance from your residence
-6. Clear the filter anytime to see all users
+2. Go to Everyone tab
+3. Tap "Distance Filter" button
+4. Choose your preferred distance
+5. View filtered results with distance indicators
 
-### Location Sharing
-- Enable location sharing for more accurate distance calculations
-- Residence setting works as a fallback when GPS is unavailable
-- Both methods provide distance-based user filtering
+### Photo Management
 
-## API Endpoints
+Comprehensive photo upload and management system with cloud storage.
+
+**Requirements:**
+- Minimum 5 photos for registration
+- Maximum 50MB per photo
+- Supported formats: JPEG, PNG, WebP
+- Automatic 1:1 aspect ratio resizing
+
+**Features:**
+- Gallery selection with preview
+- Grid layout with numbered indicators
+- Individual photo removal
+- Upload progress tracking
+- Cloud storage integration
+
+**Storage Structure:**
+```
+Supabase Storage Bucket: users
+├── user_id_1/
+│   ├── photo1.jpg
+│   ├── photo2.jpg
+│   └── ...
+└── user_id_2/
+    ├── photo1.jpg
+    └── ...
+```
+
+## 📚 API Reference
 
 ### Distance Calculation
-- `getUsersWithinDistance(maxDistance, limit)`: Get users within specified distance
-- `calculateAddressDistance(origin, destination)`: Calculate distance between addresses
-- `calculateDistance(lat1, lon1, lat2, lon2)`: Calculate distance using coordinates
 
-## Contributing
+```javascript
+// Get users within specified distance
+getUsersWithinDistance(maxDistance, limit)
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+// Calculate distance between addresses
+calculateAddressDistance(origin, destination)
 
-## License
+// Calculate distance using coordinates
+calculateDistance(lat1, lon1, lat2, lon2)
+```
 
-This project is licensed under the MIT License.
+### Photo Management
 
-## Learn more
+```javascript
+// Upload user photos
+uploadUserPhotos(userId, photos)
 
-To learn more about developing your project with Expo, look at the following resources:
+// Get user photo URLs
+getUserPhotoUrls(userId)
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+// Delete user photo
+deleteUserPhoto(userId, photoName)
+```
 
-## Join the community
+### AI Bio Generation
 
-Join our community of developers creating universal apps.
+```javascript
+// Generate bio from interests
+generateBioFromInterests(interests)
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+// Get interest categories
+getInterestCategories()
+```
+
+## 🛠 Development
+
+### Project Structure
+
+```
+CUPID/
+├── app/                    # Main application code
+│   ├── (tabs)/            # Tab-based navigation
+│   ├── components/         # Reusable components
+│   └── contexts/          # React contexts
+├── lib/                   # Utility libraries
+├── assets/                # Static assets
+└── android/ & ios/        # Platform-specific code
+```
+
+### Available Scripts
+
+```bash
+npm start          # Start Expo development server
+npm run android    # Run on Android emulator
+npm run ios        # Run on iOS simulator
+npm run lint       # Run ESLint
+npm run setup-storage  # Configure Supabase storage
+```
+
+### Development Workflow
+
+1. **File-based routing** - Edit files in the `app` directory
+2. **Hot reloading** - Changes reflect immediately
+3. **Cross-platform** - Single codebase for iOS, Android, and Web
+4. **TypeScript support** - Built-in type checking
+
+## 🤝 Contributing
+
+We welcome contributions! Please follow these steps:
+
+1. **Fork** the repository
+2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
+3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
+4. **Push** to the branch (`git push origin feature/amazing-feature`)
+5. **Open** a Pull Request
+
+### Development Guidelines
+
+- Follow the existing code style
+- Add tests for new features
+- Update documentation as needed
+- Ensure cross-platform compatibility
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🔗 Resources
+
+### Expo Documentation
+- [Expo Documentation](https://docs.expo.dev/) - Learn fundamentals and advanced topics
+- [Expo Tutorial](https://docs.expo.dev/tutorial/introduction/) - Step-by-step guide
+- [Expo Router](https://docs.expo.dev/router/introduction/) - File-based routing
+
+### Community
+- [Expo GitHub](https://github.com/expo/expo) - Open source platform
+- [Expo Discord](https://chat.expo.dev) - Community chat
+- [Expo Forums](https://forums.expo.dev/) - Q&A and discussions
+
+---
+
+**Built with ❤️ using Expo and React Native**
