@@ -1,4 +1,4 @@
-# CUPID - Modern Dating App 🏹
+# CUPID - Complete User Platform for Intelligent Dating 🏹
 
 A React Native dating application built with Expo, featuring AI-powered bio generation, intelligent distance filtering, and seamless photo management.
 
