@@ -1,7 +1,7 @@
 import { StyleSheet, ScrollView } from 'react-native';
 import { useState, useEffect } from 'react';
 import { register } from '../../../lib/supabase';
-import PersonalInfoSection from './PersonalInfoSection';
+import PersonalInfoSection from '../settings/PersonalInfoSection';
 import RegisterButton from './RegisterButton';
 import ContactSection from './ContactSection';
 

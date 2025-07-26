@@ -796,6 +796,7 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: 'hotpink',
     borderRadius: 10,
+    padding: 10,
   },
   buttonText: {
     fontSize: 16,

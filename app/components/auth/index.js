@@ -10,11 +10,9 @@ export { default as VerificationForm } from './VerificationForm';
 export { default as ContactSection } from './ContactSection';
 
 // Section Components
-export { default as PersonalInfoSection } from './PersonalInfoSection';
-export { default as BioSection } from './BioSection';
-export { default as LocationSection } from './LocationSection';
-export { default as PhotoSection } from './PhotoSection';
-export { default as InterestsSection } from './InterestsSection';
+export { default as PersonalInfoSection } from '../settings/PersonalInfoSection';
+export { default as LocationSection } from '../settings/LocationSection';
+export { default as PhotoSection } from '../settings/PhotoSection';
 
 // UI Components
 export { default as RegisterButton } from './RegisterButton';

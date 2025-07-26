@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { getQuizScoreForUser } from '../../../lib/supabase';
 
 export default function MatchCard({ 
   match, 
@@ -9,7 +10,27 @@ export default function MatchCard({
   onUnmatch, 
   processingUnmatch 
 }) {
+  const [quizScore, setQuizScore] = useState(null);
+  const [showQuiz, setShowQuiz] = useState(false);
   const hasUnreadMessages = chatRoom?.lastMessage && !chatRoom.lastMessage.isFromMe && !chatRoom.lastMessage.isRead;
+
+  // Load quiz score on component mount
+  useEffect(() => {
+    loadQuizScore();
+  }, [match.id]);
+
+  const loadQuizScore = async () => {
+    try {
+      const score = await getQuizScoreForUser(match.id);
+      setQuizScore(score);
+    } catch (error) {
+      console.error('Error loading quiz score:', error);
+    }
+  };
+
+  const handleQuizCompleted = (score) => {
+    setQuizScore(score);
+  };
 
   return (
     <View style={styles.matchCard}>
@@ -55,28 +76,46 @@ export default function MatchCard({
         </Text>
         <View style={styles.actionButtons}>
           <TouchableOpacity 
-            style={[styles.messageButton, hasUnreadMessages && styles.unreadButton]}
+            style={[styles.messageButton]}
             onPress={() => onOpenChat(match)}
           >
             <Ionicons 
               name={hasUnreadMessages ? "chatbubble" : "chatbubble-outline"} 
               size={20} 
-              color={hasUnreadMessages ? "white" : "hotpink"} 
+              color='white'
             />
           </TouchableOpacity>
+          
+          {/* Quiz Button */}
+          <TouchableOpacity 
+            style={[styles.quizButton, quizScore !== null && styles.quizCompletedButton]}
+            onPress={() => setShowQuiz(true)}
+          >
+            <Ionicons 
+              name="trophy"
+              size={20} 
+              color='white'
+            />
+          </TouchableOpacity>
+          
           <TouchableOpacity 
             style={[styles.unmatchButton, processingUnmatch === match.id && styles.processingButton]}
             onPress={() => onUnmatch(match.id, match.name)}
             disabled={processingUnmatch === match.id}
           >
-            {processingUnmatch === match.id ? (
-              <Ionicons name="ellipsis-horizontal" size={20} color="white" />
-            ) : (
-              <Ionicons name="close" size={20} color="white" />
-            )}
+            <Ionicons name="close" size={20} color="white"/>
           </TouchableOpacity>
         </View>
       </View>
+      
+      {/* Quiz Score Display */}
+      {quizScore !== null && (
+        <View style={styles.quizScoreContainer}>
+          <Text style={styles.quizScoreText}>
+            Quiz Score: {quizScore}%
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -154,15 +193,23 @@ const styles = StyleSheet.create({
   },
   messageButton: {
     padding: 8,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: 'hotpink',
     borderRadius: 20,
   },
   unreadButton: {
     backgroundColor: 'hotpink',
   },
+  quizButton: {
+    padding: 8,
+    backgroundColor: '#007AFF',
+    borderRadius: 20,
+  },
+  quizCompletedButton: {
+    backgroundColor: '#FFD700',
+  },
   unmatchButton: {
     padding: 8,
-    backgroundColor: '#ff6b6b',
+    backgroundColor: 'red',
     borderRadius: 20,
   },
   processingButton: {
@@ -177,5 +224,17 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontSize: 12,
     color: '#666',
+  },
+  quizScoreContainer: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  quizScoreText: {
+    fontSize: 12,
+    color: '#007AFF',
+    fontWeight: '600',
+    textAlign: 'center',
   },
 }); 

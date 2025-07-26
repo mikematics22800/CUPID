@@ -1,5 +1,5 @@
 import React from 'react';
-import LocationPermissionModal from './auth/LocationPermissionModal';
+import LocationPermissionModal from './settings/LocationPermissionModal';
 
 export default function LocationPermissionHandler({ 
   visible, 

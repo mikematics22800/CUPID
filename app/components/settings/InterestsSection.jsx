@@ -1,7 +1,6 @@
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { promptGemini } from '../../../lib/gemini';
 
 const INTERESTS_CATEGORIES = {
   'Sports & Fitness': [
@@ -31,9 +30,8 @@ const INTERESTS_CATEGORIES = {
   ]
 };
 
-export default function InterestsSection({ onBioGenerated, initialInterests = [], onInterestsChange }) {
+export default function InterestsSection({ initialInterests = [], onInterestsChange }) {
   const [selectedInterests, setSelectedInterests] = useState(initialInterests);
-  const [generating, setGenerating] = useState(false);
 
   // Only update selected interests when initialInterests prop changes and is different
   useEffect(() => {
@@ -58,32 +56,6 @@ export default function InterestsSection({ onBioGenerated, initialInterests = []
     // Call the callback to notify parent component of interest changes
     if (onInterestsChange) {
       onInterestsChange(newSelectedInterests);
-    }
-  };
-
-  const generateBioSuggestion = async () => {
-    if (selectedInterests.length < 5) {
-      Alert.alert('Not Enough Interests', 'Please select at least 5 interests to generate a bio suggestion.');
-      return;
-    }
-
-    setGenerating(true);
-    try {
-      const prompt = `Generate a creative and engaging dating app bio of at least 50 words based on these interests and hobbies: ${selectedInterests.join(', ')}. Only return the bio text.`;
-
-      const bioSuggestion = await promptGemini(prompt);
-      
-      if (bioSuggestion && bioSuggestion.trim()) {
-        onBioGenerated(bioSuggestion.trim());
-        Alert.alert('Bio Generated!', 'Your bio suggestion has been added to the text field.');
-      } else {
-        Alert.alert('Error', 'Failed to generate bio suggestion. Please try again.');
-      }
-    } catch (error) {
-      console.error('Error generating bio:', error);
-      Alert.alert('Error', 'Failed to generate bio suggestion. Please check your internet connection and try again.');
-    } finally {
-      setGenerating(false);
     }
   };
 
@@ -133,21 +105,6 @@ export default function InterestsSection({ onBioGenerated, initialInterests = []
         <Text style={styles.selectedCount}>
           {selectedInterests.length}/10 interest{selectedInterests.length !== 1 ? 's' : ''} selected
         </Text>
-        <TouchableOpacity
-          style={[styles.generateButton, (generating || selectedInterests.length < 5) && styles.generateButtonDisabled]}
-          onPress={generateBioSuggestion}
-          disabled={generating || selectedInterests.length < 5}
-        >
-          <Ionicons 
-            name={"sparkles"} 
-            size={20} 
-            color="white" 
-            style={styles.generateIcon}
-          />
-          <Text style={styles.generateButtonText}>
-            {generating ? 'Generating...' : 'Generate Bio Suggestion'}
-          </Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -235,37 +192,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
     textAlign: 'center',
-    marginBottom: 12,
-  },
-  generateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'hotpink',
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 12,
-    gap: 8,
-  },
-  generateButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  generateButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  generateIcon: {
-    marginRight: 0,
-  },
-  requirementText: {
-    color: '#ff6b6b',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  limitText: {
-    color: '#ff6b6b',
-    fontSize: 12,
-    fontWeight: '500',
   },
 }); 

@@ -6,9 +6,10 @@ import { useRouter } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
 import LottieView from 'lottie-react-native';
 import { useProfile } from '../contexts/ProfileContext';
-import PhotoSection from '../components/auth/PhotoSection';
-import BioSection from '../components/auth/BioSection';
+import PhotoSection from '../components/settings/PhotoSection';
+import BioSection from '../components/settings/BioSection';
 import PersonalInfoForm from '../components/settings/PersonalInfoForm';
+import QuizSection from '../components/settings/QuizSection';
 import { uploadPhotosToStorage } from '../../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -691,6 +692,11 @@ export default function SettingsScreen() {
                 interests={interests}
                 setInterests={setInterests}
               />
+              
+              <QuizSection onQuizSaved={() => {
+                // Refresh profile data if needed
+                refreshProfile();
+              }} />
               
               {/* Action Buttons */}
               <View style={styles.actionButtonsContainer}>

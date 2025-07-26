@@ -70,16 +70,25 @@ export default function LikesScreen() {
       }
       
       console.log(`✅ Likes data received: ${likesData.length} likes`);
+      console.log('📊 Likes data details:', likesData.map(like => ({
+        id: like.id,
+        name: like.name,
+        hasImage: !!like.image,
+        hasImages: !!(like.images && like.images.length > 0),
+        imageCount: like.images ? like.images.length : 0
+      })));
       
       setLikes(likesData);
       if (likesData.length > 0) {
         setCurrentLikeIndex(0);
         setCurrentPhotoIndex(0);
         setSwipeCount(0); // Reset swipe count when loading new likes
+        console.log('✅ Set current like index to 0');
       } else {
         setCurrentLikeIndex(-1);
         setCurrentPhotoIndex(0);
         setSwipeCount(0); // Reset swipe count even when no likes
+        console.log('📭 No likes found, set current like index to -1');
       }
       console.log('✅ Successfully loaded likes');
 
@@ -179,20 +188,6 @@ export default function LikesScreen() {
               
               Alert.alert(
                 '🎉 It\'s a Match!',
-                'You and this person have liked each other! They\'ll now appear in your matches.',
-                [
-                  {
-                    text: 'View Matches',
-                    onPress: () => {
-                      // Navigate to matches tab
-                      // You could add navigation here if needed
-                    }
-                  },
-                  {
-                    text: 'Continue',
-                    style: 'cancel'
-                  }
-                ]
               );
             } else {
               // Remove from likes list since they're no longer just a "like"

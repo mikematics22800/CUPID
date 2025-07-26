@@ -1,0 +1,52 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.banned (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  email text NOT NULL,
+  phone text NOT NULL,
+  CONSTRAINT banned_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.likes (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  likes ARRAY,
+  CONSTRAINT likes_pkey PRIMARY KEY (id),
+  CONSTRAINT likes_id_fkey FOREIGN KEY (id) REFERENCES public.users(id)
+);
+CREATE TABLE public.matches (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user1_id uuid,
+  user2_id uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  user1_score real,
+  user2_score real,
+  CONSTRAINT matches_pkey PRIMARY KEY (id),
+  CONSTRAINT matches_user2_id_fkey FOREIGN KEY (user2_id) REFERENCES public.users(id),
+  CONSTRAINT matches_user1_id_fkey FOREIGN KEY (user1_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.messages (
+  id uuid NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  read boolean DEFAULT false,
+  receiver_id uuid,
+  content text,
+  CONSTRAINT messages_pkey PRIMARY KEY (id),
+  CONSTRAINT messages_id_fkey FOREIGN KEY (id) REFERENCES public.users(id)
+);
+CREATE TABLE public.users (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  name text NOT NULL DEFAULT ''::text,
+  email text NOT NULL DEFAULT ''::text UNIQUE,
+  phone text NOT NULL DEFAULT ''::text UNIQUE,
+  sex text NOT NULL DEFAULT ''::text,
+  birthday timestamp with time zone NOT NULL DEFAULT now(),
+  bio text DEFAULT ''::text,
+  interests ARRAY,
+  strikes smallint NOT NULL DEFAULT '0'::smallint,
+  images ARRAY,
+  residence text,
+  geolocation ARRAY,
+  quiz ARRAY,
+  CONSTRAINT users_pkey PRIMARY KEY (id)
+);
