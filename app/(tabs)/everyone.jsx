@@ -427,7 +427,7 @@ export default function Everyone() {
             <ScrollView 
               style={styles.scrollContainer}
               showsVerticalScrollIndicator={false}
-              nestedScrollEnabled={true}
+              nestedScrollEnabled
             >
               <View style={styles.profileInfo}>
                 <View style={styles.nameRow}>

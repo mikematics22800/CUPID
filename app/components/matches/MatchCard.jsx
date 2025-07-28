@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getQuizScoreForUser } from '../../../lib/supabase';
+import { getQuizScoreForUser, getUserQuiz } from '../../../lib/supabase';
 import QuizTaker from './QuizTaker';
 
 export default function MatchCard({ 
@@ -13,19 +13,28 @@ export default function MatchCard({
 }) {
   const [quizScore, setQuizScore] = useState(null);
   const [showQuiz, setShowQuiz] = useState(false);
+  const [hasQuiz, setHasQuiz] = useState(false);
   const hasUnreadMessages = chatRoom?.lastMessage && !chatRoom.lastMessage.isFromMe && !chatRoom.lastMessage.isRead;
 
-  // Load quiz score on component mount
+  // Load quiz score and check if user has quiz on component mount
   useEffect(() => {
-    loadQuizScore();
+    loadQuizData();
   }, [match.id]);
 
-  const loadQuizScore = async () => {
+  const loadQuizData = async () => {
     try {
-      const score = await getQuizScoreForUser(match.id);
-      setQuizScore(score);
+      // Check if the matched user has a quiz
+      const quiz = await getUserQuiz(match.id);
+      setHasQuiz(quiz !== null && quiz.questions && quiz.questions.length > 0);
+      
+      // Load quiz score if user has a quiz
+      if (quiz !== null) {
+        const score = await getQuizScoreForUser(match.id);
+        setQuizScore(score);
+      }
     } catch (error) {
-      console.error('Error loading quiz score:', error);
+      console.error('Error loading quiz data:', error);
+      setHasQuiz(false);
     }
   };
 
@@ -88,17 +97,19 @@ export default function MatchCard({
             />
           </TouchableOpacity>
           
-          {/* Quiz Button */}
-          <TouchableOpacity 
-            style={[styles.quizButton, quizScore !== null && styles.quizCompletedButton]}
-            onPress={() => setShowQuiz(true)}
-          >
-            <Ionicons 
-              name={quizScore !== null ? "trophy" : "help-circle"}
-              size={20} 
-              color='white'
-            />
-          </TouchableOpacity>
+          {/* Quiz Button - Only show if user has a quiz */}
+          {hasQuiz && (
+            <TouchableOpacity 
+              style={[styles.quizButton, quizScore !== null && styles.quizCompletedButton]}
+              onPress={() => setShowQuiz(true)}
+            >
+              <Ionicons 
+                name={quizScore !== null ? "trophy" : "help-circle"}
+                size={20} 
+                color='white'
+              />
+            </TouchableOpacity>
+          )}
           
           <TouchableOpacity 
             style={[styles.unmatchButton, processingUnmatch === match.id && styles.processingButton]}
@@ -134,17 +145,14 @@ export default function MatchCard({
 const styles = StyleSheet.create({
   matchCard: {
     backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 15,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
   matchContent: {
     flexDirection: 'row',

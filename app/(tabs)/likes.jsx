@@ -422,7 +422,7 @@ export default function LikesScreen() {
             <ScrollView 
               style={styles.scrollContainer}
               showsVerticalScrollIndicator={false}
-              nestedScrollEnabled={true}
+              nestedScrollEnabled
             >
               <View style={styles.profileInfo}>
                 <Text style={styles.name}>{currentLike.name}, {currentLike.age}</Text>

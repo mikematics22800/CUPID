@@ -85,7 +85,7 @@ export default function LikeCard({
       <ScrollView 
         style={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
-        nestedScrollEnabled={true}
+        nestedScrollEnabled
       >
         <View style={styles.profileInfo}>
           <Text style={styles.name}>{like.name}, {like.age}</Text>

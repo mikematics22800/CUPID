@@ -1,6 +1,5 @@
-import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Alert, TextInput } from 'react-native';
 import { useState } from 'react';
-import { TextInput } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { promptGemini } from '../../../lib/gemini';
 import InterestsSection from './InterestsSection';
@@ -13,10 +12,6 @@ export default function BioSection({
 }) {
   const [generating, setGenerating] = useState(false);
 
-  const handleBioGenerated = (suggestion) => {
-    setBio(suggestion);
-  };
-
   const handleInterestsChange = (newInterests) => {
     if (setInterests) { 
       setInterests(newInterests);
@@ -24,8 +19,8 @@ export default function BioSection({
   };
 
   const generateBioSuggestion = async () => {
-    if (interests.length < 5) {
-      Alert.alert('Not Enough Interests', 'Please select at least 5 interests to generate a bio suggestion.');
+    if (interests.length < 10) {
+      Alert.alert('Not Enough Interests', 'Please select at least 10 interests to generate a bio suggestion.');
       return;
     }
 
@@ -55,25 +50,43 @@ export default function BioSection({
         initialInterests={interests}
         onInterestsChange={handleInterestsChange}
       />
-      <TextInput
-        style={styles.bioInput}
-        placeholder="Share your interests, hobbies, what you're looking for, and anything else that makes you unique..."
-        value={bio}
-        onChangeText={setBio}
-        multiline
-        numberOfLines={8}
-        textAlignVertical="top"
-      />
+      <View style={styles.bioInputContainer}>
+        <TextInput
+          style={styles.bioInput}
+          placeholder="Share your interests, hobbies, what you're looking for, and anything else that makes you unique..."
+          value={bio}
+          onChangeText={(text) => {
+            if (text.length <= 1000) {
+              setBio(text);
+            }
+          }}
+          multiline
+          numberOfLines={8}
+          textAlignVertical="top"
+          selectionColor="hotpink"
+          placeholderTextColor="#999"
+          maxLength={1000}
+          showsVerticalScrollIndicator
+        />
+        <View style={styles.characterCounterContainer}>
+          <Text style={[
+            styles.characterCount,
+            bio.length > 900 && styles.characterCountWarning,
+            bio.length >= 1000 && styles.characterCountLimit
+          ]}>
+            {bio.length}/1000 characters
+          </Text>
+        </View>
+      </View>
       <TouchableOpacity
-        style={[styles.generateButton, (generating || interests.length < 5) && styles.generateButtonDisabled]}
+        style={[styles.generateButton, (generating || interests.length < 10) && styles.generateButtonDisabled]}
         onPress={generateBioSuggestion}
-        disabled={generating || interests.length < 5}
+        disabled={generating || interests.length < 10}
       >
         <Ionicons 
-          name={"sparkles"} 
+          name="sparkles" 
           size={20} 
           color="white" 
-          style={styles.generateIcon}
         />
         <Text style={styles.generateButtonText}>
           {generating ? 'Generating...' : 'Generate Bio'}
@@ -86,42 +99,34 @@ export default function BioSection({
 const styles = StyleSheet.create({
   bioSection: {
     width: '100%',
-    display: 'flex',
     flexDirection: 'column',
     gap: 15,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  interestsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#f0f8ff',
-  },
-  interestsButtonText: {
-    color: '#007AFF',
-    fontSize: 14,
-    fontWeight: '600',
+
+  bioInputContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+    paddingHorizontal: 20,
   },
   bioInput: {
-    width: '100%',
-    fontSize: 16,
-    fontWeight: '400',
-    color: '#333',
-    padding: 10,
-    borderRadius: 12,
-    backgroundColor: 'white',
+    padding: 20,
+    height: 300,
+  },
+  characterCount: {
+    fontSize: 15,
+    color: '#666',
+    textAlign: 'center',
+  },
+  characterCountWarning: {
+    color: '#FF9800',
+  },
+  characterCountLimit: {
+    color: '#F44336',
   },
   generateButton: {
     flexDirection: 'row',
@@ -129,8 +134,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'hotpink',
     paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 12,
+    borderRadius: 18,
     gap: 8,
   },
   generateButtonDisabled: {
@@ -138,10 +142,14 @@ const styles = StyleSheet.create({
   },
   generateButtonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
-  generateIcon: {
-    marginRight: 0,
+  characterCounterContainer: {
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 40,
   },
 }); 

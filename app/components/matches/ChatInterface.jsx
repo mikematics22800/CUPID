@@ -165,7 +165,6 @@ const styles = StyleSheet.create({
   },
   cupidContainer: {
     width: '100%',
-    display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 20, 

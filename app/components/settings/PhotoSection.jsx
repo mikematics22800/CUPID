@@ -87,7 +87,6 @@ export default function PhotoSection({
         photoSlots.push(
           <TouchableOpacity key={`add-${i}`} style={styles.addPhotoButton} onPress={pickImage} disabled={photos.length >= 12}>
             <Ionicons name="add" size={40} color={photos.length >= 12 ? '#ccc' : 'hotpink'} />
-            <Text style={styles.addPhotoText}>Add Photo</Text>
           </TouchableOpacity>
         );
       }
@@ -105,9 +104,7 @@ export default function PhotoSection({
   return (
     <View style={styles.photoSection}>
       <View style={styles.header}>
-        <Text style={styles.requirementText}>
-          {photos.length}/3 Minimum, 12 Maximum
-        </Text>
+        <Text style={styles.addPhotoText}>Choose between 3 and 12 nice photos of yourself for other users to see!</Text>
       </View>
       {showMinWarning && (
         <Text style={{ color: 'red', fontSize: 12, textAlign: 'center', marginBottom: 5 }}>
@@ -200,22 +197,19 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
   },
   addPhotoText: {
-    color: 'hotpink',
-    fontWeight: 'bold',
-    fontSize: 12,
+    color: '#666',
+    fontSize: 15,
     textAlign: 'center',
-    marginTop: 5,
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    width: '100%',
     marginBottom: 10,
   },
   requirementText: {
-    fontSize: 12,
+    fontSize: 15,
     color: '#666',
-    fontStyle: 'italic',
     textAlign: 'center',
     width: '100%',
   },

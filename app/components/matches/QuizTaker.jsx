@@ -95,11 +95,17 @@ export default function QuizTaker({
   const handleSubmitQuiz = async () => {
     setSubmitting(true);
     try {
+      console.log(`🎯 Starting quiz submission for quiz owner: ${quizOwnerId}`);
+      
       // Calculate score
       const scoreResult = await submitQuizAnswers(quizOwnerId, answers);
+      console.log(`📊 Score calculated: ${scoreResult.score}%`);
       
       // Save score to database
       const { data: { user: currentUser } } = await supabase.auth.getUser();
+      console.log(`👤 Current user ID: ${currentUser.id}`);
+      console.log(`💾 Saving score: ${scoreResult.score}% for quiz taker ${currentUser.id} on quiz owner ${quizOwnerId}`);
+      
       await saveQuizScore(quizOwnerId, currentUser.id, scoreResult.score);
       
       setResults(scoreResult);
@@ -109,7 +115,7 @@ export default function QuizTaker({
         onQuizCompleted(scoreResult);
       }
     } catch (error) {
-      console.error('Error submitting quiz:', error);
+      console.error('❌ Error submitting quiz:', error);
       Alert.alert('Error', 'Failed to submit quiz. Please try again.');
     } finally {
       setSubmitting(false);
@@ -131,7 +137,7 @@ export default function QuizTaker({
 
   const getScoreColor = (score) => {
     if (score >= 90) return '#34C759';
-    if (score >= 80) return '#007AFF';
+    if (score >= 80) return 'hotpink';
     if (score >= 70) return '#FF9500';
     if (score >= 60) return '#FFCC00';
     return '#FF3B30';
@@ -141,7 +147,7 @@ export default function QuizTaker({
     return (
       <Modal visible={isVisible} animationType="slide" transparent={false}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color="hotpink" />
           <Text style={styles.loadingText}>Loading quiz...</Text>
         </View>
       </Modal>
@@ -219,7 +225,7 @@ export default function QuizTaker({
                 onPress={previousQuestion}
                 disabled={currentQuestionIndex === 0}
               >
-                <Ionicons name="chevron-back" size={20} color={currentQuestionIndex === 0 ? "#ccc" : "#007AFF"} />
+                <Ionicons name="chevron-back" size={20} color={currentQuestionIndex === 0 ? "#ccc" : "hotpink"} />
                 <Text style={[styles.navButtonText, currentQuestionIndex === 0 && styles.disabledText]}>
                   Previous
                 </Text>
@@ -246,7 +252,7 @@ export default function QuizTaker({
                   onPress={nextQuestion}
                 >
                   <Text style={styles.navButtonText}>Next</Text>
-                  <Ionicons name="chevron-forward" size={20} color="#007AFF" />
+                  <Ionicons name="chevron-forward" size={20} color="white" />
                 </TouchableOpacity>
               )}
             </View>
@@ -345,7 +351,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#007AFF',
+    backgroundColor: 'hotpink',
     borderRadius: 3,
   },
   progressText: {
@@ -389,7 +395,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   selectedOption: {
-    backgroundColor: '#007AFF',
+    backgroundColor: 'hotpink',
   },
   optionText: {
     fontSize: 16,
@@ -410,8 +416,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    borderRadius: 8,
-    backgroundColor: 'white',
+    borderRadius: 18,
+    backgroundColor: 'hotpink',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -427,11 +433,11 @@ const styles = StyleSheet.create({
   navButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#007AFF',
+    color: 'white',
     marginHorizontal: 8,
   },
   submitButton: {
-    backgroundColor: '#34C759',
+    backgroundColor: 'hotpink',
   },
   submitButtonText: {
     color: 'white',
@@ -496,7 +502,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   closeResultsButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: 'hotpink',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',

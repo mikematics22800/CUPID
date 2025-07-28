@@ -36,6 +36,7 @@ export default function SettingsScreen() {
   const [saving, setSaving] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [quizData, setQuizData] = useState([]);
   const [validationStatus, setValidationStatus] = useState({
     firstName: true,
     lastName: true,
@@ -396,6 +397,11 @@ export default function SettingsScreen() {
                   Alert.alert('Missing Location', 'Please enter your location.');
         return;
       }
+
+      if (!interests || interests.length < 10) {
+        Alert.alert('Incomplete Interests', 'Please select at least 10 interests to save your profile.');
+        return;
+      }
       
       setSaving(true);
 
@@ -413,6 +419,7 @@ export default function SettingsScreen() {
       const allPhotoUrls = [...existingPhotoUrls, ...newlyUploadedUrls];
       const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
       
+      // Save profile data
       const success = await updateProfile({
         bio: bio,
         interests: interests,
@@ -422,6 +429,19 @@ export default function SettingsScreen() {
         phone: phone,
         images: allPhotoUrls,
       });
+
+      // Save quiz data if there are questions
+      if (quizData.length > 0) {
+        try {
+          const { createOrUpdateQuiz } = await import('../../lib/supabase');
+          await createOrUpdateQuiz(user.id, quizData);
+          console.log('✅ Quiz saved successfully');
+        } catch (quizError) {
+          console.error('❌ Error saving quiz:', quizError);
+          Alert.alert('Warning', 'Profile saved but there was an error saving your quiz. Please try again.');
+          return;
+        }
+      }
 
       if (success) {
         Alert.alert('Success', 'Profile updated successfully!');
@@ -736,10 +756,13 @@ export default function SettingsScreen() {
                   setInterests={setInterests}
                 />
                 
-                <QuizSection onQuizSaved={() => {
-                  // Refresh profile data if needed
-                  refreshProfile();
-                }} />
+                <QuizSection 
+                  onQuizSaved={() => {
+                    // Refresh profile data if needed
+                    refreshProfile();
+                  }}
+                  onQuizDataChange={setQuizData}
+                />
               </ScrollView>
             </>
           )}

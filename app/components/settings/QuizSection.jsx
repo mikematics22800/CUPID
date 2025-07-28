@@ -4,24 +4,23 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
   ScrollView,
   Alert,
   Modal,
   ActivityIndicator,
   SafeAreaView
 } from 'react-native';
+import { TextInput } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { createOrUpdateQuiz, getUserQuiz, deleteQuiz } from '../../../lib/supabase';
 import { promptGemini } from '../../../lib/gemini';
 import { useProfile } from '../../contexts/ProfileContext';
 
-export default function QuizSection({ onQuizSaved }) {
+export default function QuizSection({ onQuizSaved, onQuizDataChange }) {
   const { user, profile, bio, interests, name } = useProfile();
   const [questions, setQuestions] = useState([]);
   const [showQuizModal, setShowQuizModal] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
 
@@ -32,6 +31,13 @@ export default function QuizSection({ onQuizSaved }) {
 
   // Store original questions to reset on discard
   const [originalQuestions, setOriginalQuestions] = useState([]);
+
+  // Notify parent component when quiz data changes
+  useEffect(() => {
+    if (onQuizDataChange) {
+      onQuizDataChange(questions);
+    }
+  }, [questions, onQuizDataChange]);
 
   const loadExistingQuiz = async () => {
     if (!user) return;
@@ -65,6 +71,21 @@ export default function QuizSection({ onQuizSaved }) {
 
     setGenerating(true);
     try {
+      // Delete existing quiz first
+      if (questions.length > 0) {
+        console.log('🗑️ Deleting existing quiz before generating new one...');
+        try {
+          await deleteQuiz(user.id);
+          console.log('✅ Existing quiz deleted successfully');
+          // Clear local state
+          setQuestions([]);
+          setOriginalQuestions([]);
+        } catch (deleteError) {
+          console.error('❌ Error deleting existing quiz:', deleteError);
+          // Continue with generation even if deletion fails
+        }
+      }
+
       // Create a prompt for Gemini based on user's profile
       const profileInfo = {
         name: name || 'User',
@@ -89,32 +110,33 @@ REQUIREMENTS:
 1. Create exactly 10 questions that are personal, fun, and reveal interesting things about the user
 2. Questions should be based on their interests, bio, and personality traits
 3. Each question must have a specific, personal answer
-4. For each question, provide 1 fake/incorrect answer that is plausible but wrong
+4. For each question, provide exactly 3 fake/incorrect answers that are plausible but wrong
 5. Questions should be engaging and help potential matches learn about the user
 6. Mix different types of questions (favorites, experiences, preferences, personality traits, etc.)
 
 RESPONSE FORMAT: You must respond with ONLY a valid JSON array. No other text.
-Each inner array must contain exactly 3 elements: [question, correct_answer, fake_answer]
+Each inner array must contain exactly 5 elements: [question, correct_answer, fake_answer1, fake_answer2, fake_answer3]
 
 EXAMPLE FORMAT:
 [
-  ["What's my favorite movie?", "The Matrix", "Inception"],
-  ["What's my dream vacation destination?", "Japan", "Italy"],
-  ["What's my biggest fear?", "Spiders", "Heights"],
-  ["What's my favorite food?", "Pizza", "Sushi"],
-  ["What's my ideal weekend activity?", "Hiking", "Netflix marathon"],
-  ["What's my favorite season?", "Fall", "Summer"],
-  ["What's my dream job?", "Software Engineer", "Doctor"],
-  ["What's my favorite music genre?", "Rock", "Pop"],
-  ["What's my biggest accomplishment?", "Graduating college", "Running a marathon"],
-  ["What's my favorite way to relax?", "Reading", "Gaming"]
+  ["What's my favorite movie?", "The Matrix", "Inception", "Interstellar", "The Dark Knight"],
+  ["What's my dream vacation destination?", "Japan", "Italy", "Australia", "Brazil"],
+  ["What's my biggest fear?", "Spiders", "Heights", "Public Speaking", "Flying"],
+  ["What's my favorite food?", "Pizza", "Sushi", "Tacos", "Burgers"],
+  ["What's my ideal weekend activity?", "Hiking", "Netflix marathon", "Shopping", "Cooking"],
+  ["What's my favorite season?", "Fall", "Summer", "Spring", "Winter"],
+  ["What's my dream job?", "Software Engineer", "Doctor", "Teacher", "Artist"],
+  ["What's my favorite music genre?", "Rock", "Pop", "Hip Hop", "Jazz"],
+  ["What's my biggest accomplishment?", "Graduating college", "Running a marathon", "Learning guitar", "Traveling solo"],
+  ["What's my favorite way to relax?", "Reading", "Gaming", "Meditation", "Yoga"]
 ]
 
 IMPORTANT: 
 - Respond with ONLY the JSON array, no additional text
 - Use the user's actual interests and bio to create personalized questions
 - If the user has limited profile info, create general personality questions
-- Ensure all questions are appropriate for a dating app context`;
+- Ensure all questions are appropriate for a dating app context
+- Each question must have exactly 3 fake answers`;
 
       console.log('🤖 Sending prompt to Gemini:', prompt);
       const response = await promptGemini(prompt);
@@ -157,8 +179,8 @@ IMPORTANT:
         throw new Error('Generated quiz data is not an array');
       }
       
-      if (quizData.length < 5 || quizData.length > 10) {
-        throw new Error(`Generated quiz must have between 5-10 questions, got ${quizData.length}`);
+      if (quizData.length !== 10) {
+        throw new Error(`Generated quiz must have exactly 10 questions, got ${quizData.length}`);
       }
 
       // Validate each question has question, answer, and 1 fake answer
@@ -166,33 +188,29 @@ IMPORTANT:
         if (!Array.isArray(quizData[i])) {
           throw new Error(`Question ${i + 1} is not an array`);
         }
-        if (quizData[i].length !== 3) {
-          throw new Error(`Question ${i + 1} must have exactly 3 elements (question, answer, fake_answer), got ${quizData[i].length}`);
+        if (quizData[i].length !== 5) {
+          throw new Error(`Question ${i + 1} must have exactly 5 elements (question, answer, fake_answer1, fake_answer2, fake_answer3), got ${quizData[i].length}`);
         }
-        if (!quizData[i][0] || !quizData[i][1] || !quizData[i][2]) {
-          throw new Error(`Question ${i + 1} cannot have empty question, answer, or fake answer`);
+        if (!quizData[i][0] || !quizData[i][1] || !quizData[i][2] || !quizData[i][3] || !quizData[i][4]) {
+          throw new Error(`Question ${i + 1} cannot have empty question, answer, or fake answers`);
         }
       }
 
       console.log('✅ Quiz validation passed, setting questions:', quizData);
       setQuestions(quizData);
       setOriginalQuestions(quizData);
-      Alert.alert('Success', 'Quiz generated successfully! You can now review and edit the questions.');
+      
+      Alert.alert('Quiz generated!', 'Feel free to review and edit to your liking.');
     } catch (error) {
       console.error('❌ Error generating quiz:', error);
       
-      // Offer to create a basic quiz as fallback
       Alert.alert(
         'Quiz Generation Error', 
-        `Failed to generate quiz: ${error.message}\n\nWould you like to create a basic quiz template instead?`,
+        `Failed to generate quiz: ${error.message}\n\nPlease try again or create your quiz manually.`,
         [
           {
-            text: 'Cancel',
-            style: 'cancel'
-          },
-          {
-            text: 'Create Basic Quiz',
-            onPress: () => createBasicQuiz()
+            text: 'OK',
+            style: 'default'
           }
         ]
       );
@@ -201,24 +219,7 @@ IMPORTANT:
     }
   };
 
-  const createBasicQuiz = () => {
-    const basicQuestions = [
-      ["What's my favorite movie?", "Enter your favorite movie", "Enter a fake movie"],
-      ["What's my dream vacation destination?", "Enter your dream destination", "Enter a fake destination"],
-      ["What's my biggest fear?", "Enter your biggest fear", "Enter a fake fear"],
-      ["What's my favorite food?", "Enter your favorite food", "Enter a fake food"],
-      ["What's my ideal weekend activity?", "Enter your ideal activity", "Enter a fake activity"],
-      ["What's my favorite season?", "Enter your favorite season", "Enter a fake season"],
-      ["What's my dream job?", "Enter your dream job", "Enter a fake job"],
-      ["What's my favorite music genre?", "Enter your favorite genre", "Enter a fake genre"],
-      ["What's my biggest accomplishment?", "Enter your accomplishment", "Enter a fake accomplishment"],
-      ["What's my favorite way to relax?", "Enter your relaxation method", "Enter a fake method"]
-    ];
-    
-    setQuestions(basicQuestions);
-    setOriginalQuestions(basicQuestions);
-    Alert.alert('Basic Quiz Created', 'A basic quiz template has been created. You can now customize the questions and answers!');
-  };
+
 
 
 
@@ -227,82 +228,17 @@ IMPORTANT:
     setQuestions(newQuestions);
   };
 
-  const editQuestion = (index, newQuestion, newAnswer, newFakeAnswer) => {
+  const editQuestion = (index, newQuestion, newAnswer, newFakeAnswer1, newFakeAnswer2, newFakeAnswer3) => {
     const newQuestions = [...questions];
     // Ensure the array has enough elements
     while (newQuestions.length <= index) {
-      newQuestions.push(['', '', '']);
+      newQuestions.push(['', '', '', '', '']);
     }
-    newQuestions[index] = [newQuestion, newAnswer, newFakeAnswer];
+    newQuestions[index] = [newQuestion, newAnswer, newFakeAnswer1, newFakeAnswer2, newFakeAnswer3];
     setQuestions(newQuestions);
   };
 
-  const saveQuiz = async () => {
-    if (!user) return;
 
-    if (questions.length === 0) {
-      Alert.alert('No Questions', 'Please add at least one question to your quiz.');
-      return;
-    }
-
-    // Check for partially filled questions (1 or 2 inputs filled but not all 3)
-    const partiallyFilledQuestions = questions.filter(q => {
-      const filledCount = [q[0], q[1], q[2]].filter(field => field && field.trim()).length;
-      return filledCount > 0 && filledCount < 3;
-    });
-
-    if (partiallyFilledQuestions.length > 0) {
-      Alert.alert(
-        'Incomplete Questions',
-        'Some questions are partially filled. Please either complete all fields for each question or leave them completely empty.',
-        [
-          { text: 'OK', style: 'default' }
-        ]
-      );
-      return;
-    }
-
-    // Filter out empty questions
-    const validQuestions = questions.filter(q => q[0] && q[1] && q[2]);
-
-    if (validQuestions.length === 0) {
-      Alert.alert('No Valid Questions', 'Please add at least one complete question with question, answer, and fake answer.');
-      return;
-    }
-
-    if (validQuestions.length < 5) {
-      Alert.alert(
-        'Incomplete Quiz',
-        `You have ${validQuestions.length}/5 complete questions. Please add at least 5 complete questions to your quiz.`,
-        [
-          { text: 'Add More', style: 'default' }
-        ]
-      );
-      return;
-    }
-
-    // Update questions to only include valid ones
-    setQuestions(validQuestions);
-    setOriginalQuestions(validQuestions);
-    await saveQuizToDatabase();
-  };
-
-  const saveQuizToDatabase = async () => {
-    setSaving(true);
-    try {
-      await createOrUpdateQuiz(user.id, questions);
-      Alert.alert('Success', 'Your quiz has been saved successfully!');
-      setShowQuizModal(false);
-      if (onQuizSaved) {
-        onQuizSaved();
-      }
-    } catch (error) {
-      console.error('Error saving quiz:', error);
-      Alert.alert('Error', 'Failed to save quiz. Please try again.');
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const clearQuiz = () => {
     Alert.alert(
@@ -352,7 +288,7 @@ IMPORTANT:
       <View style={styles.header}>
         <Text style={styles.title}>Match Quiz</Text>
         <Text style={styles.subtitle}>
-          Create a quiz to test how well your matches know you!
+          Create or edit your quiz to test how well your matches know you!
         </Text>
       </View>
       <TouchableOpacity
@@ -365,7 +301,7 @@ IMPORTANT:
       >
         <Ionicons name="create" size={20} color="white" />
         <Text style={styles.actionButtonText}>
-          {questions.length > 0 ? 'Edit Quiz' : 'Create Quiz'}
+          Edit Quiz
         </Text>
       </TouchableOpacity>
       <TouchableOpacity
@@ -391,8 +327,6 @@ IMPORTANT:
         animationType="slide"
         transparent={false}
         onRequestClose={() => {
-          // Reset to original state when closing without saving
-          setQuestions([...originalQuestions]);
           setShowQuizModal(false);
         }}
       >
@@ -402,38 +336,10 @@ IMPORTANT:
             <TouchableOpacity
               style={styles.closeButton}
               onPress={() => {
-                // Reset to original state when closing without saving
-                setQuestions([...originalQuestions]);
                 setShowQuizModal(false);
               }}
             >
               <Ionicons name="close" size={24} color="black" />
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Edit Quiz</Text>
-            <TouchableOpacity
-              style={[
-                styles.saveButton,
-                (questions.filter(q => q[0] && q[1] && q[2]).length < 5 || 
-                 questions.some(q => {
-                   const filledCount = [q[0], q[1], q[2]].filter(field => field && field.trim()).length;
-                   return filledCount > 0 && filledCount < 3;
-                 })) && styles.disabledSaveButton
-              ]}
-              onPress={saveQuiz}
-              disabled={
-                questions.filter(q => q[0] && q[1] && q[2]).length < 5 || 
-                questions.some(q => {
-                  const filledCount = [q[0], q[1], q[2]].filter(field => field && field.trim()).length;
-                  return filledCount > 0 && filledCount < 3;
-                }) || 
-                saving
-              }
-            >
-              {saving ? (
-                <ActivityIndicator color="white" size="small" />
-              ) : (
-                <Text style={styles.saveButtonText}>Save</Text>
-              )}
             </TouchableOpacity>
           </View>
 
@@ -445,26 +351,47 @@ IMPORTANT:
                 <View key={index} style={styles.questionInputSection}>
                   <Text style={styles.questionNumber}>Question {index + 1}</Text>
                   <TextInput
+                    mode="outlined"
+                    label="Question"
                     style={styles.input}
-                    placeholder="Question"
                     value={question[0] || ''}
-                    onChangeText={(text) => editQuestion(index, text, question[1] || '', question[2] || '')}
+                    onChangeText={(text) => editQuestion(index, text, question[1] || '', question[2] || '', question[3] || '', question[4] || '')}
                     multiline
                     maxLength={200}
                   />
                   <TextInput
+                    mode="outlined"
+                    label="Answer"
                     style={styles.input}
-                    placeholder="Answer"
                     value={question[1] || ''}
-                    onChangeText={(text) => editQuestion(index, question[0] || '', text, question[2] || '')}
+                    onChangeText={(text) => editQuestion(index, question[0] || '', text, question[2] || '', question[3] || '', question[4] || '')}
                     multiline
                     maxLength={100}
                   />
                   <TextInput
+                    mode="outlined"
+                    label="Fake Answer 1"
                     style={styles.input}
-                    placeholder="Fake Answer"
                     value={question[2] || ''}
-                    onChangeText={(text) => editQuestion(index, question[0] || '', question[1] || '', text)}
+                    onChangeText={(text) => editQuestion(index, question[0] || '', question[1] || '', text, question[3] || '', question[4] || '')}
+                    multiline
+                    maxLength={100}
+                  />
+                  <TextInput
+                    mode="outlined"
+                    label="Fake Answer 2"
+                    style={styles.input}
+                    value={question[3] || ''}
+                    onChangeText={(text) => editQuestion(index, question[0] || '', question[1] || '', question[2] || '', text, question[4] || '')}
+                    multiline
+                    maxLength={100}
+                  />
+                  <TextInput
+                    mode="outlined"
+                    label="Fake Answer 3"
+                    style={styles.input}
+                    value={question[4] || ''}
+                    onChangeText={(text) => editQuestion(index, question[0] || '', question[1] || '', question[2] || '', question[3] || '', text)}
                     multiline
                     maxLength={100}
                   />
@@ -474,7 +401,7 @@ IMPORTANT:
               {questions.length === 0 && (
                 <View style={styles.emptyStateContainer}>
                   <Text style={styles.emptyStateText}>
-                    No questions yet. Use the "Generate with AI" button to create questions based on your profile, or add questions manually.
+                    No questions yet. Use the "Generate quiz questions" button to create questions based on your profile. Your quiz will be saved when you click "Save" in the profile section.
                   </Text>
                 </View>
               )}
@@ -574,9 +501,14 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     gap: 12,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
   header: {
-    marginBottom: 20,
+    marginBottom: 10,
   },
   title: {
     fontSize: 20,
@@ -586,7 +518,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#666',
     lineHeight: 20,
     textAlign: 'center',
@@ -601,9 +533,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingVertical: 10,
+    borderRadius: 18,
     gap: 8,
     width: '100%',
   },
@@ -648,20 +579,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
   },
-  saveButton: {
-    backgroundColor: 'hotpink',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 16,
-  },
-  disabledSaveButton: {
-    backgroundColor: '#ccc',
-  },
-  saveButtonText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 14,
-  },
+
   modalContent: {
     flex: 1,
     padding: 20,
@@ -687,7 +605,7 @@ const styles = StyleSheet.create({
   questionNumber: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: 'hotpink',
     marginBottom: 12,
   },
   emptyStateContainer: {
@@ -705,11 +623,6 @@ const styles = StyleSheet.create({
   },
 
   input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 8,
-    fontSize: 14,
     marginBottom: 8,
     backgroundColor: 'white',
   },
@@ -765,11 +678,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   questionNumber: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#007AFF',
+    color: 'hotpink',
     textAlign: 'center',
     marginBottom: 8,
+    fontWeight: 'bold',
+    marginBottom: 10,
   },
   questionActions: {
     flexDirection: 'row',

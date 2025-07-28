@@ -331,12 +331,7 @@ export default function MatchesScreen() {
     return () => clearInterval(interval);
   }, [selectedMatch, roomId]);
 
-  // Debug: Log when messages change
-  useEffect(() => {
-    if (messages.length > 0) {
-      console.log('💬 Messages updated:', messages.length, 'messages');
-    }
-  }, [messages]);
+
 
   // Removed automatic suggestion generation - now only generates when user selects a category
 

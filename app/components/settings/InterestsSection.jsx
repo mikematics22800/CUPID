@@ -45,9 +45,9 @@ export default function InterestsSection({ initialInterests = [], onInterestsCha
       ? selectedInterests.filter(i => i !== interest)
       : [...selectedInterests, interest];
     
-    // Prevent selecting more than 10 interests
-    if (newSelectedInterests.length > 10) {
-      Alert.alert('Maximum Interests Reached', 'You can only select up to 10 interests. Please remove one before adding another.');
+    // Prevent selecting more than 25 interests
+    if (newSelectedInterests.length > 25) {
+      Alert.alert('Maximum Interests Reached', 'You can only select up to 25 interests. Please remove one before adding another.');
       return;
     }
     
@@ -62,16 +62,23 @@ export default function InterestsSection({ initialInterests = [], onInterestsCha
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.subtitle}>Choose between 5 and 10 interests which represent you best!</Text>
+        <Text style={styles.subtitle}>Choose between 10 and 25 interests which represent you best!</Text>
       </View>
-      <ScrollView style={styles.interestsContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.interestsContainer} 
+        showsVerticalScrollIndicator
+        nestedScrollEnabled
+        contentContainerStyle={styles.interestsContent}
+        keyboardShouldPersistTaps="handled"
+        scrollEventThrottle={15}
+      >
         {Object.entries(INTERESTS_CATEGORIES).map(([category, interests]) => (
           <View key={category} style={styles.category}>
             <Text style={styles.categoryTitle}>{category}</Text>
             <View style={styles.interestsGrid}>
               {interests.map((interest) => {
                 const isSelected = selectedInterests.includes(interest);
-                const isDisabled = !isSelected && selectedInterests.length >= 10;
+                const isDisabled = !isSelected && selectedInterests.length >= 25;
                 return (
                   <TouchableOpacity
                     key={interest}
@@ -91,7 +98,7 @@ export default function InterestsSection({ initialInterests = [], onInterestsCha
                       {interest}
                     </Text>
                     {isSelected && (
-                      <Ionicons name="checkmark" size={16} color="white" style={styles.checkIcon} />
+                      <Ionicons name="checkmark" size={15} color="white" style={styles.checkIcon} />
                     )}
                   </TouchableOpacity>
                 );
@@ -103,7 +110,7 @@ export default function InterestsSection({ initialInterests = [], onInterestsCha
 
       <View style={styles.footer}>
         <Text style={styles.selectedCount}>
-          {selectedInterests.length}/10 interest{selectedInterests.length !== 1 ? 's' : ''} selected
+          {selectedInterests.length}/25 interests selected
         </Text>
       </View>
     </View>
@@ -113,13 +120,15 @@ export default function InterestsSection({ initialInterests = [], onInterestsCha
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 14,
+    borderRadius: 15,
+    paddingHorizontal: 20,
+    paddingTop: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 2,
+    flex: 1,
   },
   header: {
     marginBottom: 15,
@@ -131,11 +140,13 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#666',
+    textAlign: 'center',
   },
   interestsContainer: {
-    maxHeight: 280,
+    flex: 1,
+    maxHeight: 300,
   },
   category: {
     marginBottom: 15,
@@ -171,7 +182,7 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
   },
   interestText: {
-    fontSize: 13,
+    fontSize: 15,
     color: '#333',
   },
   interestTextSelected: {
@@ -184,13 +195,15 @@ const styles = StyleSheet.create({
     marginLeft: 5,
   },
   footer: {
-    marginTop: 15,
-    paddingTop: 15,
     borderTopWidth: 1,
     borderTopColor: '#eee',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 40,
   },
   selectedCount: {
-    fontSize: 13,
+    fontSize: 15,
     color: '#666',
     textAlign: 'center',
   },
