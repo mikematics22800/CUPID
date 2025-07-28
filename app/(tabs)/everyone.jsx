@@ -307,7 +307,7 @@ export default function Everyone() {
         <Text style={styles.insufficientPhotosTitle}>Please complete your profile before continuing.</Text>
         <TouchableOpacity   
           style={styles.button}
-          onPress={() => router.push('/profile')}
+          onPress={() => router.push('/settings')}
         >
           <Text style={styles.buttonText}>Complete Profile</Text>
         </TouchableOpacity>

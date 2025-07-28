@@ -32,25 +32,49 @@ export const ProfileProvider = ({ children }) => {
     return geolocation !== null;
   };
 
+  // Clear all profile data
+  const clearProfileData = () => {
+    setProfile(null);
+    setPhotos([]);
+    setBio('');
+    setInterests([]);
+    setResidence('');
+    setGeolocation(null);
+    setName('');
+    setEmail('');
+    setPhone('');
+  };
+
   // Load user profile data
-  const loadUserProfile = async () => {
+  const loadUserProfile = async (targetUserId = null) => {
     try {
       setLoading(true);
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       
       if (!currentUser) {
+        clearProfileData();
+        setUser(null);
         router.replace('/auth');
         return;
       }
       
+      // Use targetUserId if provided, otherwise use currentUser.id
+      const userIdToLoad = targetUserId || currentUser.id;
+      
+      // Check if user has changed
+      if (user && user.id !== userIdToLoad) {
+        console.log('🔄 User changed, clearing previous data');
+        clearProfileData();
+      }
+      
       setUser(currentUser);
-      // Loading profile for user
+      console.log('👤 Loading profile for user:', userIdToLoad);
 
       // Load profile data including images from database
       const { data: profileData, error } = await supabase
         .from('users')
         .select('id, bio, interests, name, birthday, sex, email, phone, images, residence, geolocation')
-        .eq('id', currentUser.id)
+        .eq('id', userIdToLoad)
         .single();
 
       if (error && error.code !== 'PGRST116') {
@@ -59,7 +83,7 @@ export const ProfileProvider = ({ children }) => {
       }
 
       if (profileData) {
-        // Profile data loaded
+        console.log('✅ Profile data loaded for user:', userIdToLoad);
         setProfile(profileData);
         setBio(profileData.bio || '');
         setInterests(profileData.interests || []);
@@ -70,7 +94,7 @@ export const ProfileProvider = ({ children }) => {
         setPhone(profileData.phone || '');
         
         // Load photos from both database and storage
-        await loadPhotosFromStorage(currentUser.id, profileData.images);
+        await loadPhotosFromStorage(userIdToLoad, profileData.images);
         
         // Update geolocation on app start/login only if location sharing is enabled
         // Check if geolocation is not null (meaning location sharing is enabled)
@@ -92,6 +116,7 @@ export const ProfileProvider = ({ children }) => {
           console.log('📍 Location sharing disabled (geolocation is null), skipping geolocation update');
         }
       } else {
+        console.log('📝 No profile data found for user:', userIdToLoad, '- starting with empty profile');
         // No profile data found, starting with empty profile
         setBio('');
         setInterests([]);
@@ -309,8 +334,51 @@ export const ProfileProvider = ({ children }) => {
 
   // Initialize profile on mount
   useEffect(() => {
-    loadUserProfile();
+    const initializeProfile = async () => {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (currentUser) {
+        await loadUserProfile(currentUser.id);
+      } else {
+        await loadUserProfile();
+      }
+    };
+    
+    initializeProfile();
   }, []);
+
+  // Listen for auth state changes
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔄 Auth state changed:', event, session?.user?.id);
+      
+      if (event === 'SIGNED_IN' && session?.user) {
+        // User signed in, load their profile
+        console.log('👤 User signed in, loading profile for:', session.user.id);
+        await loadUserProfile(session.user.id);
+      } else if (event === 'SIGNED_OUT') {
+        // User signed out, clear all data
+        console.log('👋 User signed out, clearing profile data');
+        clearProfileData();
+        setUser(null);
+      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+        // Token refreshed, check if user changed
+        if (user && user.id !== session.user.id) {
+          console.log('🔄 User changed during token refresh, reloading profile');
+          await loadUserProfile(session.user.id);
+        }
+      } else if (event === 'USER_UPDATED' && session?.user) {
+        // User data updated, reload profile if user changed
+        if (user && user.id !== session.user.id) {
+          console.log('🔄 User updated, reloading profile');
+          await loadUserProfile(session.user.id);
+        }
+      }
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, []); // Remove user dependency to avoid infinite loops
 
   const value = {
     // State

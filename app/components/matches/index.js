@@ -9,3 +9,4 @@ export { default as MessagesList } from './MessagesList';
 export { default as ChatInterface } from './ChatInterface';
 export { default as StrikeIndicator } from './StrikeIndicator';
 export { default as LoadingScreen } from './LoadingScreen';
+export { default as QuizTaker } from './QuizTaker';

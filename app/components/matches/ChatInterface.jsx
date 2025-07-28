@@ -36,7 +36,7 @@ export default function ChatInterface({
   onToggleSuggestions,
   onGenerateSuggestions,
   onSuggestionSelect,
-  scrollToBottom
+  onRefreshMessages
 }) {
   const floatAnim = useRef(new Animated.Value(0)).current;
 
@@ -96,6 +96,7 @@ export default function ChatInterface({
         showSuggestions={showSuggestions}
         onBack={onCloseChat}
         onToggleSuggestions={onToggleSuggestions}
+        onRefreshMessages={onRefreshMessages}
       />
 
       <MessagesList
@@ -103,7 +104,8 @@ export default function ChatInterface({
         currentUserId={currentUserId}
         onDeleteMessage={onDeleteMessage}
         flatListRef={flatListRef}
-        scrollToBottom={scrollToBottom}
+        shouldScrollToBottom={true}
+        onRefreshMessages={onRefreshMessages}
       />
       
       <View style={styles.cupidContainer}>

@@ -21,17 +21,27 @@ CREATE TABLE public.matches (
   user1_score real,
   user2_score real,
   CONSTRAINT matches_pkey PRIMARY KEY (id),
-  CONSTRAINT matches_user2_id_fkey FOREIGN KEY (user2_id) REFERENCES public.users(id),
-  CONSTRAINT matches_user1_id_fkey FOREIGN KEY (user1_id) REFERENCES public.users(id)
+  CONSTRAINT matches_user1_id_fkey FOREIGN KEY (user1_id) REFERENCES public.users(id),
+  CONSTRAINT matches_user2_id_fkey FOREIGN KEY (user2_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.messages (
-  id uuid NOT NULL,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  read boolean DEFAULT false,
-  receiver_id uuid,
+  sender_id uuid DEFAULT gen_random_uuid(),
+  receiver_id uuid DEFAULT gen_random_uuid(),
   content text,
+  read boolean DEFAULT false,
   CONSTRAINT messages_pkey PRIMARY KEY (id),
-  CONSTRAINT messages_id_fkey FOREIGN KEY (id) REFERENCES public.users(id)
+  CONSTRAINT messages_receiver_id_fkey FOREIGN KEY (receiver_id) REFERENCES public.users(id),
+  CONSTRAINT messages_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.quizzes (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  questions ARRAY,
+  answers ARRAY,
+  fake_answers ARRAY,
+  CONSTRAINT quizzes_pkey PRIMARY KEY (id),
+  CONSTRAINT quizzes_id_fkey FOREIGN KEY (id) REFERENCES public.users(id)
 );
 CREATE TABLE public.users (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -47,6 +57,5 @@ CREATE TABLE public.users (
   images ARRAY,
   residence text,
   geolocation ARRAY,
-  quiz ARRAY,
   CONSTRAINT users_pkey PRIMARY KEY (id)
 );

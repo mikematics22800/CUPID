@@ -49,14 +49,7 @@ export default function MessageBubble({
           )}
         </View>
       </View>
-      {isMyMessage && !isTempMessage && (
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={() => onDeleteMessage(message.id)}
-        >
-          <Ionicons name="trash-outline" size="16" color="white" />
-        </TouchableOpacity>
-      )}
+      {/* Message deletion is not supported with the current schema */}
     </View>
   );
 }
@@ -79,27 +72,27 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   myBubble: {
-    backgroundColor: 'pink',
-    borderBottomRightRadius: 4,
-  },
-  theirBubble: {
     backgroundColor: 'white',
-    borderBottomLeftRadius: 4,
+    borderBottomRightRadius: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
   },
+  theirBubble: {
+    backgroundColor: 'pink',
+    borderBottomLeftRadius: 4,
+  },
   messageText: {
     fontSize: 16,
     lineHeight: 20,
   },
   myMessageText: {
-    color: 'white',
+    color: 'hotpink',
   },
   theirMessageText: {
-    color: 'hotpink',
+    color: 'white',
   },
   messageFooter: {
     flexDirection: 'row',
@@ -113,10 +106,10 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   myMessageTime: {
-    color: 'white',
+    color: 'hotpink',
   },
   theirMessageTime: {
-    color: 'hotpink',
+    color: 'white',
   },
   messageStatus: {
     marginLeft: 4,

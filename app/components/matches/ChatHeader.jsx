@@ -6,7 +6,8 @@ export default function ChatHeader({
   match, 
   onBack,
   showSuggestions,
-  onToggleSuggestions
+  onToggleSuggestions,
+  onRefreshMessages
 }) {
   return (
     <View style={styles.chatHeader}>
@@ -28,6 +29,11 @@ export default function ChatHeader({
         )}
         <Text style={styles.chatHeaderName}>{match.name}</Text>
       </View>
+      {onRefreshMessages && (
+        <TouchableOpacity onPress={onRefreshMessages} style={styles.refreshButton}>
+          <Ionicons name="refresh" size={24} color="#333" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -71,6 +77,9 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   moreButton: {
+    padding: 5,
+  },
+  refreshButton: {
     padding: 5,
   },
 }); 

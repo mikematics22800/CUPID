@@ -179,27 +179,21 @@ const banUser = async (userId, userInfo) => {
       throw banError;
     }
 
-    // Delete user's messages
+    // Delete user's messages (where user is the sender)
     await supabase
       .from('messages')
       .delete()
       .eq('sender_id', userId);
 
-    // Delete user's chat rooms
+    // Delete user's matches (where user is either user1 or user2)
     await supabase
-      .from('chats')
+      .from('matches')
       .delete()
       .or(`user1_id.eq.${userId},user2_id.eq.${userId}`);
 
     // Delete user's likes
     await supabase
       .from('likes')
-      .delete()
-      .eq('id', userId);
-
-    // Delete user's matches
-    await supabase
-      .from('matches')
       .delete()
       .eq('id', userId);
 
@@ -225,9 +219,8 @@ const banUser = async (userId, userInfo) => {
 const addToBannedTable = async (userId, userInfo) => {
   try {
     await supabase
-      .from('banned_users')
+      .from('banned')
       .insert([{
-        id: userId, // Use the user's ID as the primary key
         email: userInfo?.email || '',
         phone: userInfo?.phone || ''
       }]);
@@ -240,23 +233,22 @@ const addToBannedTable = async (userId, userInfo) => {
 };
 
 // Function to log violations for monitoring
+// Note: violations table doesn't exist in schema, so we'll just log to console
 const logViolation = async (userId, userInfo, message, threatAnalysis, strikeCount) => {
   try {
-    await supabase
-      .from('violations')
-      .insert([{
-        user_id: userId,
-        user_name: userInfo?.name || 'Unknown',
-        user_email: userInfo?.email || 'Unknown',
-        violation_type: 'explicit_violent_language',
-        message_content: message,
-        threat_level: threatAnalysis.severity || 'high',
-        reason: `Detected explicit violent language: ${threatAnalysis.detectedKeywords?.join(', ')}`,
-        detected_keywords: threatAnalysis.detectedKeywords || [],
-        strike_count: strikeCount,
-        detected_at: new Date().toISOString(),
-        action_taken: strikeCount >= 3 ? 'user_banned' : 'strike_added'
-      }]);
+    console.log('🚨 Violation logged:', {
+      user_id: userId,
+      user_name: userInfo?.name || 'Unknown',
+      user_email: userInfo?.email || 'Unknown',
+      violation_type: 'explicit_violent_language',
+      message_content: message,
+      threat_level: threatAnalysis.severity || 'high',
+      reason: `Detected explicit violent language: ${threatAnalysis.detectedKeywords?.join(', ')}`,
+      detected_keywords: threatAnalysis.detectedKeywords || [],
+      strike_count: strikeCount,
+      detected_at: new Date().toISOString(),
+      action_taken: strikeCount >= 3 ? 'user_banned' : 'strike_added'
+    });
   } catch (error) {
     console.error('❌ Error logging violation:', error);
     // Don't throw error here as it's not critical
@@ -285,15 +277,15 @@ const deleteUserPhotos = async (userId) => {
 // Function to notify other users about the violation/ban
 const notifyOtherUsers = async (userId, userInfo, action = 'strike') => {
   try {
-    // Get all chat rooms where the user was involved
-    const { data: chatRooms } = await supabase
-      .from('chats')
+    // Get all matches where the user was involved
+    const { data: matches } = await supabase
+      .from('matches')
       .select('user1_id, user2_id')
       .or(`user1_id.eq.${userId},user2_id.eq.${userId}`);
 
-    if (chatRooms && chatRooms.length > 0) {
-      const otherUserIds = chatRooms.map(room => 
-        room.user1_id === userId ? room.user2_id : room.user1_id
+    if (matches && matches.length > 0) {
+      const otherUserIds = matches.map(match => 
+        match.user1_id === userId ? match.user2_id : match.user1_id
       );
 
       // Send system messages to notify other users
@@ -304,14 +296,15 @@ const notifyOtherUsers = async (userId, userInfo, action = 'strike') => {
             : `⚠️ Safety Notice: The user you were chatting with has received a strike for using explicit violent language.`;
           
           // Create a system message in their chat
+          // Note: Since we don't have room_id in messages table, we'll use the other user's ID as receiver_id
           await supabase
             .from('messages')
             .insert([{
-              room_id: null, // Will be handled by the app
-              sender_id: 'system',
+              sender_id: 'system', // System messages use 'system' as sender ID
+              receiver_id: otherUserId,
               content: message,
-              message_type: 'system',
-              created_at: new Date().toISOString()
+              created_at: new Date().toISOString(),
+              read: false
             }]);
         } catch (error) {
           console.error('❌ Error notifying user:', error);

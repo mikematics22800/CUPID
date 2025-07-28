@@ -145,6 +145,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginBottom: 8,
+    textAlign: 'center',
   },
   interestsGrid: {
     flexDirection: 'row',

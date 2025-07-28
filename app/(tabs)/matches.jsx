@@ -5,14 +5,10 @@ import {
   unmatchUsers, 
   supabase, 
   getChatRooms, 
-  subscribeToChatRooms, 
-  unsubscribeFromChannel,
   getOrCreateChatRoom,
   sendMessage,
   getMessages,
   markMessagesAsRead,
-  subscribeToMessages,
-  deleteMessage,
   markMatchesAsViewed
 } from '../../lib/supabase';
 import { generateChatSuggestions, getSuggestionCategories } from '../components/matches/chatSuggestions.js';
@@ -32,7 +28,6 @@ export default function MatchesScreen() {
   const [chatRooms, setChatRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processingUnmatch, setProcessingUnmatch] = useState(null);
-  const [chatSubscription, setChatSubscription] = useState(null);
   
   // Chat state
   const [selectedMatch, setSelectedMatch] = useState(null);
@@ -40,7 +35,6 @@ export default function MatchesScreen() {
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [roomId, setRoomId] = useState(null);
-  const [messageSubscription, setMessageSubscription] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [chatLoading, setChatLoading] = useState(false);
 
@@ -67,17 +61,7 @@ export default function MatchesScreen() {
     if (currentUserId) {
       loadMatches();
       loadChatRooms();
-      setupChatSubscription();
     }
-
-    return () => {
-      if (chatSubscription) {
-        unsubscribeFromChannel(chatSubscription);
-      }
-      if (messageSubscription) {
-        unsubscribeFromChannel(messageSubscription);
-      }
-    };
   }, [currentUserId]);
 
   useFocusEffect(
@@ -91,7 +75,12 @@ export default function MatchesScreen() {
       };
       
       markAsViewed();
-    }, [])
+      
+      // Refresh messages if chat is open when user returns to screen
+      if (selectedMatch && roomId) {
+        refreshMessages();
+      }
+    }, [selectedMatch, roomId])
   );
 
   const getCurrentUser = async () => {
@@ -121,17 +110,6 @@ export default function MatchesScreen() {
     } catch (error) {
       console.error('❌ Error loading chat rooms:', error);
     }
-  };
-
-  const setupChatSubscription = () => {
-    if (chatSubscription) {
-      unsubscribeFromChannel(chatSubscription);
-    }
-    
-    const subscription = subscribeToChatRooms((newRoom, event) => {
-      loadChatRooms();
-    });
-    setChatSubscription(subscription);
   };
 
   const handleUnmatch = async (userId, userName) => {
@@ -185,45 +163,10 @@ export default function MatchesScreen() {
       setRoomId(chatRoomId);
 
       const messagesData = await getMessages(chatRoomId);
+      console.log('📥 Loaded messages:', messagesData.length);
       setMessages(messagesData);
 
       await markMessagesAsRead(chatRoomId);
-
-      if (messageSubscription) {
-        unsubscribeFromChannel(messageSubscription);
-      }
-
-      const subscription = subscribeToMessages(chatRoomId, (newMessage, event) => {
-        if (event === 'update') {
-          setMessages(prev => 
-            prev.map(msg => 
-              msg.id === newMessage.id ? { ...msg, ...newMessage } : msg
-            )
-          );
-        } else {
-          if (newMessage.sender_id !== currentUserId) {
-            setMessages(prev => [...prev, {
-              ...newMessage,
-              sender_name: 'Unknown User',
-            }]);
-            markMessagesAsRead(chatRoomId);
-          } else {
-            setMessages(prev => 
-              prev.map(msg => 
-                msg.isTemp && msg.sender_id === currentUserId
-                  ? {
-                      ...newMessage,
-                      sender_name: 'You',
-                      isTemp: false,
-                    }
-                  : msg
-              )
-            );
-          }
-        }
-      });
-
-      setMessageSubscription(subscription);
 
     } catch (error) {
       console.error('❌ Error opening chat:', error);
@@ -241,9 +184,17 @@ export default function MatchesScreen() {
     setSuggestions([]);
     setSuggestionCategories([]);
     setShowSuggestions(false);
-    if (messageSubscription) {
-      unsubscribeFromChannel(messageSubscription);
-      setMessageSubscription(null);
+  };
+
+  const refreshMessages = async () => {
+    if (!roomId) return;
+    
+    try {
+      const messagesData = await getMessages(roomId);
+      setMessages(messagesData);
+      await markMessagesAsRead(roomId);
+    } catch (error) {
+      console.error('❌ Error refreshing messages:', error);
     }
   };
 
@@ -294,7 +245,6 @@ export default function MatchesScreen() {
       const tempMessage = {
         id: tempMessageId,
         content: messageContent,
-        message_type: 'text',
         sender_id: currentUserId,
         created_at: new Date().toISOString(),
         is_read: false,
@@ -305,7 +255,7 @@ export default function MatchesScreen() {
       setMessages(prev => [...prev, tempMessage]);
 
       // Send message to server
-      const sentMessage = await sendMessage(roomId, messageContent, 'text');
+      const sentMessage = await sendMessage(roomId, messageContent);
       
       // Update the temporary message with the real message data
       setMessages(prev => 
@@ -319,6 +269,11 @@ export default function MatchesScreen() {
             : msg
         )
       );
+
+      // Refresh messages to get any new messages from the other user
+      setTimeout(() => {
+        refreshMessages();
+      }, 1000);
 
     } catch (error) {
       console.error('❌ Error sending message:', error);
@@ -348,44 +303,40 @@ export default function MatchesScreen() {
     }
   };
 
+  // Note: Message deletion is not supported with the current schema
   const handleDeleteMessage = async (messageId) => {
     Alert.alert(
       'Delete Message',
-      'Are you sure you want to delete this message?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteMessage(messageId);
-              setMessages(prev => prev.filter(msg => msg.id !== messageId));
-            } catch (error) {
-              console.error('❌ Error deleting message:', error);
-              Alert.alert('Error', 'Failed to delete message.');
-            }
-          },
-        },
-      ]
+      'Message deletion is not currently supported.',
+      [{ text: 'OK' }]
     );
   };
 
-  const scrollToBottom = () => {
-    if (flatListRef.current && messages.length > 0) {
-      flatListRef.current.scrollToEnd({ animated: true });
-    }
-  };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
 
   useEffect(() => {
     if (selectedMatch && currentUserId) {
       updateSuggestionCategories();
     }
   }, [messages, selectedMatch, currentUserId]);
+
+  // Auto-refresh messages every 30 seconds when chat is open
+  useEffect(() => {
+    if (!selectedMatch || !roomId) return;
+
+    const interval = setInterval(() => {
+      refreshMessages();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [selectedMatch, roomId]);
+
+  // Debug: Log when messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      console.log('💬 Messages updated:', messages.length, 'messages');
+    }
+  }, [messages]);
 
   // Removed automatic suggestion generation - now only generates when user selects a category
 
@@ -524,7 +475,7 @@ export default function MatchesScreen() {
         onToggleSuggestions={toggleSuggestions}
         onGenerateSuggestions={generateSuggestions}
         onSuggestionSelect={handleSuggestionSelect}
-        scrollToBottom={scrollToBottom}
+        onRefreshMessages={refreshMessages}
       />
     );
   }

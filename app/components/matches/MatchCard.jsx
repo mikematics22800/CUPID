@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getQuizScoreForUser } from '../../../lib/supabase';
+import QuizTaker from './QuizTaker';
 
 export default function MatchCard({ 
   match, 
@@ -28,8 +29,9 @@ export default function MatchCard({
     }
   };
 
-  const handleQuizCompleted = (score) => {
-    setQuizScore(score);
+  const handleQuizCompleted = (scoreResult) => {
+    setQuizScore(scoreResult.score);
+    setShowQuiz(false);
   };
 
   return (
@@ -49,18 +51,18 @@ export default function MatchCard({
             <Ionicons name="person" size={30} color="#ccc" />
           </View>
         )}
-                  <View style={styles.matchInfo}>
-            <View style={styles.nameContainer}>
-              <Text style={styles.matchName}>{match.name}, {match.age}</Text>
-              {hasUnreadMessages && <View style={styles.unreadBadge} />}
-            </View>
-            {match.distance !== null && (
-              <View style={styles.distanceContainer}>
-                <Ionicons name="location" size={14} color="#666" />
-                <Text style={styles.distanceText}>{match.distance} miles away</Text>
-              </View>
-            )}
+        <View style={styles.matchInfo}>
+          <View style={styles.nameContainer}>
+            <Text style={styles.matchName}>{match.name}, {match.age}</Text>
+            {hasUnreadMessages && <View style={styles.unreadBadge} />}
           </View>
+          {match.distance !== null && (
+            <View style={styles.distanceContainer}>
+              <Ionicons name="location" size={14} color="#666" />
+              <Text style={styles.distanceText}>{match.distance} miles away</Text>
+            </View>
+          )}
+        </View>
       </View>
       <View style={styles.matchActions}>
         <Text style={styles.timestamp}>
@@ -92,7 +94,7 @@ export default function MatchCard({
             onPress={() => setShowQuiz(true)}
           >
             <Ionicons 
-              name="trophy"
+              name={quizScore !== null ? "trophy" : "help-circle"}
               size={20} 
               color='white'
             />
@@ -116,6 +118,15 @@ export default function MatchCard({
           </Text>
         </View>
       )}
+
+      {/* Quiz Taker Modal */}
+      <QuizTaker
+        quizOwnerId={match.id}
+        quizOwnerName={match.name}
+        isVisible={showQuiz}
+        onClose={() => setShowQuiz(false)}
+        onQuizCompleted={handleQuizCompleted}
+      />
     </View>
   );
 }

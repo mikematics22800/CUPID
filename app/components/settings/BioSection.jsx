@@ -56,8 +56,6 @@ export default function BioSection({
         onInterestsChange={handleInterestsChange}
       />
       <TextInput
-        mode="outlined"
-        label="Bio"
         style={styles.bioInput}
         placeholder="Share your interests, hobbies, what you're looking for, and anything else that makes you unique..."
         value={bio}
@@ -78,7 +76,7 @@ export default function BioSection({
           style={styles.generateIcon}
         />
         <Text style={styles.generateButtonText}>
-          {generating ? 'Generating...' : 'Generate with AI'}
+          {generating ? 'Generating...' : 'Generate Bio'}
         </Text>
       </TouchableOpacity>
     </View>
@@ -118,6 +116,12 @@ const styles = StyleSheet.create({
   },
   bioInput: {
     width: '100%',
+    fontSize: 16,
+    fontWeight: '400',
+    color: '#333',
+    padding: 10,
+    borderRadius: 12,
+    backgroundColor: 'white',
   },
   generateButton: {
     flexDirection: 'row',

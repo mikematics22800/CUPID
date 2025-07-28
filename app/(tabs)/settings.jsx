@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Modal, TextInput, SafeAreaView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase, deleteUserAccount } from '../../lib/supabase';
 import { useState, useEffect } from 'react';
@@ -81,8 +81,18 @@ export default function SettingsScreen() {
     loadUserPreferences();
   }, [user]);
 
+  // Refresh profile data when user changes
+  useEffect(() => {
+    if (user) {
+      console.log('🔄 User changed in settings, refreshing profile data for:', user.id);
+      refreshProfile();
+    }
+  }, [user?.id]); // Only trigger when user ID changes
+
   const loadUserPreferences = async () => {
     if (!user) return;
+    
+    console.log('⚙️ Loading preferences for user:', user.id);
     
     try {
       const [storedMaxDistance, storedAgeRange, storedPreferredSex] = await Promise.all([
@@ -94,17 +104,20 @@ export default function SettingsScreen() {
       if (storedMaxDistance) {
         setMaxDistance(parseInt(storedMaxDistance));
         setTempMaxDistance(parseInt(storedMaxDistance));
+        console.log('📏 Loaded max distance:', storedMaxDistance);
       }
 
       if (storedAgeRange) {
         const parsedAgeRange = JSON.parse(storedAgeRange);
         setAgeRange(parsedAgeRange);
         setTempAgeRange(parsedAgeRange);
+        console.log('🎂 Loaded age range:', parsedAgeRange);
       }
 
       if (storedPreferredSex) {
         setPreferredSex(storedPreferredSex);
         setTempPreferredSex(storedPreferredSex);
+        console.log('❤️ Loaded preferred sex:', storedPreferredSex);
       }
     } catch (error) {
       console.error('Error loading user preferences:', error);
@@ -127,11 +140,16 @@ export default function SettingsScreen() {
   // Initialize first and last name from the name field
   useEffect(() => {
     if (name) {
+      console.log('👤 Loading name for user:', user?.id, 'Name:', name);
       const nameParts = name.split(' ');
       setFirstName(nameParts[0] || '');
       setLastName(nameParts.slice(1).join(' ') || '');
+    } else {
+      console.log('👤 No name found for user:', user?.id);
+      setFirstName('');
+      setLastName('');
     }
-  }, [name]);
+  }, [name, user]);
 
   // Validation logic
   useEffect(() => {
@@ -650,7 +668,7 @@ export default function SettingsScreen() {
         transparent={false}
         onRequestClose={() => setShowProfile(false)}
       >
-        <View style={styles.profileContainer}>
+        <SafeAreaView style={styles.profileContainer}>
           {loading ? (
             <View style={styles.loadingContainer}>
               <LottieView
@@ -662,63 +680,70 @@ export default function SettingsScreen() {
               />
             </View>
           ) : (
-            <ScrollView 
-              style={styles.profileForm} 
-              contentContainerStyle={styles.profileFormContent}
-              showsVerticalScrollIndicator={false}
-            >
-              <PersonalInfoForm
-                firstName={firstName}
-                setFirstName={setFirstName}
-                lastName={lastName}
-                setLastName={setLastName}
-                email={email}
-                setEmail={setEmail}
-                phone={phone}
-                setPhone={setPhone}
-                residence={residence}
-                setResidence={setResidence}
-                validationStatus={validationStatus}
-              />
-              <PhotoSection
-                photos={photos}
-                setPhotos={setPhotos}
-                required={true}
-                onRemovePhoto={handlePhotoRemove}
-              />
-              <BioSection
-                bio={bio}
-                setBio={setBio}
-                interests={interests}
-                setInterests={setInterests}
-              />
-              
-              <QuizSection onQuizSaved={() => {
-                // Refresh profile data if needed
-                refreshProfile();
-              }} />
-              
-              {/* Action Buttons */}
-              <View style={styles.actionButtonsContainer}>
-                <TouchableOpacity 
-                  onPress={saveProfile} 
-                  style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-                  disabled={saving}
-                >
-                  <Text style={[styles.saveButtonText, saving && styles.saveButtonTextDisabled]}>
-                    {saving ? 'Saving...' : 'Save'}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.discardButton}
+            <>
+              {/* Modal Header */}
+              <View style={styles.profileModalHeader}>
+                <TouchableOpacity
+                  style={styles.closeButton}
                   onPress={() => setShowProfile(false)}
                 >
-                  <Text style={styles.discardButtonText}>Discard</Text>
+                  <Ionicons name="close" size={24} color="black" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.profileSaveButton,
+                    saving && styles.disabledProfileSaveButton
+                  ]}
+                  onPress={saveProfile}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <ActivityIndicator color="white" size="small" />
+                  ) : (
+                    <Text style={styles.profileSaveButtonText}>Save</Text>
+                  )}
                 </TouchableOpacity>
               </View>
-            </ScrollView>
+
+              <ScrollView 
+                style={styles.profileForm} 
+                contentContainerStyle={styles.profileFormContent}
+                showsVerticalScrollIndicator={false}
+              >
+                <PersonalInfoForm
+                  firstName={firstName}
+                  setFirstName={setFirstName}
+                  lastName={lastName}
+                  setLastName={setLastName}
+                  email={email}
+                  setEmail={setEmail}
+                  phone={phone}
+                  setPhone={setPhone}
+                  residence={residence}
+                  setResidence={setResidence}
+                  validationStatus={validationStatus}
+                />
+                <PhotoSection
+                  photos={photos}
+                  setPhotos={setPhotos}
+                  required={true}
+                  onRemovePhoto={handlePhotoRemove}
+                />
+                <BioSection
+                  bio={bio}
+                  setBio={setBio}
+                  interests={interests}
+                  setInterests={setInterests}
+                />
+                
+                <QuizSection onQuizSaved={() => {
+                  // Refresh profile data if needed
+                  refreshProfile();
+                }} />
+              </ScrollView>
+            </>
           )}
-        </View>
+        </SafeAreaView>
       </Modal>
     </ScrollView>
   );
@@ -880,7 +905,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  profileHeader: {
+  profileModalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -890,33 +915,27 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
-  backButton: {
+  closeButton: {
     padding: 5,
   },
-  profileHeaderTitle: {
+  profileModalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
   },
-  saveButton: {
-    flex: 1,
+  profileSaveButton: {
     backgroundColor: 'hotpink',
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    width: '45%',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
   },
-  saveButtonDisabled: {
+  disabledProfileSaveButton: {
     backgroundColor: '#ccc',
   },
-  saveButtonText: {
+  profileSaveButtonText: {
     color: 'white',
     fontWeight: '600',
-    fontSize: 16,
-  },
-  saveButtonTextDisabled: {
-    color: '#999',
+    fontSize: 14,
   },
   loadingContainer: {
     flex: 1,
@@ -936,26 +955,5 @@ const styles = StyleSheet.create({
   profileFormContent: {
     paddingVertical: 20,
     gap: 25,
-  },
-  actionButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 15,
-    marginTop: 20,
-    paddingHorizontal: 5,
-  },
-  discardButton: {
-    flex: 1,
-    backgroundColor: 'red',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    borderColor: '#ddd',
-    width: '45%',
-  },
-  discardButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
