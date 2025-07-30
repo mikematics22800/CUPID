@@ -3,15 +3,20 @@ import { useState, useEffect, useRef } from 'react';
 import { 
   getMatchesForUser, 
   unmatchUsers, 
+  unmatchUsersByMatchId,
   supabase, 
   getChatRooms, 
   getOrCreateChatRoom,
   sendMessage,
   getMessages,
   markMessagesAsRead,
-  markMatchesAsViewed
+  markMatchesAsViewed,
+  deleteMessage,
+  checkAndFixMessageSchema,
+  subscribeToMessages,
+  subscribeToChatRooms,
+  unsubscribeFromChannel
 } from '../../lib/supabase';
-import { generateChatSuggestions, getSuggestionCategories } from '../components/matches/chatSuggestions.js';
 import { detectViolentThreats, isUserBanned, getUserStrikes } from '../components/matches/contentModeration';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -38,17 +43,14 @@ export default function MatchesScreen() {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [chatLoading, setChatLoading] = useState(false);
 
-  // Chat suggestions state
-  const [suggestions, setSuggestions] = useState([]);
-  const [suggestionCategories, setSuggestionCategories] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('icebreaker');
-  const [generatingSuggestions, setGeneratingSuggestions] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-
   // Content moderation state
   const [moderatingMessage, setModeratingMessage] = useState(false);
   const [userStrikes, setUserStrikes] = useState(0);
   const [userBanned, setUserBanned] = useState(false);
+
+  // Real-time subscription state
+  const [messageSubscription, setMessageSubscription] = useState(null);
+  const [matchesSubscription, setMatchesSubscription] = useState(null);
 
   const flatListRef = useRef(null);
 
@@ -61,8 +63,47 @@ export default function MatchesScreen() {
     if (currentUserId) {
       loadMatches();
       loadChatRooms();
+      setupMatchesSubscription();
     }
   }, [currentUserId]);
+
+  const setupMatchesSubscription = async () => {
+    try {
+      // Clean up any existing subscription
+      if (matchesSubscription) {
+        unsubscribeFromChannel(matchesSubscription);
+        setMatchesSubscription(null);
+      }
+
+      // Set up new subscription for matches
+      const subscription = subscribeToChatRooms((newMatch, eventType) => {
+        console.log('🔔 Real-time match update:', newMatch, 'Event type:', eventType);
+        
+        if (eventType === 'insert') {
+          // New match created - refresh the matches list
+          loadMatches();
+          loadChatRooms();
+        } else if (eventType === 'update') {
+          // Match updated - refresh the matches list
+          loadMatches();
+          loadChatRooms();
+        }
+      });
+      
+      setMatchesSubscription(subscription);
+      console.log('✅ Real-time matches subscription established');
+      
+    } catch (error) {
+      console.error('❌ Error setting up matches subscription:', error);
+      // Retry after a delay
+      setTimeout(() => {
+        if (currentUserId) {
+          console.log('🔄 Retrying matches subscription...');
+          setupMatchesSubscription();
+        }
+      }, 5000);
+    }
+  };
 
   useFocusEffect(
     React.useCallback(() => {
@@ -122,9 +163,28 @@ export default function MatchesScreen() {
         throw new Error('User not authenticated');
       }
       
-      await unmatchUsers(currentUser.id, userId);
+      // Find the match data to get the matchId (more efficient than searching by user IDs)
+      const matchData = matches.find(match => match.id === userId);
+      if (!matchData) {
+        Alert.alert('Error', 'This match no longer exists.');
+        return;
+      }
       
+      // Use the specific match ID to delete the match (more precise than searching by user IDs)
+      await unmatchUsersByMatchId(matchData.matchId);
+      
+      // Update matches list
       setMatches(prevMatches => prevMatches.filter(match => match.id !== userId));
+      
+      // Update chat rooms list
+      setChatRooms(prevRooms => prevRooms.filter(room => 
+        room.otherUser?.id !== userId
+      ));
+      
+      // If the unmatched user is currently selected in chat, close the chat
+      if (selectedMatch && selectedMatch.id === userId) {
+        closeChat();
+      }
       
       Alert.alert('Unmatched', `You have unmatched with ${userName}`);
       
@@ -137,9 +197,16 @@ export default function MatchesScreen() {
   };
 
   const confirmUnmatch = (userId, userName) => {
+    // Check if user is currently chatting with this person
+    const isCurrentlyChatting = selectedMatch && selectedMatch.id === userId;
+    
+    const message = isCurrentlyChatting 
+      ? `You are currently chatting with ${userName}. Unmatching will close this conversation and remove all messages. Are you sure you want to unmatch? This action cannot be undone.`
+      : `Are you sure you want to unmatch with ${userName}? This action cannot be undone.`;
+
     Alert.alert(
       'Unmatch',
-      `Are you sure you want to unmatch with ${userName}? This action cannot be undone.`,
+      message,
       [
         {
           text: 'Cancel',
@@ -168,6 +235,9 @@ export default function MatchesScreen() {
 
       await markMessagesAsRead(chatRoomId);
 
+      // Set up real-time subscription for new messages
+      await setupMessageSubscription(chatRoomId);
+
     } catch (error) {
       console.error('❌ Error opening chat:', error);
       Alert.alert('Error', 'Failed to open chat. Please try again.');
@@ -176,14 +246,86 @@ export default function MatchesScreen() {
     }
   };
 
+  const setupMessageSubscription = async (roomId) => {
+    try {
+      // Clean up any existing subscription
+      if (messageSubscription) {
+        unsubscribeFromChannel(messageSubscription);
+        setMessageSubscription(null);
+      }
+
+      // Set up new subscription
+      const subscription = await subscribeToMessages(roomId, (newMessage, eventType = 'insert') => {
+        console.log('🔔 Real-time message received:', newMessage, 'Event type:', eventType);
+        
+        if (eventType === 'insert') {
+          // Add new message to the list
+          const formattedMessage = {
+            id: newMessage.id,
+            content: newMessage.content,
+            is_read: newMessage.read,
+            created_at: newMessage.created_at,
+            sender_id: newMessage.sender_id,
+            sender_name: newMessage.sender_id === currentUserId ? 'You' : selectedMatch?.name || 'Unknown User'
+          };
+          
+          setMessages(prev => {
+            // Check if message already exists to avoid duplicates
+            const exists = prev.some(msg => msg.id === formattedMessage.id);
+            if (exists) return prev;
+            
+            return [...prev, formattedMessage];
+          });
+          
+          // Mark messages as read if the new message is from the other user
+          if (newMessage.sender_id !== currentUserId) {
+            markMessagesAsRead(roomId);
+          }
+        } else if (eventType === 'update') {
+          // Update existing message (e.g., when marked as read)
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.id === newMessage.id 
+                ? {
+                    ...msg,
+                    is_read: newMessage.read,
+                    content: newMessage.content
+                  }
+                : msg
+            )
+          );
+        } else if (eventType === 'delete') {
+          // Remove deleted message from the list
+          setMessages(prev => prev.filter(msg => msg.id !== newMessage.id));
+        }
+      });
+      
+      setMessageSubscription(subscription);
+      console.log('✅ Real-time subscription established for room:', roomId);
+      
+    } catch (error) {
+      console.error('❌ Error setting up message subscription:', error);
+      // Retry after a delay
+      setTimeout(() => {
+        if (selectedMatch && roomId) {
+          console.log('🔄 Retrying message subscription...');
+          setupMessageSubscription(roomId);
+        }
+      }, 5000);
+    }
+  };
+
   const closeChat = () => {
+    // Clean up subscription
+    if (messageSubscription) {
+      unsubscribeFromChannel(messageSubscription);
+      setMessageSubscription(null);
+    }
+    
     setSelectedMatch(null);
     setMessages([]);
     setNewMessage('');
     setRoomId(null);
-    setSuggestions([]);
-    setSuggestionCategories([]);
-    setShowSuggestions(false);
   };
 
   const refreshMessages = async () => {
@@ -201,9 +343,12 @@ export default function MatchesScreen() {
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !roomId || sending || moderatingMessage) return;
 
+    // Create a temporary message ID that we can track
+    const tempMessageId = `temp-${Date.now()}`;
+    const messageContent = newMessage.trim();
+
     try {
       setModeratingMessage(true);
-      const messageContent = newMessage.trim();
       
       // Check for violent threats BEFORE sending
       const threatCheck = await detectViolentThreats(messageContent, currentUserId, selectedMatch.id);
@@ -237,9 +382,6 @@ export default function MatchesScreen() {
       // If no threats detected, proceed with sending
       setSending(true);
       setNewMessage('');
-
-      // Create a temporary message ID that we can track
-      const tempMessageId = `temp-${Date.now()}`;
       
       // Optimistically add message to UI
       const tempMessage = {
@@ -270,10 +412,8 @@ export default function MatchesScreen() {
         )
       );
 
-      // Refresh messages to get any new messages from the other user
-      setTimeout(() => {
-        refreshMessages();
-      }, 1000);
+      // Real-time updates will handle new messages automatically
+      // No need for manual refresh
 
     } catch (error) {
       console.error('❌ Error sending message:', error);
@@ -303,30 +443,81 @@ export default function MatchesScreen() {
     }
   };
 
-  // Note: Message deletion is not supported with the current schema
   const handleDeleteMessage = async (messageId) => {
-    Alert.alert(
-      'Delete Message',
-      'Message deletion is not currently supported.',
-      [{ text: 'OK' }]
-    );
+    try {
+      console.log('🗑️ Attempting to delete message with ID:', messageId);
+      console.log('🗑️ Message ID type:', typeof messageId);
+      
+      // First, let's check the database schema to see if there are issues
+      try {
+        const schemaCheck = await checkAndFixMessageSchema();
+        console.log('🔧 Schema check result:', schemaCheck);
+      } catch (schemaError) {
+        console.error('🔧 Schema check error:', schemaError);
+      }
+      
+      // Show confirmation dialog
+      Alert.alert(
+        'Delete Message',
+        'Are you sure you want to delete this message? This action cannot be undone.',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                console.log('🗑️ User confirmed deletion, calling deleteMessage...');
+                
+                // Call the deleteMessage function from supabase
+                const result = await deleteMessage(messageId);
+                console.log('🗑️ deleteMessage result:', result);
+                
+                // Remove the message from the local state
+                setMessages(prev => {
+                  const filtered = prev.filter(msg => msg.id !== messageId);
+                  console.log('🗑️ Messages after filtering:', filtered.length, 'remaining');
+                  return filtered;
+                });
+                
+                console.log('✅ Message deleted successfully');
+              } catch (error) {
+                console.error('❌ Error deleting message:', error);
+                console.error('❌ Error details:', {
+                  message: error.message,
+                  code: error.code,
+                  details: error.details,
+                  hint: error.hint
+                });
+                Alert.alert(
+                  'Error',
+                  error.message || 'Failed to delete message. Please try again.'
+                );
+              }
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('❌ Error in handleDeleteMessage:', error);
+      Alert.alert('Error', 'Failed to delete message. Please try again.');
+    }
   };
 
 
 
-  useEffect(() => {
-    if (selectedMatch && currentUserId) {
-      updateSuggestionCategories();
-    }
-  }, [messages, selectedMatch, currentUserId]);
+  // Removed chat suggestions functionality
 
-  // Auto-refresh messages every 30 seconds when chat is open
+  // Auto-refresh messages every 60 seconds when chat is open (backup for missed real-time updates)
   useEffect(() => {
     if (!selectedMatch || !roomId) return;
 
     const interval = setInterval(() => {
       refreshMessages();
-    }, 30000); // 30 seconds
+    }, 60000); // 60 seconds (increased from 30 since we have real-time updates)
 
     return () => clearInterval(interval);
   }, [selectedMatch, roomId]);
@@ -364,81 +555,21 @@ export default function MatchesScreen() {
     checkUserBanStatus();
   }, [currentUserId]);
 
-
-
-  const generateSuggestions = async (category = 'general') => {
-    if (!selectedMatch || !currentUserId || generatingSuggestions) return;
-
-    try {
-      setGeneratingSuggestions(true);
-      setSelectedCategory(category);
-      
-      const recentMessages = messages.slice(-10);
-      const newSuggestions = await generateChatSuggestions(
-        currentUserId,
-        selectedMatch.id,
-        recentMessages,
-        category
-      );
-      
-      setSuggestions(newSuggestions);
-      
-    } catch (error) {
-      console.error('❌ Error generating suggestions:', error);
-      Alert.alert('Error', 'Failed to generate suggestions. Please try again.');
-    } finally {
-      setGeneratingSuggestions(false);
-    }
-  };
-
-  const handleSuggestionSelect = () => {
-    setShowSuggestions(false);
-  };
-
-  const toggleSuggestions = async () => {
-    if (showSuggestions) {
-      setShowSuggestions(false);
-    } else {
-      setShowSuggestions(true);
-      // Don't generate suggestions automatically - wait for user to select a category
-    }
-  };
-
-  const updateSuggestionCategories = async () => {
-    if (!selectedMatch || !currentUserId) return;
-    
-    try {
-      const { data: currentUserProfile } = await supabase
-        .from('users')
-        .select('interests')
-        .eq('id', currentUserId)
-        .single();
-      
-      const messageCount = messages.length;
-      const currentUserInterests = currentUserProfile?.interests || [];
-      const matchInterests = selectedMatch.interests || [];
-      
-      const hasSharedInterests = currentUserInterests.some(interest => 
-        matchInterests.includes(interest)
-      );
-      
-      const categories = getSuggestionCategories(messageCount, hasSharedInterests);
-      setSuggestionCategories(categories);
-      
-      if (messageCount === 0) {
-        setSelectedCategory('icebreaker');
-      } else if (messageCount < 5) {
-        setSelectedCategory('casual');
-      } else {
-        setSelectedCategory('date-idea');
+  // Cleanup subscription on component unmount
+  useEffect(() => {
+    return () => {
+      if (messageSubscription) {
+        unsubscribeFromChannel(messageSubscription);
       }
-    } catch (error) {
-      console.error('❌ Error updating suggestion categories:', error);
-      const categories = getSuggestionCategories(messages.length, false);
-      setSuggestionCategories(categories);
-    }
-  };
+      if (matchesSubscription) {
+        unsubscribeFromChannel(matchesSubscription);
+      }
+    };
+  }, [messageSubscription, matchesSubscription]);
 
+
+
+  // Removed generateStrategies, handleStrategySelect, toggleStrategies, updateStrategyCategories
 
 
   if (loading) {
@@ -456,20 +587,12 @@ export default function MatchesScreen() {
         sending={sending}
         moderatingMessage={moderatingMessage}
         chatLoading={chatLoading}
-        showSuggestions={showSuggestions}
-        suggestions={suggestions}
-        suggestionCategories={suggestionCategories}
-        selectedCategory={selectedCategory}
-        generatingSuggestions={generatingSuggestions}
         userStrikes={userStrikes}
         currentUserId={currentUserId}
         flatListRef={flatListRef}
         onCloseChat={closeChat}
         onSendMessage={handleSendMessage}
         onDeleteMessage={handleDeleteMessage}
-        onToggleSuggestions={toggleSuggestions}
-        onGenerateSuggestions={generateSuggestions}
-        onSuggestionSelect={handleSuggestionSelect}
         onRefreshMessages={refreshMessages}
       />
     );

@@ -5,8 +5,6 @@ import { Ionicons } from '@expo/vector-icons';
 export default function ChatHeader({ 
   match, 
   onBack,
-  showSuggestions,
-  onToggleSuggestions,
   onRefreshMessages
 }) {
   return (

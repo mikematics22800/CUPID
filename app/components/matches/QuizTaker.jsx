@@ -225,7 +225,7 @@ export default function QuizTaker({
                 onPress={previousQuestion}
                 disabled={currentQuestionIndex === 0}
               >
-                <Ionicons name="chevron-back" size={20} color={currentQuestionIndex === 0 ? "#ccc" : "hotpink"} />
+                <Ionicons name="chevron-back" size={20} color="white" />
                 <Text style={[styles.navButtonText, currentQuestionIndex === 0 && styles.disabledText]}>
                   Previous
                 </Text>
@@ -264,7 +264,7 @@ export default function QuizTaker({
               <View style={styles.scoreContainer}>
                 <Text style={styles.scoreLabel}>Your Score</Text>
                 <Text style={[styles.scoreText, { color: getScoreColor(results.score) }]}>
-                  {results.score}%
+                  {results.score.toFixed(2)}%
                 </Text>
                 <Text style={styles.scoreDetails}>
                   {results.correctAnswers} out of {results.totalQuestions} correct

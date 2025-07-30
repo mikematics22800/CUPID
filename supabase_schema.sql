@@ -1,12 +1,6 @@
 -- WARNING: This schema is for context only and is not meant to be run.
 -- Table order and constraints may not be valid for execution.
 
-CREATE TABLE public.banned (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  email text NOT NULL,
-  phone text NOT NULL,
-  CONSTRAINT banned_pkey PRIMARY KEY (id)
-);
 CREATE TABLE public.likes (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   likes ARRAY,
@@ -15,25 +9,25 @@ CREATE TABLE public.likes (
 );
 CREATE TABLE public.matches (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
-  user1_id uuid,
-  user2_id uuid,
-  created_at timestamp with time zone DEFAULT now(),
+  user1_id uuid NOT NULL,
+  user2_id uuid NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   user1_score real,
   user2_score real,
   CONSTRAINT matches_pkey PRIMARY KEY (id),
-  CONSTRAINT matches_user1_id_fkey FOREIGN KEY (user1_id) REFERENCES public.users(id),
-  CONSTRAINT matches_user2_id_fkey FOREIGN KEY (user2_id) REFERENCES public.users(id)
+  CONSTRAINT matches_user2_id_fkey FOREIGN KEY (user2_id) REFERENCES public.users(id),
+  CONSTRAINT matches_user1_id_fkey FOREIGN KEY (user1_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.messages (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  sender_id uuid DEFAULT gen_random_uuid(),
-  receiver_id uuid DEFAULT gen_random_uuid(),
-  content text,
-  read boolean DEFAULT false,
+  sender_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  receiver_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  content text NOT NULL,
+  read boolean NOT NULL DEFAULT false,
   CONSTRAINT messages_pkey PRIMARY KEY (id),
-  CONSTRAINT messages_receiver_id_fkey FOREIGN KEY (receiver_id) REFERENCES public.users(id),
-  CONSTRAINT messages_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES public.users(id)
+  CONSTRAINT messages_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES public.users(id),
+  CONSTRAINT messages_receiver_id_fkey FOREIGN KEY (receiver_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.quizzes (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -57,5 +51,6 @@ CREATE TABLE public.users (
   images ARRAY,
   residence text,
   geolocation ARRAY,
+  banned boolean NOT NULL DEFAULT false,
   CONSTRAINT users_pkey PRIMARY KEY (id)
 );

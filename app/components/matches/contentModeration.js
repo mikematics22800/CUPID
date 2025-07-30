@@ -105,7 +105,7 @@ export const addStrikeToUser = async (userId, violatingMessage, threatAnalysis) 
     // Get current user info and strikes
     const { data: userInfo, error: userError } = await supabase
       .from('users')
-      .select('name, email, phone, strikes')
+      .select('name, email, phone, strikes, banned')
       .eq('id', userId)
       .single();
 
@@ -114,28 +114,41 @@ export const addStrikeToUser = async (userId, violatingMessage, threatAnalysis) 
       throw userError;
     }
 
+    // Check if user is already banned
+    if (userInfo.banned) {
+      console.log(`🚫 User ${userId} is already banned`);
+      return {
+        actionTaken: 'User already banned',
+        strikesRemaining: 0,
+        isBanned: true
+      };
+    }
+
     const currentStrikes = userInfo.strikes || 0;
     const newStrikes = currentStrikes + 1;
     
     // Log the violation
     await logViolation(userId, userInfo, violatingMessage, threatAnalysis, newStrikes);
     
-    // Update user's strike count
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ strikes: newStrikes })
-      .eq('id', userId);
-
-    if (updateError) {
-      console.error('❌ Error updating strikes:', updateError);
-      throw updateError;
-    }
-
-    console.log(`✅ Strike added to user ${userId}. Total strikes: ${newStrikes}`);
-
     // Check if user should be banned (3 strikes)
     if (newStrikes >= 3) {
       console.log(`🚫 User ${userId} has reached 3 strikes. Banning user...`);
+      
+      // Update user's strikes and ban status
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ 
+          strikes: newStrikes,
+          banned: true
+        })
+        .eq('id', userId);
+
+      if (updateError) {
+        console.error('❌ Error banning user:', updateError);
+        throw updateError;
+      }
+
+      // Perform additional ban actions
       await banUser(userId, userInfo);
       
       return {
@@ -144,6 +157,19 @@ export const addStrikeToUser = async (userId, violatingMessage, threatAnalysis) 
         isBanned: true
       };
     } else {
+      // Just update strikes
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ strikes: newStrikes })
+        .eq('id', userId);
+
+      if (updateError) {
+        console.error('❌ Error updating strikes:', updateError);
+        throw updateError;
+      }
+
+      console.log(`✅ Strike added to user ${userId}. Total strikes: ${newStrikes}`);
+      
       const strikesRemaining = 3 - newStrikes;
       return {
         actionTaken: `Strike added (${newStrikes}/3)`,
@@ -166,24 +192,33 @@ const banUser = async (userId, userInfo) => {
     // Add user to banned table first
     await addToBannedTable(userId, userInfo);
     
-    // Update user's strikes to 3 (this indicates banned status)
-    const { error: banError } = await supabase
-      .from('users')
-      .update({ 
-        strikes: 3
-      })
-      .eq('id', userId);
-
-    if (banError) {
-      console.error('❌ Error banning user:', banError);
-      throw banError;
-    }
-
     // Delete user's messages (where user is the sender)
-    await supabase
+    // First, get all message IDs for the user
+    const { data: userMessages, error: messagesError } = await supabase
       .from('messages')
-      .delete()
+      .select('id')
       .eq('sender_id', userId);
+
+    if (messagesError) {
+      console.error('❌ Error fetching user messages:', messagesError);
+    } else if (userMessages && userMessages.length > 0) {
+      console.log(`🗑️ Found ${userMessages.length} messages to delete for user ${userId}`);
+      
+      // Delete messages by their unique IDs
+      const messageIds = userMessages.map(msg => msg.id);
+      const { error: deleteError } = await supabase
+        .from('messages')
+        .delete()
+        .in('id', messageIds);
+
+      if (deleteError) {
+        console.error('❌ Error deleting user messages:', deleteError);
+      } else {
+        console.log(`✅ Successfully deleted ${messageIds.length} messages for user ${userId}`);
+      }
+    } else {
+      console.log(`📭 No messages found for user ${userId}`);
+    }
 
     // Delete user's matches (where user is either user1 or user2)
     await supabase
@@ -321,7 +356,7 @@ export const isUserBanned = async (userId) => {
   try {
     const { data, error } = await supabase
       .from('users')
-      .select('strikes')
+      .select('banned, strikes')
       .eq('id', userId)
       .single();
     
@@ -335,8 +370,9 @@ export const isUserBanned = async (userId) => {
       return false; // Don't assume banned if user not found
     }
     
-    const isBanned = data.strikes >= 3;
-    console.log(`🔍 User ${userId} ban status: ${isBanned} (strikes: ${data.strikes})`);
+    // Use the dedicated banned field, but also check strikes as fallback
+    const isBanned = data.banned || data.strikes >= 3;
+    console.log(`🔍 User ${userId} ban status: ${isBanned} (banned: ${data.banned}, strikes: ${data.strikes})`);
     return isBanned;
   } catch (error) {
     console.error('❌ Exception checking user ban status:', error);
@@ -349,19 +385,20 @@ export const getUserStrikes = async (userId) => {
   try {
     const { data, error } = await supabase
       .from('users')
-      .select('strikes')
+      .select('strikes, banned')
       .eq('id', userId)
       .single();
     
     if (error || !data) {
-      return { strikes: 0 };
+      return { strikes: 0, banned: false };
     }
     
     return {
-      strikes: data.strikes || 0
+      strikes: data.strikes || 0,
+      banned: data.banned || false
     };
   } catch (error) {
-    return { strikes: 0 };
+    return { strikes: 0, banned: false };
   }
 };
 

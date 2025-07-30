@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getQuizScoreForUser, getUserQuiz } from '../../../lib/supabase';
 import QuizTaker from './QuizTaker';
@@ -14,6 +14,7 @@ export default function MatchCard({
   const [quizScore, setQuizScore] = useState(null);
   const [showQuiz, setShowQuiz] = useState(false);
   const [hasQuiz, setHasQuiz] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
   const hasUnreadMessages = chatRoom?.lastMessage && !chatRoom.lastMessage.isFromMe && !chatRoom.lastMessage.isRead;
 
   // Load quiz score and check if user has quiz on component mount
@@ -47,14 +48,24 @@ export default function MatchCard({
     <View style={styles.matchCard}>
       <View style={styles.matchContent}>
         {match.photo ? (
-          <Image 
-            source={{ uri: match.photo }} 
-            style={styles.matchPhoto}
-            resizeMode="cover"
-            onError={() => {
-              // Failed to load image for match
-            }}
-          />
+          <View style={styles.photoContainer}>
+            <Image 
+              source={{ uri: match.photo }} 
+              style={styles.matchPhoto}
+              resizeMode="cover"
+              onLoadStart={() => setImageLoading(true)}
+              onLoad={() => setImageLoading(false)}
+              onError={() => {
+                setImageLoading(false);
+                // Failed to load image for match
+              }}
+            />
+            {imageLoading && (
+              <View style={styles.imageLoader}>
+                <ActivityIndicator size="small" color="hotpink" />
+              </View>
+            )}
+          </View>
         ) : (
           <View style={styles.matchPhotoPlaceholder}>
             <Ionicons name="person" size={30} color="#ccc" />
@@ -159,11 +170,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
+  photoContainer: {
+    position: 'relative',
+    marginRight: 15,
+  },
   matchPhoto: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    marginRight: 15,
+  },
+  imageLoader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(200, 200, 200, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 30,
   },
   matchPhotoPlaceholder: {
     width: 60,

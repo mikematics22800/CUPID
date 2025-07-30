@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
 
 export default function MessageBubble({ 
   message, 
@@ -16,19 +17,21 @@ export default function MessageBubble({
     ]}>
       <View style={[
         styles.messageBubble,
-        isMyMessage ? styles.myBubble : styles.theirBubble
+        isMyMessage ? styles.myMessageBubble : styles.theirMessageBubble
       ]}>
-        <Text style={[
-          styles.messageText,
-          isMyMessage ? styles.myMessageText : styles.theirMessageText
-        ]}>
+        {isMyMessage && !isTempMessage && onDeleteMessage && (
+          <TouchableOpacity 
+            style={styles.closeButton} 
+            onPress={() => onDeleteMessage(message.id)}
+          >
+            <MaterialIcons name="cancel" size={18} color="#FF4444" />
+          </TouchableOpacity>
+        )}
+        <Text style={styles.messageText}>
           {message.content}
         </Text>
         <View style={styles.messageFooter}>
-          <Text style={[
-            styles.messageTime,
-            isMyMessage ? styles.myMessageTime : styles.theirMessageTime
-          ]}>
+          <Text style={styles.messageTime}>
             {new Date(message.created_at).toLocaleTimeString([], { 
               hour: '2-digit', 
               minute: '2-digit' 
@@ -42,14 +45,13 @@ export default function MessageBubble({
                 <Ionicons 
                   name={message.is_read ? "checkmark-done" : "checkmark"} 
                   size={16} 
-                  color={message.is_read ? "#007AFF" : "rgba(255, 255, 255, 0.7)"} 
+                  color="white" 
                 />
               )}
             </View>
           )}
         </View>
       </View>
-      {/* Message deletion is not supported with the current schema */}
     </View>
   );
 }
@@ -68,54 +70,50 @@ const styles = StyleSheet.create({
   },
   messageBubble: {
     maxWidth: '80%',
+    minWidth: 100,
     padding: 12,
     borderRadius: 18,
-  },
-  myBubble: {
-    backgroundColor: 'white',
-    borderBottomRightRadius: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+    position: 'relative',
   },
-  theirBubble: {
-    backgroundColor: 'pink',
+  myMessageBubble: {
+    backgroundColor: '#FFB6C1', // Light pink color for user messages
+    borderBottomRightRadius: 4,
+  },
+  theirMessageBubble: {
+    backgroundColor: '#FFB6C1', // Light pink color for other messages
     borderBottomLeftRadius: 4,
   },
   messageText: {
     fontSize: 16,
     lineHeight: 20,
-  },
-  myMessageText: {
-    color: 'hotpink',
-  },
-  theirMessageText: {
     color: 'white',
+    paddingRight: 20, // Make room for close button
   },
   messageFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'flex-start',
     marginTop: 4,
   },
   messageTime: {
     fontSize: 12,
-    color: 'hotpink',
-    marginRight: 4,
-  },
-  myMessageTime: {
-    color: 'hotpink',
-  },
-  theirMessageTime: {
-    color: 'white',
-  },
-  messageStatus: {
+    color: 'rgba(255, 255, 255, 0.8)',
     marginLeft: 4,
   },
-  deleteButton: {
-    padding: 8,
-    marginLeft: 8,
+  messageStatus: {
+    marginLeft: 'auto',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    zIndex: 1,
+    backgroundColor: 'white',
+    borderRadius: 9,
   },
 }); 

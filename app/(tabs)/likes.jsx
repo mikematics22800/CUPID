@@ -31,6 +31,7 @@ export default function LikesScreen() {
   const [processingAction, setProcessingAction] = useState(null);
   const [currentLikeIndex, setCurrentLikeIndex] = useState(0);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [imageLoadingStates, setImageLoadingStates] = useState({});
 
   // Animation values
   const position = useRef(new Animated.ValueXY()).current;
@@ -56,6 +57,7 @@ export default function LikesScreen() {
   const fetchLikes = async (shouldUpdateLocation = false) => {
     try {
       setLoading(true);
+      setImageLoadingStates({}); // Reset image loading states
       console.log(`🔄 Fetching likes with location update: ${shouldUpdateLocation}`);
       
       let likesData;
@@ -224,6 +226,7 @@ export default function LikesScreen() {
     if (nextIndex < likes.length && likes.length > 0) {
       setCurrentLikeIndex(nextIndex);
       setCurrentPhotoIndex(0); // Reset photo index for new like
+      setImageLoadingStates({}); // Reset image loading states for new like
     } else {
       // No more likes, check if we need to update geolocation and fetch new likes
       const shouldUpdateLocation = swipeCount >= 10;
@@ -369,10 +372,31 @@ export default function LikesScreen() {
                           source={{ uri: image }} 
                           style={styles.profileImage}
                           resizeMode="cover"
+                          onLoadStart={() => {
+                            setImageLoadingStates(prev => ({
+                              ...prev,
+                              [`${currentLike.id}-${index}`]: true
+                            }));
+                          }}
+                          onLoad={() => {
+                            setImageLoadingStates(prev => ({
+                              ...prev,
+                              [`${currentLike.id}-${index}`]: false
+                            }));
+                          }}
                           onError={() => {
                             console.log('Failed to load image for like:', currentLike.id, 'photo:', index);
+                            setImageLoadingStates(prev => ({
+                              ...prev,
+                              [`${currentLike.id}-${index}`]: false
+                            }));
                           }}
                         />
+                        {imageLoadingStates[`${currentLike.id}-${index}`] && (
+                          <View style={styles.imageLoader}>
+                            <ActivityIndicator size="large" color="hotpink" />
+                          </View>
+                        )}
                       </View>
                     ))}
                   </ScrollView>
@@ -403,14 +427,37 @@ export default function LikesScreen() {
                 </>
               ) : currentLike.image ? (
                 // Fallback for single image
-                <Image 
-                  source={{ uri: currentLike.image }} 
-                  style={styles.profileImage}
-                  resizeMode="cover"
-                  onError={() => {
-                    console.log('Failed to load image for like:', currentLike.id);
-                  }}
-                />
+                <View style={styles.photoSlide}>
+                  <Image 
+                    source={{ uri: currentLike.image }} 
+                    style={styles.profileImage}
+                    resizeMode="cover"
+                    onLoadStart={() => {
+                      setImageLoadingStates(prev => ({
+                        ...prev,
+                        [`${currentLike.id}-single`]: true
+                      }));
+                    }}
+                    onLoad={() => {
+                      setImageLoadingStates(prev => ({
+                        ...prev,
+                        [`${currentLike.id}-single`]: false
+                      }));
+                    }}
+                    onError={() => {
+                      console.log('Failed to load image for like:', currentLike.id);
+                      setImageLoadingStates(prev => ({
+                        ...prev,
+                        [`${currentLike.id}-single`]: false
+                      }));
+                    }}
+                  />
+                  {imageLoadingStates[`${currentLike.id}-single`] && (
+                    <View style={styles.imageLoader}>
+                      <ActivityIndicator size="large" color="hotpink" />
+                    </View>
+                  )}
+                </View>
               ) : (
                 <View style={styles.profileImagePlaceholder}>
                   <Ionicons name="person" size={80} color="#ccc" />
@@ -717,5 +764,16 @@ const styles = StyleSheet.create({
   residenceText: {
     fontSize: 16,
     color: '#666',
+  },
+  imageLoader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(200, 200, 200, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 10,
   },
 }); 

@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Animated, Dimensions, Image, TouchableOpacity, Alert, ScrollView} from 'react-native';
+import { View, Text, StyleSheet, Animated, Dimensions, Image, TouchableOpacity, Alert, ScrollView, ActivityIndicator} from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
@@ -28,6 +28,7 @@ export default function Everyone() {
   const [distanceFilter, setDistanceFilter] = useState(50);
   const [isDistanceFilterActive, setIsDistanceFilterActive] = useState(false);
   const [nextProfileReady, setNextProfileReady] = useState(false);
+  const [imageLoadingStates, setImageLoadingStates] = useState({});
 
   // Animation values
   const position = useRef(new Animated.ValueXY()).current;
@@ -59,6 +60,7 @@ export default function Everyone() {
     try {
       setLoadingProfiles(true);
       setPhotoLoadingError(false);
+      setImageLoadingStates({}); // Reset image loading states
       
       console.log(`🔄 Loading profiles with location update: ${shouldUpdateLocation}`);
       let fetchedProfiles;
@@ -161,6 +163,7 @@ export default function Everyone() {
       setCurrentProfile(profiles[nextIndex]);
       setCurrentProfileIndex(nextIndex);
       setCurrentPhotoIndex(0); // Reset photo index for new profile
+      setImageLoadingStates({}); // Reset image loading states for new profile
       setNextProfileReady(true); // Next profile is ready
     } else {
       // No more profiles, check if we need to update geolocation
@@ -370,12 +373,33 @@ export default function Everyone() {
                           source={{ uri: image }} 
                           style={styles.profileImage}
                           resizeMode="cover"
+                          onLoadStart={() => {
+                            setImageLoadingStates(prev => ({
+                              ...prev,
+                              [`${currentProfile.id}-${index}`]: true
+                            }));
+                          }}
+                          onLoad={() => {
+                            setImageLoadingStates(prev => ({
+                              ...prev,
+                              [`${currentProfile.id}-${index}`]: false
+                            }));
+                            setPhotoLoadingError(false);
+                          }}
                           onError={() => {
                             console.log('Failed to load image for profile:', currentProfile.id, 'photo:', index);
+                            setImageLoadingStates(prev => ({
+                              ...prev,
+                              [`${currentProfile.id}-${index}`]: false
+                            }));
                             setPhotoLoadingError(true);
                           }}
-                          onLoad={() => setPhotoLoadingError(false)}
                         />
+                        {imageLoadingStates[`${currentProfile.id}-${index}`] && (
+                          <View style={styles.imageLoader}>
+                            <ActivityIndicator size="large" color="hotpink" />
+                          </View>
+                        )}
                       </View>
                     ))}
                   </ScrollView>
@@ -406,16 +430,39 @@ export default function Everyone() {
                 </>
               ) : currentProfile.image ? (
                 // Fallback for single image
-                <Image 
-                  source={{ uri: currentProfile.image }} 
-                  style={styles.profileImage}
-                  resizeMode="cover"
-                  onError={() => {
-                    console.log('Failed to load image for profile:', currentProfile.id);
-                    setPhotoLoadingError(true);
-                  }}
-                  onLoad={() => setPhotoLoadingError(false)}
-                />
+                <View style={styles.photoSlide}>
+                  <Image 
+                    source={{ uri: currentProfile.image }} 
+                    style={styles.profileImage}
+                    resizeMode="cover"
+                    onLoadStart={() => {
+                      setImageLoadingStates(prev => ({
+                        ...prev,
+                        [`${currentProfile.id}-single`]: true
+                      }));
+                    }}
+                    onLoad={() => {
+                      setImageLoadingStates(prev => ({
+                        ...prev,
+                        [`${currentProfile.id}-single`]: false
+                      }));
+                      setPhotoLoadingError(false);
+                    }}
+                    onError={() => {
+                      console.log('Failed to load image for profile:', currentProfile.id);
+                      setImageLoadingStates(prev => ({
+                        ...prev,
+                        [`${currentProfile.id}-single`]: false
+                      }));
+                      setPhotoLoadingError(true);
+                    }}
+                  />
+                  {imageLoadingStates[`${currentProfile.id}-single`] && (
+                    <View style={styles.imageLoader}>
+                      <ActivityIndicator size="large" color="hotpink" />
+                    </View>
+                  )}
+                </View>
               ) : (
                 <View style={styles.profileImagePlaceholder}>
                   <Ionicons name="person" size={80} color="#ccc" />
@@ -885,6 +932,17 @@ const styles = StyleSheet.create({
   hourglassAnimation: {
     width: 50,
     height: 50
+  },
+  imageLoader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(200, 200, 200, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 10,
   },
 });
 
