@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getQuizScoreForUser, getUserQuiz } from '../../../lib/supabase';
+import { getQuizScoreForUser, getUserQuiz, getQuizScoreForUserReversed } from '../../../lib/supabase';
 import QuizTaker from './QuizTaker';
 
 export default function MatchCard({ 
@@ -12,6 +12,7 @@ export default function MatchCard({
   processingUnmatch 
 }) {
   const [quizScore, setQuizScore] = useState(null);
+  const [otherUserQuizScore, setOtherUserQuizScore] = useState(null);
   const [showQuiz, setShowQuiz] = useState(false);
   const [hasQuiz, setHasQuiz] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
@@ -28,11 +29,15 @@ export default function MatchCard({
       const quiz = await getUserQuiz(match.id);
       setHasQuiz(quiz !== null && quiz.questions && quiz.questions.length > 0);
       
-      // Load quiz score if user has a quiz
+      // Load quiz score if user has a quiz (current user's score on other user's quiz)
       if (quiz !== null) {
         const score = await getQuizScoreForUser(match.id);
         setQuizScore(score);
       }
+      
+      // Load the other user's score on current user's quiz
+      const otherUserScore = await getQuizScoreForUserReversed(match.id);
+      setOtherUserQuizScore(otherUserScore);
     } catch (error) {
       console.error('Error loading quiz data:', error);
       setHasQuiz(false);
@@ -82,6 +87,15 @@ export default function MatchCard({
               <Text style={styles.distanceText}>{match.distance} miles away</Text>
             </View>
           )}
+          {/* Quiz Score Display - Only show if other user has taken current user's quiz */}
+          {otherUserQuizScore !== null && (
+            <View style={styles.quizScoreContainer}>
+              <Ionicons name="trophy" size={14} color="#666" />
+              <Text style={styles.quizScoreText}>
+                {otherUserQuizScore}% high score after {match.otherUserAttempts} attempts
+              </Text>
+            </View>
+          )}
         </View>
       </View>
       <View style={styles.matchActions}>
@@ -111,11 +125,11 @@ export default function MatchCard({
           {/* Quiz Button - Only show if user has a quiz */}
           {hasQuiz && (
             <TouchableOpacity 
-              style={[styles.quizButton, quizScore !== null && styles.quizCompletedButton]}
+              style={styles.quizButton}
               onPress={() => setShowQuiz(true)}
             >
               <Ionicons 
-                name={quizScore !== null ? "trophy" : "help-circle"}
+                name="trophy"
                 size={20} 
                 color='white'
               />
@@ -132,15 +146,6 @@ export default function MatchCard({
         </View>
       </View>
       
-      {/* Quiz Score Display */}
-      {quizScore !== null && (
-        <View style={styles.quizScoreContainer}>
-          <Text style={styles.quizScoreText}>
-            Quiz Score: {quizScore}%
-          </Text>
-        </View>
-      )}
-
       {/* Quiz Taker Modal */}
       <QuizTaker
         quizOwnerId={match.id}
@@ -245,11 +250,8 @@ const styles = StyleSheet.create({
   },
   quizButton: {
     padding: 8,
-    backgroundColor: '#007AFF',
-    borderRadius: 20,
-  },
-  quizCompletedButton: {
     backgroundColor: '#FFD700',
+    borderRadius: 20,
   },
   unmatchButton: {
     padding: 8,
@@ -270,15 +272,19 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   quizScoreContainer: {
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    marginTop: 4,
+    flexDirection: 'row',
+    alignItems: 'center', 
+    gap: 4,
   },
   quizScoreText: {
     fontSize: 12,
     color: '#007AFF',
     fontWeight: '600',
-    textAlign: 'center',
+  },
+  quizAttemptsText: {
+    fontSize: 10,
+    color: '#999',
+    fontStyle: 'italic',
   },
 }); 

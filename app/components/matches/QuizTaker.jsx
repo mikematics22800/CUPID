@@ -11,7 +11,7 @@ import {
   Dimensions
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getQuizWithOptions, submitQuizAnswers, saveQuizScore, supabase } from '../../../lib/supabase';
+import { getQuizWithOptions, submitQuizAnswers, saveQuizScore, getQuizScoreForUser, supabase } from '../../../lib/supabase';
 
 const { width } = Dimensions.get('window');
 
@@ -29,10 +29,12 @@ export default function QuizTaker({
   const [submitting, setSubmitting] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [results, setResults] = useState(null);
+  const [highScore, setHighScore] = useState(null);
 
   useEffect(() => {
     if (isVisible && quizOwnerId) {
       loadQuiz();
+      loadHighScore();
     }
   }, [isVisible, quizOwnerId]);
 
@@ -42,10 +44,13 @@ export default function QuizTaker({
       const quizData = await getQuizWithOptions(quizOwnerId);
       if (quizData) {
         setQuiz(quizData);
-        setAnswers(new Array(quizData.length).fill(null));
+        // Preselect all answers for testing - select the first option for each question
+        const preselectedAnswers = quizData.map(question => question.options[0]);
+        setAnswers(preselectedAnswers);
         setCurrentQuestionIndex(0);
         setShowResults(false);
         setResults(null);
+        console.log('🧪 TESTING: Preselected all answers:', preselectedAnswers);
       } else {
         Alert.alert('No Quiz', 'This user hasn\'t created a quiz yet.');
         onClose();
@@ -56,6 +61,16 @@ export default function QuizTaker({
       onClose();
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadHighScore = async () => {
+    try {
+      const score = await getQuizScoreForUser(quizOwnerId);
+      setHighScore(score);
+    } catch (error) {
+      console.error('Error loading high score:', error);
+      setHighScore(null);
     }
   };
 
@@ -104,12 +119,18 @@ export default function QuizTaker({
       // Save score to database
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       console.log(`👤 Current user ID: ${currentUser.id}`);
+      console.log(`👤 Quiz owner ID: ${quizOwnerId}`);
       console.log(`💾 Saving score: ${scoreResult.score}% for quiz taker ${currentUser.id} on quiz owner ${quizOwnerId}`);
       
       await saveQuizScore(quizOwnerId, currentUser.id, scoreResult.score);
       
       setResults(scoreResult);
       setShowResults(true);
+      
+      // Update high score if this score is higher
+      if (highScore === null || scoreResult.score > highScore) {
+        setHighScore(scoreResult.score);
+      }
       
       if (onQuizCompleted) {
         onQuizCompleted(scoreResult);
@@ -175,6 +196,14 @@ export default function QuizTaker({
         {!showResults ? (
           /* Quiz Interface */
           <View style={styles.quizContainer}>
+            {/* High Score Display */}
+            {highScore !== null && (
+              <View style={styles.highScoreContainer}>
+                <Ionicons name="trophy" size={16} color="#FFD700" />
+                <Text style={styles.highScoreText}>Your High Score: {highScore}%</Text>
+              </View>
+            )}
+            
             {/* Progress Bar */}
             <View style={styles.progressContainer}>
               <View style={styles.progressBar}>
@@ -328,10 +357,29 @@ const styles = StyleSheet.create({
   closeButton: {
     padding: 5,
   },
+
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
+  },
+  highScoreContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF8DC',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#FFD700',
+  },
+  highScoreText: {
+    fontSize: 14,
+    color: '#333',
+    marginLeft: 6,
+    fontWeight: '600',
   },
   placeholder: {
     width: 34,

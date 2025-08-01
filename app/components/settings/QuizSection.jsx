@@ -20,9 +20,11 @@ export default function QuizSection({ onQuizSaved, onQuizDataChange }) {
   const { user, profile, bio, interests, name } = useProfile();
   const [questions, setQuestions] = useState([]);
   const [showQuizModal, setShowQuizModal] = useState(false);
+  const [showQuestionCountModal, setShowQuestionCountModal] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [deleting, setDeleting] = useState(false);
-
+  const [questionCount, setQuestionCount] = useState(10);
+  const pickerScrollViewRef = React.useRef(null);
 
   // Load existing quiz on component mount
   useEffect(() => {
@@ -66,7 +68,7 @@ export default function QuizSection({ onQuizSaved, onQuizDataChange }) {
     }
   };
 
-  const generateQuizWithGemini = async () => {
+  const generateQuizWithGemini = async (numQuestions = 10) => {
     if (!user) return;
 
     setGenerating(true);
@@ -104,10 +106,10 @@ USER PROFILE:
 - Interests: ${profileInfo.interests.length > 0 ? profileInfo.interests.join(', ') : 'No interests specified'}
 - Age: ${profileInfo.age || 'Not specified'}
 
-TASK: Generate exactly 10 questions with answers based on the user's profile information.
+TASK: Generate exactly ${numQuestions} questions with answers based on the user's profile information.
 
 REQUIREMENTS:
-1. Create exactly 10 questions that are personal, fun, and reveal interesting things about the user
+1. Create exactly ${numQuestions} questions that are personal, fun, and reveal interesting things about the user
 2. Questions should be based on their interests, bio, and personality traits
 3. Each question must have a specific, personal answer
 4. For each question, provide exactly 3 fake/incorrect answers that are plausible but wrong
@@ -136,7 +138,8 @@ IMPORTANT:
 - Use the user's actual interests and bio to create personalized questions
 - If the user has limited profile info, create general personality questions
 - Ensure all questions are appropriate for a dating app context
-- Each question must have exactly 3 fake answers`;
+- Each question must have exactly 3 fake answers
+- Generate exactly ${numQuestions} questions`;
 
       console.log('🤖 Sending prompt to Gemini:', prompt);
       const response = await promptGemini(prompt);
@@ -179,11 +182,11 @@ IMPORTANT:
         throw new Error('Generated quiz data is not an array');
       }
       
-      if (quizData.length !== 10) {
-        throw new Error(`Generated quiz must have exactly 10 questions, got ${quizData.length}`);
+      if (quizData.length !== numQuestions) {
+        throw new Error(`Generated quiz must have exactly ${numQuestions} questions, got ${quizData.length}`);
       }
 
-      // Validate each question has question, answer, and 1 fake answer
+      // Validate each question has question, answer, and 3 fake answers
       for (let i = 0; i < quizData.length; i++) {
         if (!Array.isArray(quizData[i])) {
           throw new Error(`Question ${i + 1} is not an array`);
@@ -200,7 +203,7 @@ IMPORTANT:
       setQuestions(quizData);
       setOriginalQuestions(quizData);
       
-      Alert.alert('Quiz generated!', 'Feel free to review and edit to your liking.');
+      Alert.alert('Quiz generated!', `Generated ${numQuestions} questions. Feel free to review and edit to your liking.`);
     } catch (error) {
       console.error('❌ Error generating quiz:', error);
       
@@ -219,9 +222,14 @@ IMPORTANT:
     }
   };
 
-
-
-
+  const addQuestion = () => {
+    if (questions.length >= 25) {
+      Alert.alert('Maximum Questions Reached', 'You can have a maximum of 25 questions in your quiz.');
+      return;
+    }
+    const newQuestions = [...questions, ['', '', '', '', '']];
+    setQuestions(newQuestions);
+  };
 
   const removeQuestion = (index) => {
     const newQuestions = questions.filter((_, i) => i !== index);
@@ -237,8 +245,6 @@ IMPORTANT:
     newQuestions[index] = [newQuestion, newAnswer, newFakeAnswer1, newFakeAnswer2, newFakeAnswer3];
     setQuestions(newQuestions);
   };
-
-
 
   const clearQuiz = () => {
     Alert.alert(
@@ -283,12 +289,100 @@ IMPORTANT:
     );
   };
 
+  const handleGenerateQuiz = () => {
+    setShowQuestionCountModal(true);
+  };
+
+  const scrollToQuestionCount = (count) => {
+    const scrollY = (count - 10) * 50;
+    return scrollY;
+  };
+
+  // Scroll to initial position when modal opens
+  useEffect(() => {
+    if (showQuestionCountModal && pickerScrollViewRef.current) {
+      setTimeout(() => {
+        pickerScrollViewRef.current?.scrollTo({
+          y: scrollToQuestionCount(questionCount),
+          animated: false
+        });
+      }, 100);
+    }
+  }, [showQuestionCountModal, questionCount]);
+
+  const confirmGenerateQuiz = () => {
+    setShowQuestionCountModal(false);
+    generateQuizWithGemini(questionCount);
+  };
+
+  const validateQuiz = () => {
+    if (questions.length < 10) {
+      Alert.alert(
+        'Insufficient Questions',
+        'Your quiz must have at least 10 questions. Please add more questions or generate a new quiz.',
+        [{ text: 'OK', style: 'default' }]
+      );
+      return false;
+    }
+
+    if (questions.length > 25) {
+      Alert.alert(
+        'Too Many Questions',
+        'Your quiz cannot have more than 25 questions. Please remove some questions.',
+        [{ text: 'OK', style: 'default' }]
+      );
+      return false;
+    }
+
+    // Check if all questions have content
+    for (let i = 0; i < questions.length; i++) {
+      const question = questions[i];
+      if (!question[0]?.trim() || !question[1]?.trim() || !question[2]?.trim() || !question[3]?.trim() || !question[4]?.trim()) {
+        Alert.alert(
+          'Incomplete Questions',
+          `Question ${i + 1} is incomplete. Please fill in all fields (question, answer, and 3 fake answers).`,
+          [{ text: 'OK', style: 'default' }]
+        );
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const saveQuiz = async () => {
+    if (!validateQuiz()) {
+      return;
+    }
+
+    try {
+      // Clean up the questions data before saving
+      const cleanedQuestions = questions.map(q => [
+        q[0]?.trim() || '',
+        q[1]?.trim() || '',
+        q[2]?.trim() || '',
+        q[3]?.trim() || '',
+        q[4]?.trim() || ''
+      ]);
+
+      await createOrUpdateQuiz(user.id, cleanedQuestions);
+      setShowQuizModal(false);
+      Alert.alert('Success', 'Quiz saved successfully!');
+      if (onQuizSaved) {
+        onQuizSaved();
+      }
+    } catch (error) {
+      console.error('Error saving quiz:', error);
+      Alert.alert('Error', 'Failed to save quiz. Please try again.');
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Match Quiz</Text>
         <Text style={styles.subtitle}>
-          Create or edit your quiz to test how well your matches know you!
+          Create or edit your quiz to test how well your matches know you! (10-25 questions)
         </Text>
       </View>
       <TouchableOpacity
@@ -301,12 +395,12 @@ IMPORTANT:
       >
         <Ionicons name="create" size={20} color="white" />
         <Text style={styles.actionButtonText}>
-          Edit Quiz
+          Edit Quiz ({questions.length}/25)
         </Text>
       </TouchableOpacity>
       <TouchableOpacity
         style={[styles.actionButton, styles.generateButton]}
-        onPress={generateQuizWithGemini}
+        onPress={handleGenerateQuiz}
         disabled={generating}
       >
         {generating ? (
@@ -319,7 +413,80 @@ IMPORTANT:
         </Text>
       </TouchableOpacity>
 
-
+      {/* Question Count Selection Modal */}
+      <Modal
+        visible={showQuestionCountModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowQuestionCountModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.questionCountModal}>
+            <Text style={styles.modalTitle}>How many questions?</Text>
+            <View style={styles.pickerContainer}>
+              <View style={styles.pickerWheel}>
+                <View style={styles.pickerSelectionIndicator} />
+                <ScrollView
+                  ref={pickerScrollViewRef}
+                  style={styles.pickerScrollView}
+                  showsVerticalScrollIndicator={false}
+                  snapToInterval={50}
+                  decelerationRate="fast"
+                  onMomentumScrollEnd={(event) => {
+                    const y = event.nativeEvent.contentOffset.y;
+                    const index = Math.round(y / 50);
+                    const newValue = Math.max(10, Math.min(25, 10 + index));
+                    setQuestionCount(newValue);
+                  }}
+                >
+                  {/* Add padding items to center the selection */}
+                  <View style={styles.pickerPaddingItem} />
+                  <View style={styles.pickerPaddingItem} />
+                  
+                  {Array.from({ length: 16 }, (_, i) => i + 10).map((num) => (
+                    <TouchableOpacity
+                      key={num}
+                      style={styles.pickerItem}
+                      onPress={() => setQuestionCount(num)}
+                    >
+                      <View style={[
+                        styles.pickerItemContainer,
+                        questionCount === num && styles.pickerItemContainerSelected
+                      ]}>
+                        <Text style={[
+                          styles.pickerItemText,
+                          questionCount === num && styles.pickerItemTextSelected
+                        ]}>
+                          {num}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                  
+                  {/* Add padding items to center the selection */}
+                  <View style={styles.pickerPaddingItem} />
+                  <View style={styles.pickerPaddingItem} />
+                </ScrollView>
+              </View>
+            </View>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setShowQuestionCountModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={confirmGenerateQuiz}
+              >
+                <Text style={styles.confirmButtonText}>Generate</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Quiz Editing Modal */}
       <Modal
@@ -341,15 +508,38 @@ IMPORTANT:
             >
               <Ionicons name="close" size={24} color="black" />
             </TouchableOpacity>
+            <Text style={styles.modalTitle}>Edit Quiz ({questions.length}/25)</Text>
+            <View style={styles.modalHeaderActions}>
+              <TouchableOpacity
+                style={styles.addQuestionButton}
+                onPress={addQuestion}
+                disabled={questions.length >= 25}
+              >
+                <Ionicons name="add" size={24} color={questions.length >= 25 ? "#ccc" : "hotpink"} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.saveQuizButton}
+                onPress={saveQuiz}
+              >
+                <Text style={styles.saveQuizButtonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Modal Content */}
           <View style={styles.modalContent}>
-
             <ScrollView style={styles.questionsContainer}>
               {questions.map((question, index) => (
                 <View key={index} style={styles.questionInputSection}>
-                  <Text style={styles.questionNumber}>Question {index + 1}</Text>
+                  <View style={styles.questionHeader}>
+                    <Text style={styles.questionNumber}>Question {index + 1}</Text>
+                    <TouchableOpacity
+                      style={styles.removeQuestionButton}
+                      onPress={() => removeQuestion(index)}
+                    >
+                      <Ionicons name="trash" size={20} color="#ff3b30" />
+                    </TouchableOpacity>
+                  </View>
                   <TextInput
                     mode="outlined"
                     label="Question"
@@ -414,82 +604,7 @@ IMPORTANT:
   );
 }
 
-// Question Item Component
-function QuestionItem({ index, question, answer, fakeAnswer, onEdit, onRemove }) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editQuestion, setEditQuestion] = useState(question);
-  const [editAnswer, setEditAnswer] = useState(answer);
-  const [editFakeAnswer, setEditFakeAnswer] = useState(fakeAnswer);
 
-  const handleSave = () => {
-    if (editQuestion.trim() && editAnswer.trim() && editFakeAnswer.trim()) {
-      onEdit(index, editQuestion.trim(), editAnswer.trim(), editFakeAnswer.trim());
-      setIsEditing(false);
-    }
-  };
-
-  const handleCancel = () => {
-    setEditQuestion(question);
-    setEditAnswer(answer);
-    setEditFakeAnswer(fakeAnswer);
-    setIsEditing(false);
-  };
-
-  return (
-    <View style={styles.questionItem}>
-      {isEditing ? (
-        <View style={styles.editMode}>
-          <TextInput
-            style={styles.input}
-            value={editQuestion}
-            onChangeText={setEditQuestion}
-            placeholder="Question"
-            multiline
-          />
-          <TextInput
-            style={styles.input}
-            value={editAnswer}
-            onChangeText={setEditAnswer}
-            placeholder="Correct Answer"
-            multiline
-          />
-          <TextInput
-            style={styles.input}
-            value={editFakeAnswer}
-            onChangeText={setEditFakeAnswer}
-            placeholder="Fake Answer"
-            multiline
-          />
-          <View style={styles.editActions}>
-            <TouchableOpacity style={styles.saveEditButton} onPress={handleSave}>
-              <Text style={styles.saveEditButtonText}>Save</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.cancelEditButton} onPress={handleCancel}>
-              <Text style={styles.cancelEditButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      ) : (
-        <View style={styles.viewMode}>
-          <View style={styles.questionHeader}>
-            <Text style={styles.questionNumber}>{index + 1}.</Text>
-            <View style={styles.questionActions}>
-              <TouchableOpacity onPress={() => setIsEditing(true)}>
-                <Ionicons name="create" size={16} color="#007AFF" />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => onRemove(index)}>
-                <Ionicons name="trash" size={16} color="#ff3b30" />
-              </TouchableOpacity>
-            </View>
-          </View>
-          <Text style={styles.questionText}>{question}</Text>
-          <Text style={styles.answerText}>Answer: {answer}</Text>
-          <Text style={styles.fakeAnswerText}>Fake Answer: {fakeAnswer}</Text>
-        </View>
-      )}
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   container: {
@@ -579,6 +694,137 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  questionCountModal: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 24,
+    width: '80%',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  pickerContainer: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  pickerWheel: {
+    height: 150,
+    width: 120,
+    position: 'relative',
+    marginBottom: 8,
+  },
+  pickerSelectionIndicator: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    height: 50,
+    backgroundColor: 'transparent',
+    zIndex: 1,
+    transform: [{ translateY: -25 }],
+  },
+  pickerScrollView: {
+    flex: 1,
+  },
+  pickerItem: {
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pickerPaddingItem: {
+    height: 50,
+  },
+  pickerItemContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    minWidth: 40,
+    alignItems: 'center',
+  },
+  pickerItemContainerSelected: {
+    backgroundColor: 'hotpink',
+  },
+  pickerItemText: {
+    fontSize: 20,
+    color: '#999',
+    fontWeight: '400',
+  },
+  pickerItemTextSelected: {
+    fontSize: 24,
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  pickerLabel: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#f0f0f0',
+  },
+  confirmButton: {
+    backgroundColor: 'hotpink',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+  },
+  confirmButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+  },
+  addQuestionButton: {
+    padding: 8,
+  },
+  removeQuestionButton: {
+    padding: 8,
+  },
+  modalHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  saveQuizButton: {
+    backgroundColor: 'hotpink',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  saveQuizButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
 
   modalContent: {
     flex: 1,
@@ -608,6 +854,12 @@ const styles = StyleSheet.create({
     color: 'hotpink',
     marginBottom: 12,
   },
+  questionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   emptyStateContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -626,138 +878,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     backgroundColor: 'white',
   },
-  existingQuestionsSection: {
-    backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 12,
-    flex: 1,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  clearButton: {
-    color: '#ff3b30',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  emptyState: {
-    textAlign: 'center',
-    color: '#999',
-    fontSize: 14,
-    fontStyle: 'italic',
-    paddingVertical: 20,
-  },
-  questionsList: {
-    flex: 1,
-  },
-  questionItem: {
-    marginBottom: 16,
-    padding: 12,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: '#007AFF',
-  },
-  viewMode: {
-    gap: 8,
-  },
-  questionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  questionNumber: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: 'hotpink',
-    textAlign: 'center',
-    marginBottom: 8,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  questionActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  questionText: {
-    fontSize: 14,
-    color: '#333',
-    fontWeight: '500',
-  },
-  answerText: {
-    fontSize: 12,
-    color: '#666',
-    fontStyle: 'italic',
-  },
-  fakeAnswerText: {
-    fontSize: 12,
-    color: '#999',
-    fontStyle: 'italic',
-  },
-  editMode: {
-    gap: 8,
-  },
-  editQuestionInput: {
-    borderWidth: 1,
-    borderColor: '#007AFF',
-    borderRadius: 6,
-    padding: 8,
-    fontSize: 14,
-    backgroundColor: 'white',
-  },
-  editAnswerInput: {
-    borderWidth: 1,
-    borderColor: '#007AFF',
-    borderRadius: 6,
-    padding: 8,
-    fontSize: 14,
-    backgroundColor: 'white',
-  },
-  editFakeAnswerInput: {
-    borderWidth: 1,
-    borderColor: '#007AFF',
-    borderRadius: 6,
-    padding: 8,
-    fontSize: 14,
-    backgroundColor: 'white',
-  },
-  editActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  saveEditButton: {
-    backgroundColor: '#34C759',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  saveEditButtonText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  cancelEditButton: {
-    backgroundColor: '#ff3b30',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  cancelEditButtonText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
-  },
+
+
 
 
 }); 

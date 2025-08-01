@@ -14,6 +14,9 @@ CREATE TABLE public.matches (
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   user1_score real,
   user2_score real,
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  user1_attempts smallint NOT NULL DEFAULT '0'::smallint,
+  user2_attempts smallint NOT NULL DEFAULT '0'::smallint,
   CONSTRAINT matches_pkey PRIMARY KEY (id),
   CONSTRAINT matches_user2_id_fkey FOREIGN KEY (user2_id) REFERENCES public.users(id),
   CONSTRAINT matches_user1_id_fkey FOREIGN KEY (user1_id) REFERENCES public.users(id)
