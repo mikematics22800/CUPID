@@ -7,11 +7,11 @@ import ContactSection from './ContactSection';
 
 export default function RegisterForm({ onBack, onRegistrationSuccess }) {
   const [isFormValid, setIsFormValid] = useState(false);
-  const [firstName, setFirstName] = useState('Michael');
-  const [lastName, setLastName] = useState('Medina');
-  const [phone, setPhone] = useState('5617159065');
-  const [email, setEmail] = useState('mikematics22800@gmail.com');
-  const [password, setPassword] = useState('D7452m61457!');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [sex, setSex] = useState('Male');
   const [birthday, setBirthday] = useState(new Date(new Date().setFullYear(new Date().getFullYear() - 18)));
   const [loading, setLoading] = useState(false);

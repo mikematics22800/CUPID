@@ -294,13 +294,13 @@ const logViolation = async (userId, userInfo, message, threatAnalysis, strikeCou
 const deleteUserPhotos = async (userId) => {
   try {
     const { data: photos } = await supabase.storage
-      .from('user-photos')
+      .from('users')
       .list(`${userId}/`);
     
     if (photos && photos.length > 0) {
       const photoPaths = photos.map(photo => `${userId}/${photo.name}`);
       await supabase.storage
-        .from('user-photos')
+        .from('users')
         .remove(photoPaths);
     }
   } catch (error) {

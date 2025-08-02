@@ -92,7 +92,7 @@ export default function MatchCard({
             <View style={styles.quizScoreContainer}>
               <Ionicons name="trophy" size={14} color="#666" />
               <Text style={styles.quizScoreText}>
-                {otherUserQuizScore}% high score after {match.otherUserAttempts} attempts
+                {otherUserQuizScore}% after {match.otherUserAttempts} attempt{match.otherUserAttempts === 1 ? '' : 's'}
               </Text>
             </View>
           )}
@@ -279,8 +279,7 @@ const styles = StyleSheet.create({
   },
   quizScoreText: {
     fontSize: 12,
-    color: '#007AFF',
-    fontWeight: '600',
+    color: '#666',
   },
   quizAttemptsText: {
     fontSize: 10,

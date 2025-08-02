@@ -7,3 +7,4 @@ export { default as ChatHeader } from './ChatHeader';
 export { default as MessagesList } from './MessagesList';
 export { default as MessageBubble } from './MessageBubble';
 export { default as StrikeIndicator } from './StrikeIndicator';
+export { default as ConversationTipsModal } from './ConversationTipsModal';

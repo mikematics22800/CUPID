@@ -5,7 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 export default function ChatHeader({ 
   match, 
   onBack,
-  onRefreshMessages
+  onRefreshMessages,
+  onShowTips
 }) {
   return (
     <View style={styles.chatHeader}>
@@ -27,11 +28,13 @@ export default function ChatHeader({
         )}
         <Text style={styles.chatHeaderName}>{match.name}</Text>
       </View>
-      {onRefreshMessages && (
-        <TouchableOpacity onPress={onRefreshMessages} style={styles.refreshButton}>
-          <Ionicons name="refresh" size={24} color="#333" />
-        </TouchableOpacity>
-      )}
+      <View style={styles.headerButtons}>
+        {onShowTips && (
+          <TouchableOpacity onPress={onShowTips} style={styles.tipsButton}>
+            <Ionicons name="bulb" size={24} color="gold" />
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
@@ -76,6 +79,14 @@ const styles = StyleSheet.create({
   },
   moreButton: {
     padding: 5,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  tipsButton: {
+    padding: 5,
+    marginRight: 5,
   },
   refreshButton: {
     padding: 5,

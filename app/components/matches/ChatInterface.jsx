@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   StyleSheet, 
@@ -10,6 +10,9 @@ import LottieView from 'lottie-react-native';
 import ChatHeader from './ChatHeader';
 import MessagesList from './MessagesList';
 import MessageInput from './MessageInput';
+import ConversationTipsModal from './ConversationTipsModal';
+import { generateConversationTips } from '../../../lib/gemini';
+import { useProfile } from '../../contexts/ProfileContext';
 
 export default function ChatInterface({
   selectedMatch,
@@ -28,6 +31,67 @@ export default function ChatInterface({
   onRefreshMessages,
   messageSubscription
 }) {
+  const { profile: currentUserProfile } = useProfile();
+  const [tipsModalVisible, setTipsModalVisible] = useState(false);
+  const [tipsLoading, setTipsLoading] = useState(false);
+  const [tips, setTips] = useState('');
+  const [tipsError, setTipsError] = useState('');
+
+  const handleShowTips = async () => {
+    if (!currentUserProfile || !selectedMatch) {
+      setTipsError('Unable to generate tips. Please try again.');
+      setTipsModalVisible(true);
+      return;
+    }
+
+    setTipsModalVisible(true);
+    setTipsLoading(true);
+    setTipsError('');
+
+    try {
+      // Prepare conversation data for Gemini
+      const conversationData = {
+        messages: messages.filter(msg => msg.content && msg.content.trim()),
+        currentUserProfile: {
+          id: currentUserId,
+          name: currentUserProfile.name || 'You',
+          age: currentUserProfile.birthday ? calculateAge(currentUserProfile.birthday) : null,
+          residence: currentUserProfile.residence || '',
+          interests: currentUserProfile.interests || [],
+          bio: currentUserProfile.bio || ''
+        },
+        matchProfile: {
+          id: selectedMatch.id,
+          name: selectedMatch.name || 'Your match',
+          age: selectedMatch.age || null,
+          residence: selectedMatch.residence || '',
+          interests: selectedMatch.interests || [],
+          bio: selectedMatch.bio || ''
+        },
+        conversationContext: `This is a conversation between ${currentUserProfile.name || 'You'} and ${selectedMatch.name || 'your match'}. The conversation has ${messages.length} messages.`
+      };
+
+      const generatedTips = await generateConversationTips(conversationData);
+      setTips(generatedTips);
+    } catch (error) {
+      console.error('❌ Error generating tips:', error);
+      setTipsError(error.message || 'Failed to generate tips. Please try again.');
+    } finally {
+      setTipsLoading(false);
+    }
+  };
+
+  const calculateAge = (birthday) => {
+    if (!birthday) return null;
+    const birthDate = new Date(birthday);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
   if (chatLoading) {
     return (
       <View style={styles.chatLoadingContainer}>
@@ -52,6 +116,7 @@ export default function ChatInterface({
         match={selectedMatch}
         onBack={onCloseChat}
         onRefreshMessages={onRefreshMessages}
+        onShowTips={handleShowTips}
       />
 
       <MessagesList
@@ -69,6 +134,14 @@ export default function ChatInterface({
         onSendMessage={onSendMessage}
         sending={sending}
         moderatingMessage={moderatingMessage}
+      />
+
+      <ConversationTipsModal
+        visible={tipsModalVisible}
+        onClose={() => setTipsModalVisible(false)}
+        tips={tips}
+        loading={tipsLoading}
+        error={tipsError}
       />
 
     </KeyboardAvoidingView>

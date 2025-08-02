@@ -2,7 +2,6 @@ import { View, StyleSheet, Alert } from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import { 
   getMatchesForUser, 
-  unmatchUsers, 
   unmatchUsersByMatchId,
   supabase, 
   getChatRooms, 
@@ -12,7 +11,6 @@ import {
   markMessagesAsRead,
   markMatchesAsViewed,
   deleteMessage,
-  checkAndFixMessageSchema,
   subscribeToMessages,
   subscribeToChatRooms,
   unsubscribeFromChannel
@@ -509,8 +507,6 @@ export default function MatchesScreen() {
 
 
 
-  // Removed chat suggestions functionality
-
   // Auto-refresh messages every 60 seconds when chat is open (backup for missed real-time updates)
   useEffect(() => {
     if (!selectedMatch || !roomId) return;
@@ -521,10 +517,6 @@ export default function MatchesScreen() {
 
     return () => clearInterval(interval);
   }, [selectedMatch, roomId]);
-
-
-
-  // Removed automatic suggestion generation - now only generates when user selects a category
 
   // Check user ban status and load strikes
   useEffect(() => {
@@ -569,7 +561,7 @@ export default function MatchesScreen() {
 
 
 
-  // Removed generateStrategies, handleStrategySelect, toggleStrategies, updateStrategyCategories
+
 
 
   if (loading) {

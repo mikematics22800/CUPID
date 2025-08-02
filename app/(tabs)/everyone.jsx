@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import LottieView from 'lottie-react-native';
-import { handleUserLike, getSwipeProfilesWithGeolocationUpdate, getUsersWithinDistance } from '../../lib/supabase';
+import { handleUserLike, updateGeolocationAndFetchProfiles, getSwipeProfiles, getUsersWithinDistance } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
 import { useProfile } from '../contexts/ProfileContext';
 
@@ -92,7 +92,9 @@ export default function Everyone() {
           return;
         }
       } else {
-        fetchedProfiles = await getSwipeProfilesWithGeolocationUpdate(10, shouldUpdateLocation);
+        fetchedProfiles = shouldUpdateLocation 
+          ? await updateGeolocationAndFetchProfiles(10)
+          : await getSwipeProfiles(10);
       }
       
       setProfiles(fetchedProfiles);

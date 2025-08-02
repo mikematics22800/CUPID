@@ -6,9 +6,9 @@ import PasswordInput from './PasswordInput';
 import PhoneInput from './PhoneInput';
 
 export default function LoginForm({ onBack }) {
-  const [email, setEmail] = useState('mikematics22800@gmail.com');
-  const [phone, setPhone] = useState('5617159065');
-  const [password, setPassword] = useState('D7452m61457!');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [isEmailValid, setIsEmailValid] = useState(false);
   const [validationStatus, setValidationStatus] = useState({
