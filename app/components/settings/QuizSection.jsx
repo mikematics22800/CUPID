@@ -382,7 +382,7 @@ IMPORTANT:
       <View style={styles.header}>
         <Text style={styles.title}>Match Quiz</Text>
         <Text style={styles.subtitle}>
-          Create or edit your quiz to test how well your matches know you! (10-25 questions)
+          Create or edit your quiz to test how well your matches know you!
         </Text>
       </View>
       <TouchableOpacity
@@ -508,15 +508,7 @@ IMPORTANT:
             >
               <Ionicons name="close" size={24} color="black" />
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Edit Quiz ({questions.length}/25)</Text>
             <View style={styles.modalHeaderActions}>
-              <TouchableOpacity
-                style={styles.addQuestionButton}
-                onPress={addQuestion}
-                disabled={questions.length >= 25}
-              >
-                <Ionicons name="add" size={24} color={questions.length >= 25 ? "#ccc" : "hotpink"} />
-              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.saveQuizButton}
                 onPress={saveQuiz}

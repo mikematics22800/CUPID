@@ -6,7 +6,6 @@ import QuizTaker from './QuizTaker';
 
 export default function MatchCard({ 
   match, 
-  chatRoom, 
   onOpenChat, 
   onUnmatch, 
   processingUnmatch 
@@ -16,7 +15,10 @@ export default function MatchCard({
   const [showQuiz, setShowQuiz] = useState(false);
   const [hasQuiz, setHasQuiz] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
-  const hasUnreadMessages = chatRoom?.lastMessage && !chatRoom.lastMessage.isFromMe && !chatRoom.lastMessage.isRead;
+  // In new schema, unread messages are stored within the match object
+  const hasUnreadMessages = match.messages && match.messages.some(msg => 
+    msg.sender_id !== match.id && !msg.read
+  );
 
   // Load quiz score and check if user has quiz on component mount
   useEffect(() => {
@@ -92,7 +94,7 @@ export default function MatchCard({
             <View style={styles.quizScoreContainer}>
               <Ionicons name="trophy" size={14} color="#666" />
               <Text style={styles.quizScoreText}>
-                {otherUserQuizScore}% after {match.otherUserAttempts} attempt{match.otherUserAttempts === 1 ? '' : 's'}
+                {otherUserQuizScore}%
               </Text>
             </View>
           )}
@@ -281,9 +283,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
   },
-  quizAttemptsText: {
-    fontSize: 10,
-    color: '#999',
-    fontStyle: 'italic',
-  },
+
 }); 

@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 2,
-    paddingHorizontal: 20,
+    paddingHorizontal: 10,
   },
   bioInput: {
     padding: 20,

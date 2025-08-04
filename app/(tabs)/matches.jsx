@@ -3,8 +3,8 @@ import { useState, useEffect, useRef } from 'react';
 import { 
   getMatchesForUser, 
   unmatchUsersByMatchId,
+  clearMessagesBetweenUsers,
   supabase, 
-  getChatRooms, 
   getOrCreateChatRoom,
   sendMessage,
   getMessages,
@@ -22,13 +22,13 @@ import React from 'react';
 import { 
   MatchesList, 
   ChatInterface, 
-  LoadingScreen 
+  LoadingScreen,
+  MatchFilters
 } from '../components/matches';
 
 export default function MatchesScreen() {
   const router = useRouter();
   const [matches, setMatches] = useState([]);
-  const [chatRooms, setChatRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processingUnmatch, setProcessingUnmatch] = useState(null);
   
@@ -50,6 +50,14 @@ export default function MatchesScreen() {
   const [messageSubscription, setMessageSubscription] = useState(null);
   const [matchesSubscription, setMatchesSubscription] = useState(null);
 
+  // Filter state
+  const [filters, setFilters] = useState({
+    dateFilter: 'all',
+    quizScoreFilter: 'all',
+    distanceFilter: 'all'
+  });
+  const [filteredMatches, setFilteredMatches] = useState([]);
+
   const flatListRef = useRef(null);
 
   // Get current user on component mount
@@ -60,10 +68,16 @@ export default function MatchesScreen() {
   useEffect(() => {
     if (currentUserId) {
       loadMatches();
-      loadChatRooms();
       setupMatchesSubscription();
     }
   }, [currentUserId]);
+
+  // Apply filters when matches or filters change
+  useEffect(() => {
+    if (matches.length > 0) {
+      applyFilters(matches, filters);
+    }
+  }, [matches, filters]);
 
   const setupMatchesSubscription = async () => {
     try {
@@ -80,11 +94,9 @@ export default function MatchesScreen() {
         if (eventType === 'insert') {
           // New match created - refresh the matches list
           loadMatches();
-          loadChatRooms();
         } else if (eventType === 'update') {
           // Match updated - refresh the matches list
           loadMatches();
-          loadChatRooms();
         }
       });
       
@@ -134,6 +146,7 @@ export default function MatchesScreen() {
       setLoading(true);
       const matchesData = await getMatchesForUser();
       setMatches(matchesData);
+      applyFilters(matchesData, filters);
     } catch (error) {
       console.error('❌ Error loading matches:', error);
       Alert.alert('Error', 'Failed to load matches. Please try again.');
@@ -142,14 +155,113 @@ export default function MatchesScreen() {
     }
   };
 
-  const loadChatRooms = async () => {
-    try {
-      const roomsData = await getChatRooms();
-      setChatRooms(roomsData);
-    } catch (error) {
-      console.error('❌ Error loading chat rooms:', error);
+  const applyFilters = (matchesData, currentFilters) => {
+    let filtered = [...matchesData];
+
+    // Apply date filter
+    if (currentFilters.dateFilter && currentFilters.dateFilter !== 'all') {
+      const now = new Date();
+      let cutoffDate;
+
+      switch (currentFilters.dateFilter) {
+        case '7days':
+          cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case '30days':
+          cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case '3months':
+          cutoffDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          break;
+        case '6months':
+          cutoffDate = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+          break;
+        case '1year':
+          cutoffDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          break;
+        default:
+          cutoffDate = null;
+      }
+
+      if (cutoffDate) {
+        filtered = filtered.filter(match => {
+          const matchDate = new Date(match.matchedAt);
+          return matchDate >= cutoffDate;
+        });
+      }
     }
+
+    // Apply quiz score filter
+    if (currentFilters.quizScoreFilter && currentFilters.quizScoreFilter !== 'all') {
+      filtered = filtered.filter(match => {
+        const score = match.userScore;
+        if (score === null || score === undefined) return false;
+
+        switch (currentFilters.quizScoreFilter) {
+          case '90+':
+            return score >= 90;
+          case '80+':
+            return score >= 80;
+          case '70+':
+            return score >= 70;
+          case '60+':
+            return score >= 60;
+          case '50+':
+            return score >= 50;
+          case 'below50':
+            return score < 50;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Apply distance filter
+    if (currentFilters.distanceFilter && currentFilters.distanceFilter !== 'all') {
+      filtered = filtered.filter(match => {
+        const distance = match.distance;
+        if (distance === null || distance === undefined) return false;
+
+        const maxDistance = parseInt(currentFilters.distanceFilter);
+        
+        switch (currentFilters.distanceFilter) {
+          case '5':
+            return distance <= 5;
+          case '10':
+            return distance <= 10;
+          case '25':
+            return distance <= 25;
+          case '50':
+            return distance <= 50;
+          case '100':
+            return distance <= 100;
+          case '100+':
+            return distance > 100;
+          default:
+            return true;
+        }
+      });
+    }
+
+    setFilteredMatches(filtered);
   };
+
+  const handleFilterChange = (newFilters) => {
+    setFilters(newFilters);
+    applyFilters(matches, newFilters);
+  };
+
+  const handleClearFilters = () => {
+    const clearedFilters = {
+      dateFilter: 'all',
+      quizScoreFilter: 'all',
+      distanceFilter: 'all'
+    };
+    setFilters(clearedFilters);
+    setFilteredMatches(matches);
+  };
+
+
 
   const handleUnmatch = async (userId, userName) => {
     try {
@@ -168,23 +280,18 @@ export default function MatchesScreen() {
         return;
       }
       
-      // Use the specific match ID to delete the match (more precise than searching by user IDs)
+      // Use the specific match ID to delete the match and clear messages
       await unmatchUsersByMatchId(matchData.matchId);
       
       // Update matches list
       setMatches(prevMatches => prevMatches.filter(match => match.id !== userId));
-      
-      // Update chat rooms list
-      setChatRooms(prevRooms => prevRooms.filter(room => 
-        room.otherUser?.id !== userId
-      ));
       
       // If the unmatched user is currently selected in chat, close the chat
       if (selectedMatch && selectedMatch.id === userId) {
         closeChat();
       }
       
-      Alert.alert('Unmatched', `You have unmatched with ${userName}`);
+      Alert.alert('Unmatched', `You have unmatched with ${userName}. All messages have been cleared.`);
       
     } catch (error) {
       console.error('❌ Error unmatching:', error);
@@ -444,15 +551,6 @@ export default function MatchesScreen() {
   const handleDeleteMessage = async (messageId) => {
     try {
       console.log('🗑️ Attempting to delete message with ID:', messageId);
-      console.log('🗑️ Message ID type:', typeof messageId);
-      
-      // First, let's check the database schema to see if there are issues
-      try {
-        const schemaCheck = await checkAndFixMessageSchema();
-        console.log('🔧 Schema check result:', schemaCheck);
-      } catch (schemaError) {
-        console.error('🔧 Schema check error:', schemaError);
-      }
       
       // Show confirmation dialog
       Alert.alert(
@@ -484,12 +582,6 @@ export default function MatchesScreen() {
                 console.log('✅ Message deleted successfully');
               } catch (error) {
                 console.error('❌ Error deleting message:', error);
-                console.error('❌ Error details:', {
-                  message: error.message,
-                  code: error.code,
-                  details: error.details,
-                  hint: error.hint
-                });
                 Alert.alert(
                   'Error',
                   error.message || 'Failed to delete message. Please try again.'
@@ -593,9 +685,13 @@ export default function MatchesScreen() {
   // Show matches list
   return (
     <View style={styles.container}>
+      <MatchFilters
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onClearFilters={handleClearFilters}
+      />
       <MatchesList
-        matches={matches}
-        chatRooms={chatRooms}
+        matches={filteredMatches}
         processingUnmatch={processingUnmatch}
         onOpenChat={openChat}
         onUnmatch={confirmUnmatch}

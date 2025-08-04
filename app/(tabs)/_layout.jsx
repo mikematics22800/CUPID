@@ -101,9 +101,9 @@ export default function TabLayout() {
       headerTitle: ''
     }}>
       <Tabs.Screen
-        name="everyone"
+        name="feed"
         options={{
-          title: 'Everyone',
+          title: 'Feed',
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="diversity-1" size={size} color={color} />
           ),
@@ -135,6 +135,15 @@ export default function TabLayout() {
             backgroundColor: 'hotpink',
             color: 'white',
           },
+        }}
+      />
+      <Tabs.Screen
+        name="analytics"
+        options={{
+          title: 'Analytics',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="area-chart" size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen

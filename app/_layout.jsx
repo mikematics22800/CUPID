@@ -4,7 +4,7 @@ import { View, ActivityIndicator } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PaperProvider, MD3LightTheme } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '../lib/supabase';
+import { supabase, initializeAppStateListener, cleanupAppStateListener } from '../lib/supabase';
 import { ProfileProvider, useProfile } from './contexts/ProfileContext';
 import LocationPermissionHandler from './components/LocationPermissionHandler';
 '../assets/images/heart.lottie';
@@ -95,6 +95,15 @@ export default function Layout() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  // Initialize app state listener
+  useEffect(() => {
+    initializeAppStateListener();
+    
+    return () => {
+      cleanupAppStateListener();
+    };
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -125,7 +134,7 @@ export default function Layout() {
           // Check if user's email is confirmed
           if (session?.user?.email_confirmed_at) {
             setIsAuthenticated(true);
-            router.replace('/(tabs)/everyone');
+            router.replace('/(tabs)/feed');
           } else {
             // User is signed in but email not confirmed
             setIsAuthenticated(false);
@@ -149,7 +158,7 @@ export default function Layout() {
   useEffect(() => {
     if (!isLoading) {
       if (isAuthenticated) {
-        router.replace('/(tabs)/everyone');
+        router.replace('/(tabs)/feed');
       } else {
         router.replace('/auth');
       }

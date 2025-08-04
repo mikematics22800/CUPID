@@ -104,8 +104,15 @@ export const addStrikeToUser = async (userId, violatingMessage, threatAnalysis) 
     
     // Get current user info and strikes
     const { data: userInfo, error: userError } = await supabase
-      .from('users')
-      .select('name, email, phone, strikes, banned')
+      .from('user')
+      .select('email, phone, strikes, banned')
+      .eq('id', userId)
+      .single();
+
+    // Get user profile info
+    const { data: userProfile, error: profileError } = await supabase
+      .from('profile')
+      .select('name')
       .eq('id', userId)
       .single();
 
@@ -114,8 +121,24 @@ export const addStrikeToUser = async (userId, violatingMessage, threatAnalysis) 
       throw userError;
     }
 
+    if (profileError) {
+      console.error('❌ Error getting user profile:', profileError);
+      throw profileError;
+    }
+
+    // Combine user info with profile info
+    const combinedUserInfo = {
+      ...userInfo,
+      name: userProfile?.name || 'Unknown User'
+    };
+
+    if (userError) {
+      console.error('❌ Error getting user info:', userError);
+      throw userError;
+    }
+
     // Check if user is already banned
-    if (userInfo.banned) {
+    if (combinedUserInfo.banned) {
       console.log(`🚫 User ${userId} is already banned`);
       return {
         actionTaken: 'User already banned',
@@ -124,11 +147,11 @@ export const addStrikeToUser = async (userId, violatingMessage, threatAnalysis) 
       };
     }
 
-    const currentStrikes = userInfo.strikes || 0;
+    const currentStrikes = combinedUserInfo.strikes || 0;
     const newStrikes = currentStrikes + 1;
     
     // Log the violation
-    await logViolation(userId, userInfo, violatingMessage, threatAnalysis, newStrikes);
+    await logViolation(userId, combinedUserInfo, violatingMessage, threatAnalysis, newStrikes);
     
     // Check if user should be banned (3 strikes)
     if (newStrikes >= 3) {
@@ -136,7 +159,7 @@ export const addStrikeToUser = async (userId, violatingMessage, threatAnalysis) 
       
       // Update user's strikes and ban status
       const { error: updateError } = await supabase
-        .from('users')
+        .from('user')
         .update({ 
           strikes: newStrikes,
           banned: true
@@ -149,7 +172,7 @@ export const addStrikeToUser = async (userId, violatingMessage, threatAnalysis) 
       }
 
       // Perform additional ban actions
-      await banUser(userId, userInfo);
+      await banUser(userId, combinedUserInfo);
       
       return {
         actionTaken: 'User banned for 3 strikes',
@@ -159,7 +182,7 @@ export const addStrikeToUser = async (userId, violatingMessage, threatAnalysis) 
     } else {
       // Just update strikes
       const { error: updateError } = await supabase
-        .from('users')
+        .from('user')
         .update({ strikes: newStrikes })
         .eq('id', userId);
 
@@ -192,45 +215,13 @@ const banUser = async (userId, userInfo) => {
     // Add user to banned table first
     await addToBannedTable(userId, userInfo);
     
-    // Delete user's messages (where user is the sender)
-    // First, get all message IDs for the user
-    const { data: userMessages, error: messagesError } = await supabase
-      .from('messages')
-      .select('id')
-      .eq('sender_id', userId);
+    // Note: In new schema, messages are stored within matches arrays
+    // Messages will be cleared when the user is banned and matches are deactivated
+    console.log('✅ Messages will be cleared when user is banned and matches are deactivated');
 
-    if (messagesError) {
-      console.error('❌ Error fetching user messages:', messagesError);
-    } else if (userMessages && userMessages.length > 0) {
-      console.log(`🗑️ Found ${userMessages.length} messages to delete for user ${userId}`);
-      
-      // Delete messages by their unique IDs
-      const messageIds = userMessages.map(msg => msg.id);
-      const { error: deleteError } = await supabase
-        .from('messages')
-        .delete()
-        .in('id', messageIds);
-
-      if (deleteError) {
-        console.error('❌ Error deleting user messages:', deleteError);
-      } else {
-        console.log(`✅ Successfully deleted ${messageIds.length} messages for user ${userId}`);
-      }
-    } else {
-      console.log(`📭 No messages found for user ${userId}`);
-    }
-
-    // Delete user's matches (where user is either user1 or user2)
-    await supabase
-      .from('matches')
-      .delete()
-      .or(`user1_id.eq.${userId},user2_id.eq.${userId}`);
-
-    // Delete user's likes
-    await supabase
-      .from('likes')
-      .delete()
-      .eq('id', userId);
+    // Note: In new schema, likes and matches are stored as arrays in users table
+    // We don't need to delete separate tables - the user's profile will be marked as banned
+    // and their likes/matches will be handled by the active/inactive status
 
     // Delete user's photos from storage
     await deleteUserPhotos(userId);
@@ -312,16 +303,19 @@ const deleteUserPhotos = async (userId) => {
 // Function to notify other users about the violation/ban
 const notifyOtherUsers = async (userId, userInfo, action = 'strike') => {
   try {
-    // Get all matches where the user was involved
-    const { data: matches } = await supabase
-      .from('matches')
-      .select('user1_id, user2_id')
-      .or(`user1_id.eq.${userId},user2_id.eq.${userId}`);
-
-    if (matches && matches.length > 0) {
-      const otherUserIds = matches.map(match => 
-        match.user1_id === userId ? match.user2_id : match.user1_id
-      );
+    // Get all matches to find those who have matches with the banned user
+    const { data: allMatches } = await supabase
+      .from('match')
+      .select('user_1_id, user_2_id');
+    
+    // Find users who have matches with the banned user
+    const affectedUsers = allMatches.filter(match => 
+      match.user_1_id === userId || match.user_2_id === userId
+    );
+    
+    const otherUserIds = affectedUsers.map(match => 
+      match.user_1_id === userId ? match.user_2_id : match.user_1_id
+    );
 
       // Send system messages to notify other users
       for (const otherUserId of otherUserIds) {
@@ -330,22 +324,34 @@ const notifyOtherUsers = async (userId, userInfo, action = 'strike') => {
             ? `⚠️ Safety Alert: The user you were chatting with has been banned for using explicit violent language. Your safety is our top priority.`
             : `⚠️ Safety Notice: The user you were chatting with has received a strike for using explicit violent language.`;
           
-          // Create a system message in their chat
-          // Note: Since we don't have room_id in messages table, we'll use the other user's ID as receiver_id
-          await supabase
-            .from('messages')
-            .insert([{
-              sender_id: 'system', // System messages use 'system' as sender ID
-              receiver_id: otherUserId,
-              content: message,
-              created_at: new Date().toISOString(),
-              read: false
-            }]);
+          // In new schema, we need to add system messages to the user's matches
+          // Get the user's matches
+          const { data: userMatches, error: userError } = await supabase
+            .from('match')
+            .select('id')
+            .or(`user_1_id.eq.${otherUserId},user_2_id.eq.${otherUserId}`);
+
+          if (!userError && userMatches) {
+            // Add system message to all matches
+            for (const match of userMatches) {
+              const systemMessage = {
+                match_id: match.id,
+                sender_id: 'system', // System messages use 'system' as sender ID
+                receiver_id: otherUserId,
+                content: message,
+                read: false,
+                created_at: new Date().toISOString()
+              };
+              
+              await supabase
+                .from('message')
+                .insert([systemMessage]);
+            }
+          }
         } catch (error) {
           console.error('❌ Error notifying user:', error);
         }
       }
-    }
   } catch (error) {
     console.error('❌ Error notifying other users:', error);
   }
@@ -355,7 +361,7 @@ const notifyOtherUsers = async (userId, userInfo, action = 'strike') => {
 export const isUserBanned = async (userId) => {
   try {
     const { data, error } = await supabase
-      .from('users')
+      .from('user')
       .select('banned, strikes')
       .eq('id', userId)
       .single();
@@ -384,7 +390,7 @@ export const isUserBanned = async (userId) => {
 export const getUserStrikes = async (userId) => {
   try {
     const { data, error } = await supabase
-      .from('users')
+      .from('user')
       .select('strikes, banned')
       .eq('id', userId)
       .single();

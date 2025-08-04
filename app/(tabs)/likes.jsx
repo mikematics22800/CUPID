@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import LottieView from 'lottie-react-native';
 import { getUsersWhoLikedMe, handleUserLike, discardLike, markLikesAsViewed, updateGeolocationAndFetchProfiles } from '../../lib/supabase';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useProfile } from '../contexts/ProfileContext';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -24,6 +24,7 @@ const SWIPE_THRESHOLD = 120;
 
 export default function LikesScreen() {
   const { updateProfile } = useProfile();
+  const navigation = useNavigation();
   const [likes, setLikes] = useState([]);
   const [swipeCount, setSwipeCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -60,25 +61,10 @@ export default function LikesScreen() {
       setImageLoadingStates({}); // Reset image loading states
       console.log(`🔄 Fetching likes with location update: ${shouldUpdateLocation}`);
       
-      let likesData;
-      if (shouldUpdateLocation) {
-        // Update geolocation and fetch likes
-        console.log('📍 Updating geolocation before fetching likes');
-        await updateGeolocationAndFetchProfiles(10); // This updates geolocation
-        likesData = await getUsersWhoLikedMe();
-      } else {
-        // Fetch likes without updating geolocation
-        likesData = await getUsersWhoLikedMe();
-      }
+      // Temporarily mock data to isolate the issue
+      const likesData = [];
       
       console.log(`✅ Likes data received: ${likesData.length} likes`);
-      console.log('📊 Likes data details:', likesData.map(like => ({
-        id: like.id,
-        name: like.name,
-        hasImage: !!like.image,
-        hasImages: !!(like.images && like.images.length > 0),
-        imageCount: like.images ? like.images.length : 0
-      })));
       
       setLikes(likesData);
       if (likesData.length > 0) {
@@ -108,7 +94,7 @@ export default function LikesScreen() {
     React.useCallback(() => {
       const markAsViewed = async () => {
         try {
-          await markLikesAsViewed();
+          // await markLikesAsViewed();
           console.log('✅ Likes marked as viewed');
         } catch (error) {
           console.error('❌ Error marking likes as viewed:', error);
@@ -189,7 +175,18 @@ export default function LikesScreen() {
               setLikes(prevLikes => prevLikes.filter(like => like.id !== currentLike.id));
               
               Alert.alert(
-                '🎉 It\'s a Match!',
+                'It\'s a Match! 🎉 ',
+                `You and ${currentLike.name} have liked each other!`,
+                [
+                  {
+                    text: 'View Match',
+                    onPress: () => navigation.navigate('matches')
+                  },
+                  {
+                    text: 'Continue Swiping',
+                    style: 'cancel'
+                  }
+                ]
               );
             } else {
               // Remove from likes list since they're no longer just a "like"

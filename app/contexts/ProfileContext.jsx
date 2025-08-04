@@ -26,6 +26,7 @@ export const ProfileProvider = ({ children }) => {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [pendingUpdates, setPendingUpdates] = useState(null);
 
   // Helper function to check if location sharing is enabled
   const isLocationSharingEnabled = () => {
@@ -72,8 +73,8 @@ export const ProfileProvider = ({ children }) => {
 
       // Load profile data including images from database
       const { data: profileData, error } = await supabase
-        .from('users')
-        .select('id, bio, interests, name, birthday, sex, email, phone, images, residence, geolocation')
+        .from('profile')
+        .select('id, bio, interests, name, birthday, sex, images, residence, geolocation')
         .eq('id', userIdToLoad)
         .single();
 
@@ -206,7 +207,7 @@ export const ProfileProvider = ({ children }) => {
       if (!user) return false;
 
       const { error } = await supabase
-        .from('users')
+        .from('profile')
         .update(updates)
         .eq('id', user.id);
 
@@ -218,17 +219,8 @@ export const ProfileProvider = ({ children }) => {
       // Update local state
       setProfile(prev => ({ ...prev, ...updates }));
       
-      // Update specific fields if they exist in updates
-      // Use setTimeout to defer state updates to avoid useInsertionEffect warning
-      setTimeout(() => {
-        if (updates.bio !== undefined) setBio(updates.bio);
-        if (updates.interests !== undefined) setInterests(updates.interests);
-        if (updates.residence !== undefined) setResidence(updates.residence);
-        if (updates.geolocation !== undefined) setGeolocation(updates.geolocation);
-        if (updates.name !== undefined) setName(updates.name);
-        if (updates.email !== undefined) setEmail(updates.email);
-        if (updates.phone !== undefined) setPhone(updates.phone);
-      }, 0);
+      // Set pending updates to be processed in useEffect
+      setPendingUpdates(updates);
       
       if (updates.images !== undefined) {
         await loadPhotosFromStorage(user.id, updates.images);
@@ -379,6 +371,23 @@ export const ProfileProvider = ({ children }) => {
       subscription?.unsubscribe();
     };
   }, []); // Remove user dependency to avoid infinite loops
+
+  // Handle pending updates to avoid useInsertionEffect warning
+  useEffect(() => {
+    if (pendingUpdates) {
+      // Update specific fields if they exist in updates
+      if (pendingUpdates.bio !== undefined) setBio(pendingUpdates.bio);
+      if (pendingUpdates.interests !== undefined) setInterests(pendingUpdates.interests);
+      if (pendingUpdates.residence !== undefined) setResidence(pendingUpdates.residence);
+      if (pendingUpdates.geolocation !== undefined) setGeolocation(pendingUpdates.geolocation);
+      if (pendingUpdates.name !== undefined) setName(pendingUpdates.name);
+      if (pendingUpdates.email !== undefined) setEmail(pendingUpdates.email);
+      if (pendingUpdates.phone !== undefined) setPhone(pendingUpdates.phone);
+      
+      // Clear pending updates
+      setPendingUpdates(null);
+    }
+  }, [pendingUpdates]);
 
   const value = {
     // State

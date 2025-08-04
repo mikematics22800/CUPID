@@ -288,7 +288,7 @@ export default function SettingsScreen() {
       // Disable location sharing
       Alert.alert(
         'Disable Location Sharing',
-        'This will stop sharing your location with other users. You can still use the app with your residence setting.',
+        'This will stop sharing your location with other users. Your feed will be based on your residence.',
         [
           {
             text: 'Cancel',

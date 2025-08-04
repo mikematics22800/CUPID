@@ -10,7 +10,7 @@ import { useProfile } from '../contexts/ProfileContext';
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SWIPE_THRESHOLD = 120;
 
-export default function Everyone() {
+export default function Feed() {
   const router = useRouter();
   const { user, profile, photos, hasCompletedProfile, getPhotoCount, updateProfile, loading } = useProfile();
   const [canSwipe, setCanSwipe] = useState(true);
@@ -219,7 +219,7 @@ export default function Everyone() {
           if (result.success) {
             if (result.isMatch) {
               Alert.alert(
-                '🎉 It\'s a Match!',
+                'It\'s a Match! 🎉 ',
                 `You and ${currentProfile.name} have liked each other!`,
                 [
                   {

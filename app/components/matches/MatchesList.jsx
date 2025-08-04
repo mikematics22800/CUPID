@@ -6,19 +6,16 @@ import MatchCard from './MatchCard';
 
 export default function MatchesList({ 
   matches, 
-  chatRooms, 
   processingUnmatch,
   onOpenChat, 
   onUnmatch 
 }) {
   const renderMatch = ({ item }) => {
-    // Find if there's a chat room for this match
-    const chatRoom = chatRooms.find(room => room.otherUser.id === item.id);
-    
+    // In new schema, messages are stored within matches
+    // No need for separate chat rooms
     return (
       <MatchCard
         match={item}
-        chatRoom={chatRoom}
         onOpenChat={onOpenChat}
         onUnmatch={onUnmatch}
         processingUnmatch={processingUnmatch}
@@ -36,17 +33,33 @@ export default function MatchesList({
   }
 
   return (
-    <FlatList
-      data={matches}
-      renderItem={renderMatch}
-      keyExtractor={item => item.id}
-      contentContainerStyle={styles.listContainer}
-      showsVerticalScrollIndicator={false}
-    />
+    <View style={styles.container}>
+      <FlatList
+        data={matches}
+        renderItem={renderMatch}
+        keyExtractor={item => item.id}
+        contentContainerStyle={styles.listContainer}
+        showsVerticalScrollIndicator={false}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  countContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  countText: {
+    fontSize: 14,
+    color: 'white',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
@@ -57,6 +70,12 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: 'white',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
   },
   listContainer: {
     padding: 20,
