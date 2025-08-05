@@ -36,6 +36,7 @@ export default function ChatInterface({
   const [tipsLoading, setTipsLoading] = useState(false);
   const [tips, setTips] = useState('');
   const [tipsError, setTipsError] = useState('');
+  const [isDeleteMode, setIsDeleteMode] = useState(false);
 
   const handleShowTips = async () => {
     if (!currentUserProfile || !selectedMatch) {
@@ -81,6 +82,10 @@ export default function ChatInterface({
     }
   };
 
+  const handleToggleDeleteMode = () => {
+    setIsDeleteMode(!isDeleteMode);
+  };
+
   const calculateAge = (birthday) => {
     if (!birthday) return null;
     const birthDate = new Date(birthday);
@@ -117,6 +122,8 @@ export default function ChatInterface({
         onBack={onCloseChat}
         onRefreshMessages={onRefreshMessages}
         onShowTips={handleShowTips}
+        onToggleDeleteMode={handleToggleDeleteMode}
+        isDeleteMode={isDeleteMode}
       />
 
       <MessagesList
@@ -126,6 +133,7 @@ export default function ChatInterface({
         flatListRef={flatListRef}
         shouldScrollToBottom={true}
         onRefreshMessages={onRefreshMessages}
+        isDeleteMode={isDeleteMode}
       />
       
       <MessageInput

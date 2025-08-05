@@ -46,15 +46,13 @@ export default function QuizSection({ onQuizSaved, onQuizDataChange }) {
     
     try {
       const quiz = await getUserQuiz(user.id);
-      if (quiz && quiz.questions) {
-        // Handle both old and new quiz formats
-        const formattedQuestions = quiz.questions.map(q => {
-          if (Array.isArray(q) && q.length >= 3) {
-            // New format: [question, answer, fake_answer]
-            return q;
-          }
-          return q;
-        });
+      if (quiz && quiz.length > 0) {
+        // Convert new quiz format to the format expected by the component
+        const formattedQuestions = quiz.map(q => [
+          q.question,
+          q.correctAnswer,
+          ...q.options.filter(option => option !== q.correctAnswer).slice(0, 3)
+        ]);
         setQuestions(formattedQuestions);
         setOriginalQuestions(formattedQuestions);
       } else {

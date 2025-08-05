@@ -11,7 +11,7 @@ import {
   Dimensions
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getQuizWithOptions, submitQuizAnswers, saveQuizScore, getQuizScoreForUser, supabase } from '../../../lib/supabase';
+import { submitQuizAnswers, saveQuizScore, getQuizScore, getUserQuiz, supabase } from '../../../lib/supabase';
 
 const { width } = Dimensions.get('window');
 
@@ -41,16 +41,18 @@ export default function QuizTaker({
   const loadQuiz = async () => {
     setLoading(true);
     try {
-      const quizData = await getQuizWithOptions(quizOwnerId);
-      if (quizData) {
+      // Load quiz data from the database
+      const quizData = await getUserQuiz(quizOwnerId);
+      
+      if (quizData && quizData.length > 0) {
         setQuiz(quizData);
-        // Preselect all answers for testing - select the first option for each question
-        const preselectedAnswers = quizData.map(question => question.options[0]);
-        setAnswers(preselectedAnswers);
+        // Initialize answers array with null values
+        const initialAnswers = new Array(quizData.length).fill(null);
+        setAnswers(initialAnswers);
         setCurrentQuestionIndex(0);
         setShowResults(false);
         setResults(null);
-        console.log('🧪 TESTING: Preselected all answers:', preselectedAnswers);
+        console.log('🧪 Loaded quiz with', quizData.length, 'questions');
       } else {
         Alert.alert('No Quiz', 'This user hasn\'t created a quiz yet.');
         onClose();
@@ -66,7 +68,7 @@ export default function QuizTaker({
 
   const loadHighScore = async () => {
     try {
-      const score = await getQuizScoreForUser(quizOwnerId);
+      const score = await getQuizScore(quizOwnerId);
       setHighScore(score);
     } catch (error) {
       console.error('Error loading high score:', error);

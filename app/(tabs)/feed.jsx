@@ -60,7 +60,7 @@ export default function Feed() {
     try {
       setLoadingProfiles(true);
       setPhotoLoadingError(false);
-      setImageLoadingStates({}); // Reset image loading states
+      // Don't reset image loading states here - let them persist
       
       console.log(`🔄 Loading profiles with location update: ${shouldUpdateLocation}`);
       let fetchedProfiles;
@@ -165,7 +165,7 @@ export default function Feed() {
       setCurrentProfile(profiles[nextIndex]);
       setCurrentProfileIndex(nextIndex);
       setCurrentPhotoIndex(0); // Reset photo index for new profile
-      setImageLoadingStates({}); // Reset image loading states for new profile
+      // Don't reset image loading states - let them persist across profile changes
       setNextProfileReady(true); // Next profile is ready
     } else {
       // No more profiles, check if we need to update geolocation
@@ -397,7 +397,7 @@ export default function Feed() {
                             setPhotoLoadingError(true);
                           }}
                         />
-                        {imageLoadingStates[`${currentProfile.id}-${index}`] && (
+                        {imageLoadingStates[`${currentProfile.id}-${index}`] === true && (
                           <View style={styles.imageLoader}>
                             <ActivityIndicator size="large" color="hotpink" />
                           </View>
@@ -459,7 +459,7 @@ export default function Feed() {
                       setPhotoLoadingError(true);
                     }}
                   />
-                  {imageLoadingStates[`${currentProfile.id}-single`] && (
+                  {imageLoadingStates[`${currentProfile.id}-single`] === true && (
                     <View style={styles.imageLoader}>
                       <ActivityIndicator size="large" color="hotpink" />
                     </View>

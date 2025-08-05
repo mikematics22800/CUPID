@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getQuizScoreForUser, getUserQuiz, getQuizScoreForUserReversed } from '../../../lib/supabase';
+import { getUserQuiz } from '../../../lib/supabase';
 import QuizTaker from './QuizTaker';
 
 export default function MatchCard({ 
@@ -25,17 +25,8 @@ export default function MatchCard({
     try {
       // Check if the matched user has a quiz
       const quiz = await getUserQuiz(match.id);
-      setHasQuiz(quiz !== null && quiz.questions && quiz.questions.length > 0);
+      setHasQuiz(quiz !== null && quiz.length > 0);
       
-      // Load quiz score if user has a quiz (current user's score on other user's quiz)
-      if (quiz !== null) {
-        const score = await getQuizScoreForUser(match.id);
-        setQuizScore(score);
-      }
-      
-      // Load the other user's score on current user's quiz
-      const otherUserScore = await getQuizScoreForUserReversed(match.id);
-      setOtherUserQuizScore(otherUserScore);
     } catch (error) {
       console.error('Error loading quiz data:', error);
       setHasQuiz(false);

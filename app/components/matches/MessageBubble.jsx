@@ -6,9 +6,9 @@ import { MaterialIcons } from '@expo/vector-icons';
 export default function MessageBubble({ 
   message, 
   isMyMessage, 
-  onDeleteMessage 
+  onDeleteMessage,
+  isDeleteMode = false
 }) {
-  const isTempMessage = message.isTemp || message.id.startsWith('temp-');
 
   return (
     <View style={[
@@ -19,15 +19,18 @@ export default function MessageBubble({
         styles.messageBubble,
         isMyMessage ? styles.myMessageBubble : styles.theirMessageBubble
       ]}>
-        {isMyMessage && !isTempMessage && onDeleteMessage && (
+        {isMyMessage && isDeleteMode && onDeleteMessage && ( 
           <TouchableOpacity 
-            style={styles.closeButton} 
+            style={styles.deleteButton} 
             onPress={() => onDeleteMessage(message.id)}
           >
-            <MaterialIcons name="cancel" size={18} color="#FF4444" />
+            <Ionicons name="trash" size={16} color="#FF4444" />
           </TouchableOpacity>
         )}
-        <Text style={styles.messageText}>
+        <Text style={[
+          styles.messageText,
+          isMyMessage && isDeleteMode && styles.messageTextWithDelete
+        ]}>
           {message.content}
         </Text>
         <View style={styles.messageFooter}>
@@ -37,19 +40,6 @@ export default function MessageBubble({
               minute: '2-digit' 
             })}
           </Text>
-          {isMyMessage && (
-            <View style={styles.messageStatus}>
-              {isTempMessage ? (
-                <ActivityIndicator size="small" color="rgba(255, 255, 255, 0.7)" />
-              ) : (
-                <Ionicons 
-                  name={message.is_read ? "checkmark-done" : "checkmark"} 
-                  size={16} 
-                  color="white" 
-                />
-              )}
-            </View>
-          )}
         </View>
       </View>
     </View>
@@ -92,7 +82,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 20,
     color: 'white',
-    paddingRight: 20, // Make room for close button
+  },
+  messageTextWithDelete: {
+    paddingRight: 20, // Make room for delete button when in delete mode
   },
   messageFooter: {
     flexDirection: 'row',
@@ -108,12 +100,18 @@ const styles = StyleSheet.create({
   messageStatus: {
     marginLeft: 'auto',
   },
-  closeButton: {
+  deleteButton: {
     position: 'absolute',
-    top: -6,
-    right: -6,
+    top: -8,
+    right: -8,
     zIndex: 1,
     backgroundColor: 'white',
-    borderRadius: 9,
+    borderRadius: 12,
+    padding: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
   },
 }); 

@@ -195,34 +195,10 @@ const Analytics = () => {
           </View>
         )}
 
-        {/* Timescale Slider */}
-        <View style={styles.sliderContainer}>
-          <Text style={styles.sliderLabel}>Time Period: {daysRange} days</Text>
-          <View style={styles.sliderTrack}>
-            <PanGestureHandler
-              onGestureEvent={onSliderGestureEvent}
-              onHandlerStateChange={onSliderStateChange}
-            >
-              <Animated.View 
-                style={[
-                  styles.sliderThumb,
-                  {
-                    transform: [{ translateX: sliderPosition }]
-                  }
-                ]} 
-              />
-            </PanGestureHandler>
-          </View>
-          <View style={styles.sliderLabels}>
-            <Text style={styles.sliderMinLabel}>1 day</Text>
-            <Text style={styles.sliderMaxLabel}>{maxDays} days</Text>
-          </View>
-        </View>
-
-        {/* Combined Engagement Chart */}
+        {/* Combined Engagement Chart with Slider */}
         {analyticsData?.likesGiven && analyticsData?.likesReceived && analyticsData?.matches && (
           <View style={styles.chartContainer}>
-            <Text style={styles.chartTitle}>Engagement Overview</Text>
+            <Text style={styles.chartTitle}>Engagement</Text>
             <LineChart
               data={{
                 labels: analyticsData.likesGiven.labels,
@@ -253,6 +229,29 @@ const Analytics = () => {
               bezier
               style={styles.chart}
             />
+            
+            {/* Timescale Slider */}
+            <View style={styles.sliderContainer}>
+              <View style={styles.sliderTrack}>
+                <PanGestureHandler
+                  onGestureEvent={onSliderGestureEvent}
+                  onHandlerStateChange={onSliderStateChange}
+                >
+                  <Animated.View 
+                    style={[
+                      styles.sliderThumb,
+                      {
+                        transform: [{ translateX: sliderPosition }]
+                      }
+                    ]} 
+                  />
+                </PanGestureHandler>
+              </View>
+              <View style={styles.sliderLabels}>
+                <Text style={styles.sliderMinLabel}>1 day</Text>
+                <Text style={styles.sliderMaxLabel}>{maxDays} days</Text>
+              </View>
+            </View>
           </View>
         )}
       </ScrollView>
@@ -327,18 +326,10 @@ const styles = StyleSheet.create({
     color: '#212529'
   },
   sliderContainer: {
-    backgroundColor: '#ffffff',
-    margin: 20,
-    padding: 20,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#e9ecef'
   },
   sliderLabel: {
     fontSize: 16,

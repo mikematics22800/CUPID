@@ -1,39 +1,13 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { TextInput } from 'react-native-paper';
+import { StyleSheet, View } from 'react-native';
 import ResidenceInput from './ResidenceInput';
 
 export default function PersonalInfoForm({
-  firstName,
-  setFirstName,
-  lastName,
-  setLastName,
   residence,
   setResidence,
   validationStatus
 }) {
   return (
     <View style={styles.container}>
-      <View style={styles.dualInputs}>
-        <TextInput
-          mode="outlined"
-          label="First Name"
-          style={styles.nameInput}
-          value={firstName || ''}
-          onChangeText={setFirstName}
-          keyboardType="default"
-          maxLength={20}
-        />
-        <TextInput
-          mode="outlined"
-          label="Last Name"
-          style={styles.nameInput}
-          value={lastName || ''}
-          onChangeText={setLastName}
-          keyboardType="default"
-          maxLength={20}
-        />
-      </View>
-      
       <ResidenceInput
         value={residence}
         onChangeText={setResidence}

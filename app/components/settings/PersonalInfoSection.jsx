@@ -4,16 +4,14 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useState } from 'react';
 
 export default function PersonalInfoSection({
-  firstName,
-  setFirstName,
-  lastName,
-  setLastName,
   sex,
   setSex,
   birthday,
   setBirthday,
   validationStatus
 }) {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [sexMenuVisible, setSexMenuVisible] = useState(false);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
 

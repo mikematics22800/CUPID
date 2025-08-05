@@ -514,15 +514,15 @@ export default function SettingsScreen() {
   const SettingItem = ({ icon, title, value, onPress, showSwitch = false, displayValue = null, destructive = false }) => (
     <TouchableOpacity style={styles.settingItem} onPress={onPress}>
       <View style={styles.settingLeft}>
-        <MaterialIcons name={icon} size={24} color={destructive ? "#ff3b30" : "#007AFF"} style={styles.settingIcon} />
+        <MaterialIcons name={icon} size={24} color={"hotpink"} style={styles.settingIcon} />
         <Text style={[styles.settingText, destructive && styles.destructiveText]}>{title}</Text>
       </View>
       {showSwitch ? (
         <Switch
           value={value}
           onValueChange={onPress}
-          trackColor={{ false: '#767577', true: '#81b0ff' }}
-          thumbColor={value ? '#007AFF' : '#f4f3f4'}
+          trackColor={{ false: '#767577', true: 'pink' }}
+          thumbColor={value ? 'hotpink' : '#f4f3f4'}
         />
       ) : (
         <View style={styles.settingRight}>
@@ -559,20 +559,20 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Feed</Text>
         <SettingItem
-          icon="cake"
-          title="Age Range"
-          displayValue={`${ageRange.min}-${ageRange.max}`}
-          onPress={handleAgeRangePress}
-        />
-        <SettingItem
           icon="favorite"
-          title="Show Me"
+          title="Gender"
           displayValue={getSexDisplayText(preferredSex)}
           onPress={handleSexPreferencePress}
         />
         <SettingItem
+          icon="cake"
+          title="Age"
+          displayValue={`${ageRange.min}-${ageRange.max}`}
+          onPress={handleAgeRangePress}
+        />
+        <SettingItem
           icon="location-on"
-          title="Maximum Distance"
+          title="Distance"
           displayValue={getDistanceDisplayText(maxDistance)}
           onPress={handleDistancePress}
         />
@@ -625,10 +625,9 @@ export default function SettingsScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Age Range</Text>
             <View style={styles.ageInputContainer}>
               <View style={styles.ageInput}>
-                <Text style={styles.ageLabel}>Min Age</Text>
+                <Text style={styles.ageLabel}>Minimum</Text>
                 <TextInput
                   style={styles.ageTextInput}
                   value={tempAgeRange.min.toString()}
@@ -639,7 +638,7 @@ export default function SettingsScreen() {
               </View>
               <Text style={styles.ageSeparator}>-</Text>
               <View style={styles.ageInput}>
-                <Text style={styles.ageLabel}>Max Age</Text>
+                <Text style={styles.ageLabel}>Maximum</Text>
                 <TextInput
                   style={styles.ageTextInput}
                   value={tempAgeRange.max.toString()}
@@ -670,7 +669,6 @@ export default function SettingsScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Show Me</Text>
             <View style={styles.pickerContainer}>
               <Picker
                 selectedValue={tempPreferredSex}
@@ -832,9 +830,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: '600',
-    color: '#666',
+    color: 'black',
     marginLeft: 20,
     marginBottom: 10,
   },

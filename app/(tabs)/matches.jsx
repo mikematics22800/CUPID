@@ -233,12 +233,23 @@ export default function MatchesScreen() {
         throw new Error('User not authenticated');
       }
       
-      // Find the match data to get the matchId (more efficient than searching by user IDs)
+      // Find the match data to get the matchId
       const matchData = matches.find(match => match.id === userId);
       if (!matchData) {
         Alert.alert('Error', 'This match no longer exists.');
         return;
       }
+      
+      // Validate that we have a valid matchId
+      if (!matchData.matchId) {
+        Alert.alert('Error', 'Invalid match data. Please try again.');
+        return;
+      }
+      
+      console.log(`🔍 Found match data:`, matchData);
+      console.log(`🔍 Using matchId: ${matchData.matchId}`);
+      console.log(`🔍 matchId type: ${typeof matchData.matchId}`);
+      console.log(`🔍 matchId length: ${matchData.matchId?.length}`);
       
       // Use the specific match ID to delete the match and clear messages
       await unmatchUsers(matchData.matchId);
@@ -246,12 +257,15 @@ export default function MatchesScreen() {
       // Update matches list
       setMatches(prevMatches => prevMatches.filter(match => match.id !== userId));
       
+      // Update filtered matches list to immediately hide the unmatched user
+      setFilteredMatches(prevFiltered => prevFiltered.filter(match => match.id !== userId));
+      
       // If the unmatched user is currently selected in chat, close the chat
       if (selectedMatch && selectedMatch.id === userId) {
         closeChat();
       }
       
-      Alert.alert('Unmatched', `You have unmatched with ${userName}. All messages have been cleared.`);
+      Alert.alert('Unmatched', `You have unmatched with ${userName}.`);
       
     } catch (error) {
       console.error('❌ Error unmatching:', error);
@@ -290,8 +304,6 @@ export default function MatchesScreen() {
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !roomId || sending || moderatingMessage) return;
 
-    // Create a temporary message ID that we can track
-    const tempMessageId = `temp-${Date.now()}`;
     const messageContent = newMessage.trim();
 
     try {
@@ -329,34 +341,9 @@ export default function MatchesScreen() {
       // If no threats detected, proceed with sending
       setSending(true);
       setNewMessage('');
-      
-      // Optimistically add message to UI
-      const tempMessage = {
-        id: tempMessageId,
-        content: messageContent,
-        sender_id: currentUserId,
-        created_at: new Date().toISOString(),
-        sender_name: 'You',
-        isTemp: true,
-      };
-      
-      setMessages(prev => [...prev, tempMessage]);
 
       // Send message to server
-      const sentMessage = await sendMessage(roomId, messageContent);
-      
-      // Update the temporary message with the real message data
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === tempMessageId 
-            ? {
-                ...sentMessage,
-                sender_name: 'You',
-                isTemp: false,
-              }
-            : msg
-        )
-      );
+      await sendMessage(roomId, messageContent);
 
       // Real-time updates will handle new messages automatically
       // No need for manual refresh
@@ -379,8 +366,6 @@ export default function MatchesScreen() {
       }
       
       Alert.alert('Error', 'Failed to send message. Please try again.');
-      // Remove the temporary message on error
-      setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
       // Restore the message input
       setNewMessage(messageContent);
     } finally {

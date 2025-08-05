@@ -6,7 +6,9 @@ export default function ChatHeader({
   match, 
   onBack,
   onRefreshMessages,
-  onShowTips
+  onShowTips,
+  onToggleDeleteMode,
+  isDeleteMode = false
 }) {
   return (
     <View style={styles.chatHeader}>
@@ -29,9 +31,26 @@ export default function ChatHeader({
         <Text style={styles.chatHeaderName}>{match.name}</Text>
       </View>
       <View style={styles.headerButtons}>
+      {onToggleDeleteMode && (
+          <TouchableOpacity 
+            onPress={onToggleDeleteMode} 
+            style={styles.deleteModeButton}
+          >
+            <Ionicons 
+              name="trash" 
+              size={24} 
+              color="red"
+            />
+          </TouchableOpacity>
+        )}
+        {onRefreshMessages && (
+          <TouchableOpacity onPress={onRefreshMessages} style={styles.refreshButton}>
+            <Ionicons name="refresh" size={24} color="black" />
+          </TouchableOpacity>
+        )}
         {onShowTips && (
           <TouchableOpacity onPress={onShowTips} style={styles.tipsButton}>
-            <Ionicons name="bulb" size={24} color="gold" />
+            <Ionicons name="chatbubble-ellipses" size={24} color="hotpink" />
           </TouchableOpacity>
         )}
       </View>
@@ -84,11 +103,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  tipsButton: {
+  refreshButton: {
     padding: 5,
     marginRight: 5,
   },
-  refreshButton: {
+  deleteModeButton: {
+    padding: 5,
+    marginRight: 5,
+    borderRadius: 4,
+  },
+  deleteModeActive: {
+    backgroundColor: '#FF4444',
+  },
+  tipsButton: {
     padding: 5,
   },
-}); 
+});

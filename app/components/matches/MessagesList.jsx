@@ -8,7 +8,8 @@ export default function MessagesList({
   onDeleteMessage,
   flatListRef,
   shouldScrollToBottom = false,
-  onRefreshMessages
+  onRefreshMessages,
+  isDeleteMode = false
 }) {
   const [refreshing, setRefreshing] = useState(false);
   const internalFlatListRef = useRef(null);
@@ -70,6 +71,7 @@ export default function MessagesList({
         message={item}
         isMyMessage={isMyMessage}
         onDeleteMessage={onDeleteMessage}
+        isDeleteMode={isDeleteMode}
       />
     );
   };

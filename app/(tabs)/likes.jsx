@@ -57,7 +57,7 @@ export default function LikesScreen() {
   const fetchLikes = async (shouldUpdateLocation = false) => {
     try {
       setLoading(true);
-      setImageLoadingStates({}); // Reset image loading states
+      // Don't reset image loading states - let them persist
       console.log(`🔄 Fetching likes with location update: ${shouldUpdateLocation}`);
       
       // Actually fetch likes from the database
@@ -214,7 +214,7 @@ export default function LikesScreen() {
     if (nextIndex < likes.length && likes.length > 0) {
       setCurrentLikeIndex(nextIndex);
       setCurrentPhotoIndex(0); // Reset photo index for new like
-      setImageLoadingStates({}); // Reset image loading states for new like
+      // Don't reset image loading states - let them persist across like changes
     } else {
       // No more likes, check if we need to update geolocation and fetch new likes
       const shouldUpdateLocation = swipeCount >= 10;
@@ -380,7 +380,7 @@ export default function LikesScreen() {
                             }));
                           }}
                         />
-                        {imageLoadingStates[`${currentLike.id}-${index}`] && (
+                        {imageLoadingStates[`${currentLike.id}-${index}`] === true && (
                           <View style={styles.imageLoader}>
                             <ActivityIndicator size="large" color="hotpink" />
                           </View>
@@ -440,7 +440,7 @@ export default function LikesScreen() {
                       }));
                     }}
                   />
-                  {imageLoadingStates[`${currentLike.id}-single`] && (
+                  {imageLoadingStates[`${currentLike.id}-single`] === true && (
                     <View style={styles.imageLoader}>
                       <ActivityIndicator size="large" color="hotpink" />
                     </View>
