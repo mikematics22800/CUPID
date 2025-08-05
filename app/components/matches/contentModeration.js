@@ -219,9 +219,9 @@ const banUser = async (userId, userInfo) => {
     // Messages will be cleared when the user is banned and matches are deactivated
     console.log('✅ Messages will be cleared when user is banned and matches are deactivated');
 
-    // Note: In new schema, likes and matches are stored as arrays in users table
-    // We don't need to delete separate tables - the user's profile will be marked as banned
-    // and their likes/matches will be handled by the active/inactive status
+    // Note: In new schema, likes and matches are stored in separate tables
+    // We need to delete the user's records from like, match, and message tables
+    // and their profile will be deleted when the user is banned
 
     // Delete user's photos from storage
     await deleteUserPhotos(userId);

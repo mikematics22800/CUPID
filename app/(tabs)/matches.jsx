@@ -1,19 +1,13 @@
 import { View, StyleSheet, Alert } from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import { 
-  getMatchesForUser, 
-  unmatchUsersByMatchId,
-  clearMessagesBetweenUsers,
+  getMatches, 
+  unmatchUsers,
   supabase, 
-  getOrCreateChatRoom,
   sendMessage,
   getMessages,
-  markMessagesAsRead,
-  markMatchesAsViewed,
   deleteMessage,
   subscribeToMessages,
-  subscribeToChatRooms,
-  unsubscribeFromChannel
 } from '../../lib/supabase';
 import { detectViolentThreats, isUserBanned, getUserStrikes } from '../components/matches/contentModeration';
 import { useRouter } from 'expo-router';
@@ -25,6 +19,7 @@ import {
   LoadingScreen,
   MatchFilters
 } from '../components/matches';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function MatchesScreen() {
   const router = useRouter();
@@ -79,41 +74,6 @@ export default function MatchesScreen() {
     }
   }, [matches, filters]);
 
-  const setupMatchesSubscription = async () => {
-    try {
-      // Clean up any existing subscription
-      if (matchesSubscription) {
-        unsubscribeFromChannel(matchesSubscription);
-        setMatchesSubscription(null);
-      }
-
-      // Set up new subscription for matches
-      const subscription = subscribeToChatRooms((newMatch, eventType) => {
-        console.log('🔔 Real-time match update:', newMatch, 'Event type:', eventType);
-        
-        if (eventType === 'insert') {
-          // New match created - refresh the matches list
-          loadMatches();
-        } else if (eventType === 'update') {
-          // Match updated - refresh the matches list
-          loadMatches();
-        }
-      });
-      
-      setMatchesSubscription(subscription);
-      console.log('✅ Real-time matches subscription established');
-      
-    } catch (error) {
-      console.error('❌ Error setting up matches subscription:', error);
-      // Retry after a delay
-      setTimeout(() => {
-        if (currentUserId) {
-          console.log('🔄 Retrying matches subscription...');
-          setupMatchesSubscription();
-        }
-      }, 5000);
-    }
-  };
 
   useFocusEffect(
     React.useCallback(() => {
@@ -144,7 +104,7 @@ export default function MatchesScreen() {
   const loadMatches = async () => {
     try {
       setLoading(true);
-      const matchesData = await getMatchesForUser();
+      const matchesData = await getMatches();
       setMatches(matchesData);
       applyFilters(matchesData, filters);
     } catch (error) {
@@ -281,7 +241,7 @@ export default function MatchesScreen() {
       }
       
       // Use the specific match ID to delete the match and clear messages
-      await unmatchUsersByMatchId(matchData.matchId);
+      await unmatchUsers(matchData.matchId);
       
       // Update matches list
       setMatches(prevMatches => prevMatches.filter(match => match.id !== userId));
@@ -326,124 +286,6 @@ export default function MatchesScreen() {
     );
   };
 
-  const openChat = async (match) => {
-    try {
-      setChatLoading(true);
-      setSelectedMatch(match);
-      
-      const chatRoomId = await getOrCreateChatRoom(currentUserId, match.id);
-      setRoomId(chatRoomId);
-
-      const messagesData = await getMessages(chatRoomId);
-      console.log('📥 Loaded messages:', messagesData.length);
-      setMessages(messagesData);
-
-      await markMessagesAsRead(chatRoomId);
-
-      // Set up real-time subscription for new messages
-      await setupMessageSubscription(chatRoomId);
-
-    } catch (error) {
-      console.error('❌ Error opening chat:', error);
-      Alert.alert('Error', 'Failed to open chat. Please try again.');
-    } finally {
-      setChatLoading(false);
-    }
-  };
-
-  const setupMessageSubscription = async (roomId) => {
-    try {
-      // Clean up any existing subscription
-      if (messageSubscription) {
-        unsubscribeFromChannel(messageSubscription);
-        setMessageSubscription(null);
-      }
-
-      // Set up new subscription
-      const subscription = await subscribeToMessages(roomId, (newMessage, eventType = 'insert') => {
-        console.log('🔔 Real-time message received:', newMessage, 'Event type:', eventType);
-        
-        if (eventType === 'insert') {
-          // Add new message to the list
-          const formattedMessage = {
-            id: newMessage.id,
-            content: newMessage.content,
-            is_read: newMessage.read,
-            created_at: newMessage.created_at,
-            sender_id: newMessage.sender_id,
-            sender_name: newMessage.sender_id === currentUserId ? 'You' : selectedMatch?.name || 'Unknown User'
-          };
-          
-          setMessages(prev => {
-            // Check if message already exists to avoid duplicates
-            const exists = prev.some(msg => msg.id === formattedMessage.id);
-            if (exists) return prev;
-            
-            return [...prev, formattedMessage];
-          });
-          
-          // Mark messages as read if the new message is from the other user
-          if (newMessage.sender_id !== currentUserId) {
-            markMessagesAsRead(roomId);
-          }
-        } else if (eventType === 'update') {
-          // Update existing message (e.g., when marked as read)
-          setMessages(prev => 
-            prev.map(msg => 
-              msg.id === newMessage.id 
-                ? {
-                    ...msg,
-                    is_read: newMessage.read,
-                    content: newMessage.content
-                  }
-                : msg
-            )
-          );
-        } else if (eventType === 'delete') {
-          // Remove deleted message from the list
-          setMessages(prev => prev.filter(msg => msg.id !== newMessage.id));
-        }
-      });
-      
-      setMessageSubscription(subscription);
-      console.log('✅ Real-time subscription established for room:', roomId);
-      
-    } catch (error) {
-      console.error('❌ Error setting up message subscription:', error);
-      // Retry after a delay
-      setTimeout(() => {
-        if (selectedMatch && roomId) {
-          console.log('🔄 Retrying message subscription...');
-          setupMessageSubscription(roomId);
-        }
-      }, 5000);
-    }
-  };
-
-  const closeChat = () => {
-    // Clean up subscription
-    if (messageSubscription) {
-      unsubscribeFromChannel(messageSubscription);
-      setMessageSubscription(null);
-    }
-    
-    setSelectedMatch(null);
-    setMessages([]);
-    setNewMessage('');
-    setRoomId(null);
-  };
-
-  const refreshMessages = async () => {
-    if (!roomId) return;
-    
-    try {
-      const messagesData = await getMessages(roomId);
-      setMessages(messagesData);
-      await markMessagesAsRead(roomId);
-    } catch (error) {
-      console.error('❌ Error refreshing messages:', error);
-    }
-  };
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !roomId || sending || moderatingMessage) return;
@@ -494,7 +336,6 @@ export default function MatchesScreen() {
         content: messageContent,
         sender_id: currentUserId,
         created_at: new Date().toISOString(),
-        is_read: false,
         sender_name: 'You',
         isTemp: true,
       };
@@ -597,7 +438,118 @@ export default function MatchesScreen() {
     }
   };
 
+  // Function to mark matches as viewed
+  const markMatchesAsViewed = async () => {
+    try {
+      if (!currentUserId) return;
+      
+      // Store the current timestamp as the last viewed time for matches
+      await AsyncStorage.setItem(`matches_viewed_${currentUserId}`, new Date().toISOString());
+      console.log('✅ Matches marked as viewed');
+    } catch (error) {
+      console.error('❌ Error marking matches as viewed:', error);
+    }
+  };
 
+  // Function to refresh messages
+  const refreshMessages = async () => {
+    if (!selectedMatch || !roomId) return;
+    
+    try {
+      setChatLoading(true);
+      const refreshedMessages = await getMessages(roomId);
+      setMessages(refreshedMessages);
+      console.log('✅ Messages refreshed');
+    } catch (error) {
+      console.error('❌ Error refreshing messages:', error);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  // Function to open chat with a match
+  const openChat = async (match) => {
+    try {
+      setSelectedMatch(match);
+      setRoomId(match.matchId); // Use matchId from the match object
+      setChatLoading(true);
+      
+      // Load messages for this match
+      const matchMessages = await getMessages(match.matchId);
+      setMessages(matchMessages);
+      
+      // Set up real-time subscription for this match
+      if (messageSubscription) {
+        messageSubscription.unsubscribe();
+      }
+      
+      const subscription = await subscribeToMessages(match.matchId, (newMessage, eventType) => {
+        if (eventType === 'insert') {
+          // Get sender name for the new message
+          const getSenderName = async () => {
+            try {
+              const { data: userProfile, error } = await supabase
+                .from('profile')
+                .select('name')
+                .eq('id', newMessage.sender_id)
+                .single();
+              
+              if (!error && userProfile) {
+                const messageWithSender = {
+                  ...newMessage,
+                  sender_name: userProfile.name
+                };
+                setMessages(prev => [...prev, messageWithSender]);
+              }
+            } catch (error) {
+              console.error('❌ Error getting sender name:', error);
+            }
+          };
+          getSenderName();
+        }
+      });
+      
+      setMessageSubscription(subscription);
+      setChatLoading(false);
+      
+    } catch (error) {
+      console.error('❌ Error opening chat:', error);
+      Alert.alert('Error', 'Failed to open chat. Please try again.');
+      setChatLoading(false);
+    }
+  };
+
+  // Function to close chat
+  const closeChat = () => {
+    // Unsubscribe from real-time updates
+    if (messageSubscription) {
+      messageSubscription.unsubscribe();
+      setMessageSubscription(null);
+    }
+    
+    // Clear chat state
+    setSelectedMatch(null);
+    setMessages([]);
+    setNewMessage('');
+    setRoomId(null);
+    setChatLoading(false);
+  };
+
+  // Function to set up matches subscription
+  const setupMatchesSubscription = () => {
+    // For now, we'll implement a simple polling mechanism
+    // In the future, this could be replaced with real-time subscriptions
+    console.log('🔔 Setting up matches subscription');
+    
+    // Clean up existing subscription
+    if (matchesSubscription) {
+      matchesSubscription.unsubscribe();
+    }
+    
+    // For now, we'll just log that subscription is set up
+    // Real-time match updates can be implemented later if needed
+    setMatchesSubscription({ unsubscribe: () => {} });
+  };
 
   // Auto-refresh messages every 60 seconds when chat is open (backup for missed real-time updates)
   useEffect(() => {
@@ -638,23 +590,6 @@ export default function MatchesScreen() {
     
     checkUserBanStatus();
   }, [currentUserId]);
-
-  // Cleanup subscription on component unmount
-  useEffect(() => {
-    return () => {
-      if (messageSubscription) {
-        unsubscribeFromChannel(messageSubscription);
-      }
-      if (matchesSubscription) {
-        unsubscribeFromChannel(matchesSubscription);
-      }
-    };
-  }, [messageSubscription, matchesSubscription]);
-
-
-
-
-
 
   if (loading) {
     return <LoadingScreen />;

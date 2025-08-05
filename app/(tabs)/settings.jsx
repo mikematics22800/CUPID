@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Modal, TextInput, SafeAreaView, ActivityIndicator } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { supabase, deleteUserAccount } from '../../lib/supabase';
+import { MaterialIcons } from '@expo/vector-icons';
+import { supabase, deleteUserAccount, disableUserAccount } from '../../lib/supabase';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
@@ -10,15 +10,12 @@ import PhotoSection from '../components/settings/PhotoSection';
 import BioSection from '../components/settings/BioSection';
 import PersonalInfoForm from '../components/settings/PersonalInfoForm';
 import QuizSection from '../components/settings/QuizSection';
+import AccountSection from '../components/settings/AccountSection';
 import { uploadPhotosToStorage } from '../../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const [notifications, setNotifications] = useState(true);
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [showOnlineStatus, setShowOnlineStatus] = useState(true);
-  const [showDistance, setShowDistance] = useState(true);
   
   // Filter settings
   const [ageRange, setAgeRange] = useState({ min: 18, max: 50 });
@@ -27,6 +24,7 @@ export default function SettingsScreen() {
   const [showAgeModal, setShowAgeModal] = useState(false);
   const [showSexModal, setShowSexModal] = useState(false);
   const [showDistanceModal, setShowDistanceModal] = useState(false);
+  const [showAccountModal, setShowAccountModal] = useState(false);
   const [tempAgeRange, setTempAgeRange] = useState({ min: 18, max: 50 });
   const [tempPreferredSex, setTempPreferredSex] = useState('all');
   const [tempMaxDistance, setTempMaxDistance] = useState(50);
@@ -40,8 +38,6 @@ export default function SettingsScreen() {
   const [validationStatus, setValidationStatus] = useState({
     firstName: true,
     lastName: true,
-    email: true,
-    phone: true,
     residence: true
   });
 
@@ -154,17 +150,12 @@ export default function SettingsScreen() {
 
   // Validation logic
   useEffect(() => {
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    const cleanedPhone = phone?.replace(/\D/g, '') || '';
-    
     setValidationStatus({
       firstName: firstName?.trim().length > 0,
       lastName: lastName?.trim().length > 0,
-      email: email?.match(emailRegex) !== null,
-      phone: cleanedPhone.length >= 10 || cleanedPhone.length === 0,
       residence: residence?.trim().length > 0
     });
-  }, [firstName, lastName, email, phone, residence]);
+  }, [firstName, lastName, residence]);
 
   const handleLogout = async () => {
     try {
@@ -361,6 +352,66 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleEmailUpdate = async (newEmail) => {
+    try {
+      const success = await updateProfile({ email: newEmail });
+      if (success) {
+        setEmail(newEmail);
+        Alert.alert('Success', 'Email updated successfully!');
+      } else {
+        Alert.alert('Error', 'Failed to update email. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error updating email:', error);
+      Alert.alert('Error', 'Failed to update email. Please try again.');
+    }
+  };
+
+  const handlePhoneUpdate = async (newPhone) => {
+    try {
+      const success = await updateProfile({ phone: newPhone });
+      if (success) {
+        setPhone(newPhone);
+        Alert.alert('Success', 'Phone number updated successfully!');
+      } else {
+        Alert.alert('Error', 'Failed to update phone number. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error updating phone:', error);
+      Alert.alert('Error', 'Failed to update phone number. Please try again.');
+    }
+  };
+
+  const handleDisableAccount = async () => {
+    try {
+      await disableUserAccount();
+      Alert.alert(
+        'Account Disabled',
+        'Your account has been disabled. You have been signed out. To re-enable your account, please contact support.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Navigate to auth screen
+              router.replace('/auth');
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Account disable error:', error);
+      Alert.alert(
+        'Disable Error',
+        'There was an error disabling your account. Please try again or contact support.',
+        [
+          {
+            text: 'OK'
+          }
+        ]
+      );
+    }
+  };
+
   const saveProfile = async () => {
     try {
       if (!hasEnoughPhotos()) {
@@ -383,18 +434,8 @@ export default function SettingsScreen() {
         return;
       }
 
-      if (!validationStatus.email) {
-        Alert.alert('Invalid Email', 'Please enter a valid email address.');
-        return;
-      }
-
-      if (phone && !validationStatus.phone) {
-        Alert.alert('Invalid Phone', 'Please enter a valid 10-digit phone number.');
-        return;
-      }
-
       if (!validationStatus.residence) {
-                  Alert.alert('Missing Location', 'Please enter your location.');
+        Alert.alert('Missing Location', 'Please enter your location.');
         return;
       }
 
@@ -425,8 +466,6 @@ export default function SettingsScreen() {
         interests: interests,
         residence: residence,
         name: fullName,
-        email: email,
-        phone: phone,
         images: allPhotoUrls,
       });
 
@@ -475,7 +514,7 @@ export default function SettingsScreen() {
   const SettingItem = ({ icon, title, value, onPress, showSwitch = false, displayValue = null, destructive = false }) => (
     <TouchableOpacity style={styles.settingItem} onPress={onPress}>
       <View style={styles.settingLeft}>
-        <Ionicons name={icon} size={24} color={destructive ? "#ff3b30" : "#007AFF"} style={styles.settingIcon} />
+        <MaterialIcons name={icon} size={24} color={destructive ? "#ff3b30" : "#007AFF"} style={styles.settingIcon} />
         <Text style={[styles.settingText, destructive && styles.destructiveText]}>{title}</Text>
       </View>
       {showSwitch ? (
@@ -488,7 +527,7 @@ export default function SettingsScreen() {
       ) : (
         <View style={styles.settingRight}>
           {displayValue && <Text style={styles.settingValue}>{displayValue}</Text>}
-          <Ionicons name="chevron-forward" size={24} color="#999" />
+          <MaterialIcons name="chevron-right" size={24} color="#999" />
         </View>
       )}
     </TouchableOpacity>
@@ -496,50 +535,43 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>Settings</Text>
-
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>General</Text>
         <SettingItem
-          icon="person-outline"
-          title="Edit Profile"
-          onPress={() => setShowProfile(true)}
+          icon="account-circle"
+          title="Account"
+          onPress={() => setShowAccountModal(true)}
         />
         <SettingItem
-          icon="location-outline"
-          title="Location Sharing"
+          icon="person"
+          title="Profile"
+          onPress={() => setShowProfile(true)}
+        />
+     
+        <SettingItem
+          icon="location-on"
+          title="Location"
           value={isLocationSharingEnabled()}
           onPress={handleLocationSharingToggle}
           showSwitch
         />
-        <SettingItem
-          icon="log-out-outline"
-          title="Log Out"
-          onPress={handleLogout}
-        />
-        <SettingItem
-          icon="trash-outline"
-          title="Delete Account"
-          onPress={handleDeleteAccount}
-          destructive
-        />
       </View>
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Filtering</Text>
+        <Text style={styles.sectionTitle}>Feed</Text>
         <SettingItem
-          icon="people-outline"
+          icon="cake"
           title="Age Range"
           displayValue={`${ageRange.min}-${ageRange.max}`}
           onPress={handleAgeRangePress}
         />
         <SettingItem
-          icon="heart-outline"
+          icon="favorite"
           title="Show Me"
           displayValue={getSexDisplayText(preferredSex)}
           onPress={handleSexPreferencePress}
         />
         <SettingItem
-          icon="location-outline"
+          icon="location-on"
           title="Maximum Distance"
           displayValue={getDistanceDisplayText(maxDistance)}
           onPress={handleDistancePress}
@@ -549,23 +581,40 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Support</Text>
         <SettingItem
-          icon="help-circle-outline"
+          icon="help"
           title="Help Center"
           onPress={() => {}}
         />
         <SettingItem
-          icon="document-text-outline"
+          icon="description"
           title="Terms of Service"
           onPress={() => {}}
         />
         <SettingItem
-          icon="shield-outline"
+          icon="security"
           title="Privacy Policy"
           onPress={() => {}}
         />
       </View>
 
       <Text style={styles.version}>Version 1.0.0</Text>
+
+      {/* Account Modal */}
+      <AccountSection
+        visible={showAccountModal}
+        onClose={() => setShowAccountModal(false)}
+        email={email}
+        setEmail={setEmail}
+        phone={phone}
+        setPhone={setPhone}
+        validationStatus={validationStatus}
+        onEmailUpdate={handleEmailUpdate}
+        onPhoneUpdate={handlePhoneUpdate}
+        onLogout={handleLogout}
+        onDeleteAccount={handleDeleteAccount}
+        onDisableAccount={handleDisableAccount}
+        user={user}
+      />
 
       {/* Age Range Modal */}
       <Modal
@@ -707,7 +756,7 @@ export default function SettingsScreen() {
                   style={styles.closeButton}
                   onPress={() => setShowProfile(false)}
                 >
-                  <Ionicons name="close" size={24} color="black" />
+                  <MaterialIcons name="close" size={24} color="black" />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[
@@ -735,10 +784,6 @@ export default function SettingsScreen() {
                   setFirstName={setFirstName}
                   lastName={lastName}
                   setLastName={setLastName}
-                  email={email}
-                  setEmail={setEmail}
-                  phone={phone}
-                  setPhone={setPhone}
                   residence={residence}
                   setResidence={setResidence}
                   validationStatus={validationStatus}
@@ -776,6 +821,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+    paddingTop: 20,
   },
   title: {
     fontSize: 24,

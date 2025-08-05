@@ -39,7 +39,7 @@ export default function WelcomeScreen({ onLoginPress, onRegisterPress }) {
           style={[styles.logo, { transform: [{ translateY }] }]} 
         />
         <Text style={styles.heroText}>
-          <Text style={{color: 'white'}}>C</Text>ognitive <Text style={{color: 'white'}}>U</Text>ser <Text style={{color: 'white'}}>P</Text>latform for <Text style={{color: 'white'}}>I</Text>ntelligent <Text style={{color: 'white'}}>D</Text>ating 🏹
+          <Text style={{color: 'white'}}>C</Text>ognitive <Text style={{color: 'white'}}>U</Text>ser <Text style={{color: 'white'}}>P</Text>latform <Text style={{color: 'white'}}>I</Text>nnovating <Text style={{color: 'white'}}>D</Text>ating 🏹
         </Text>
       </View>
       <View style={styles.auth}>

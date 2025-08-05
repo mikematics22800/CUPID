@@ -1,6 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { TextInput } from 'react-native-paper';
-import { EmailInput, PhoneInput } from '../auth/index';
 import ResidenceInput from './ResidenceInput';
 
 export default function PersonalInfoForm({
@@ -8,10 +7,6 @@ export default function PersonalInfoForm({
   setFirstName,
   lastName,
   setLastName,
-  email,
-  setEmail,
-  phone,
-  setPhone,
   residence,
   setResidence,
   validationStatus
@@ -38,18 +33,6 @@ export default function PersonalInfoForm({
           maxLength={20}
         />
       </View>
-      
-      <EmailInput
-        email={email}
-        setEmail={setEmail}
-        validationStatus={validationStatus}
-      />
-      
-      <PhoneInput
-        phone={phone}
-        setPhone={setPhone}
-        validationStatus={validationStatus}
-      />
       
       <ResidenceInput
         value={residence}

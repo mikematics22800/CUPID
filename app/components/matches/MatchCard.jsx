@@ -15,10 +15,6 @@ export default function MatchCard({
   const [showQuiz, setShowQuiz] = useState(false);
   const [hasQuiz, setHasQuiz] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
-  // In new schema, unread messages are stored within the match object
-  const hasUnreadMessages = match.messages && match.messages.some(msg => 
-    msg.sender_id !== match.id && !msg.read
-  );
 
   // Load quiz score and check if user has quiz on component mount
   useEffect(() => {
@@ -81,7 +77,6 @@ export default function MatchCard({
         <View style={styles.matchInfo}>
           <View style={styles.nameContainer}>
             <Text style={styles.matchName}>{match.name}, {match.age}</Text>
-            {hasUnreadMessages && <View style={styles.unreadBadge} />}
           </View>
           {match.distance !== null && (
             <View style={styles.distanceContainer}>
@@ -102,8 +97,8 @@ export default function MatchCard({
       </View>
       <View style={styles.matchActions}>
         <Text style={styles.timestamp}>
-          {chatRoom?.lastMessage ? 
-            new Date(chatRoom.lastMessage.createdAt).toLocaleString([], { 
+          {match.matchedAt ? 
+            new Date(match.matchedAt).toLocaleString([], { 
               month: 'short', 
               day: 'numeric',
               hour: '2-digit', 
@@ -118,7 +113,7 @@ export default function MatchCard({
             onPress={() => onOpenChat(match)}
           >
             <Ionicons 
-              name={hasUnreadMessages ? "chatbubble" : "chatbubble-outline"} 
+              name="chatbubble-outline" 
               size={20} 
               color='white'
             />
@@ -219,13 +214,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
   },
-  unreadBadge: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'hotpink',
-    marginLeft: 8,
-  },
+
   matchActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -247,9 +236,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'hotpink',
     borderRadius: 20,
   },
-  unreadButton: {
-    backgroundColor: 'hotpink',
-  },
+
   quizButton: {
     padding: 8,
     backgroundColor: '#FFD700',

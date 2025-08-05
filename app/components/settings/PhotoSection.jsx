@@ -91,7 +91,7 @@ export default function PhotoSection({
         );
       }
     }
-    
+     
     return photoSlots;
   };
 
@@ -103,9 +103,6 @@ export default function PhotoSection({
 
   return (
     <View style={styles.photoSection}>
-      <View style={styles.header}>
-        <Text style={styles.addPhotoText}>Choose between 3 and 12 nice photos of yourself for other users to see!</Text>
-      </View>
       {showMinWarning && (
         <Text style={{ color: 'red', fontSize: 12, textAlign: 'center', marginBottom: 5 }}>
           Please upload at least 3 photos to continue.

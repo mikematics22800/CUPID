@@ -5,6 +5,7 @@ export { default as DistanceModal } from './DistanceModal';
 export { default as PersonalInfoForm } from './PersonalInfoForm';
 export { default as ResidenceInput } from './ResidenceInput';
 export { default as QuizSection } from './QuizSection';
+export { default as AccountSection } from './AccountSection';
 
 // Default export
 export { default } from './SettingItem'; 

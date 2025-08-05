@@ -1,8 +1,11 @@
 import { View, Text, ScrollView, StyleSheet, RefreshControl, Dimensions } from 'react-native'
-import React, { useState, useEffect } from 'react'
-import { LineChart, BarChart } from 'react-native-chart-kit'
-import { getAnalyticsData, getAnalyticsSummary } from '../../lib/supabase'
+import React, { useState, useEffect, useRef } from 'react'
+import { LineChart } from 'react-native-chart-kit'
+import { getAnalyticsData, getAnalyticsSummary, supabase } from '../../lib/supabase'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import LottieView from 'lottie-react-native'
+import { PanGestureHandler, State } from 'react-native-gesture-handler'
+import { Animated } from 'react-native'
 
 const { width } = Dimensions.get('window')
 
@@ -12,12 +15,28 @@ const Analytics = () => {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState(null)
+  const [error, setError] = useState(null)
+  const [daysRange, setDaysRange] = useState(7) // Default to 7 days
+  const [userCreatedAt, setUserCreatedAt] = useState(null)
+  const [maxDays, setMaxDays] = useState(365) // Default max days
 
-  const fetchAnalyticsData = async () => {
+  // Animation refs for slider
+  const sliderPosition = useRef(new Animated.Value(0)).current
+  const sliderWidth = width - 80 // Account for padding
+
+  // Initialize slider position based on current daysRange
+  useEffect(() => {
+    const percentage = (daysRange - 1) / (maxDays - 1)
+    const position = percentage * sliderWidth
+    sliderPosition.setValue(position)
+  }, [maxDays, daysRange])
+
+  const fetchAnalyticsData = async (selectedDays = daysRange) => {
     try {
       setLoading(true)
+      setError(null)
       const [analytics, summary] = await Promise.all([
-        getAnalyticsData(),
+        getAnalyticsData(selectedDays),
         getAnalyticsSummary()
       ])
       
@@ -26,6 +45,7 @@ const Analytics = () => {
       setLastUpdated(new Date())
     } catch (error) {
       console.error('Error fetching analytics data:', error)
+      setError(error.message || 'Failed to load analytics data')
     } finally {
       setLoading(false)
     }
@@ -37,7 +57,49 @@ const Analytics = () => {
     setRefreshing(false)
   }
 
+  const onSliderGestureEvent = Animated.event(
+    [{ nativeEvent: { translationX: sliderPosition } }],
+    { useNativeDriver: false }
+  )
+
+  const onSliderStateChange = (event) => {
+    if (event.nativeEvent.state === State.ACTIVE) {
+      const { translationX } = event.nativeEvent
+      const newPosition = Math.max(0, Math.min(sliderWidth, translationX))
+      const percentage = newPosition / sliderWidth
+      const newDays = Math.round(1 + (percentage * (maxDays - 1)))
+      
+      setDaysRange(newDays)
+    } else if (event.nativeEvent.state === State.END) {
+      fetchAnalyticsData(daysRange)
+    }
+  }
+
+  const getUserCreatedAt = async () => {
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      if (currentUser) {
+        const { data: userData, error } = await supabase
+          .from('user')
+          .select('created_at')
+          .eq('id', currentUser.id)
+          .single()
+        
+        if (userData && !error) {
+          const createdAt = new Date(userData.created_at)
+          const now = new Date()
+          const daysSinceCreation = Math.ceil((now - createdAt) / (1000 * 60 * 60 * 24))
+          setMaxDays(Math.max(daysSinceCreation, 1)) // Minimum 1 day
+          setUserCreatedAt(createdAt)
+        }
+      }
+    } catch (error) {
+      console.error('Error getting user created_at:', error)
+    }
+  }
+
   useEffect(() => {
+    getUserCreatedAt()
     fetchAnalyticsData()
     
     // Set up daily refresh at midnight
@@ -76,30 +138,28 @@ const Analytics = () => {
     }
   }
 
-  const barChartConfig = {
-    backgroundColor: '#ffffff',
-    backgroundGradientFrom: '#ffffff',
-    backgroundGradientTo: '#ffffff',
-    decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(138, 43, 226, ${opacity})`, // Purple color
-    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-    style: {
-      borderRadius: 16
-    }
-  }
-
-  const formatDateLabels = (labels) => {
-    return labels.map(label => {
-      const date = new Date(label)
-      return `${date.getMonth() + 1}/${date.getDate()}`
-    })
-  }
-
   if (loading) {
     return (
+      <View style={styles.imageLoader}>
+        <LottieView
+          source={require('../../assets/animations/heart.json')}
+          autoPlay
+          loop
+          style={styles.lottieAnimation}
+          speed={1}
+        />
+      </View>
+    )
+  }
+
+  if (error) {
+    return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading analytics...</Text>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.retryText} onPress={fetchAnalyticsData}>
+            Tap to retry
+          </Text>
         </View>
       </SafeAreaView>
     )
@@ -114,7 +174,7 @@ const Analytics = () => {
         }
       >
         {/* Summary Cards */}
-        {summaryData && (
+        {summaryData && ( 
           <View style={styles.summaryContainer}>
             <View style={styles.summaryCard}>
               <Text style={styles.summaryLabel}>Likes Received</Text>
@@ -132,59 +192,66 @@ const Analytics = () => {
               <Text style={styles.summaryLabel}>Match Rate</Text>
               <Text style={styles.summaryValue}>{summaryData.matchRate}%</Text>
             </View>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Profile Views</Text>
-              <Text style={styles.summaryValue}>{summaryData.profileViews}</Text>
-            </View>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Avg Likes/Day</Text>
-              <Text style={styles.summaryValue}>{summaryData.averageLikesPerDay}</Text>
-            </View>
           </View>
         )}
 
-        {/* Likes Chart */}
-        {analyticsData?.likes && (
+        {/* Timescale Slider */}
+        <View style={styles.sliderContainer}>
+          <Text style={styles.sliderLabel}>Time Period: {daysRange} days</Text>
+          <View style={styles.sliderTrack}>
+            <PanGestureHandler
+              onGestureEvent={onSliderGestureEvent}
+              onHandlerStateChange={onSliderStateChange}
+            >
+              <Animated.View 
+                style={[
+                  styles.sliderThumb,
+                  {
+                    transform: [{ translateX: sliderPosition }]
+                  }
+                ]} 
+              />
+            </PanGestureHandler>
+          </View>
+          <View style={styles.sliderLabels}>
+            <Text style={styles.sliderMinLabel}>1 day</Text>
+            <Text style={styles.sliderMaxLabel}>{maxDays} days</Text>
+          </View>
+        </View>
+
+        {/* Combined Engagement Chart */}
+        {analyticsData?.likesGiven && analyticsData?.likesReceived && analyticsData?.matches && (
           <View style={styles.chartContainer}>
-            <Text style={styles.chartTitle}>Likes Over Time (Last 30 Days)</Text>
+            <Text style={styles.chartTitle}>Engagement Overview</Text>
             <LineChart
               data={{
-                labels: formatDateLabels(analyticsData.likes.labels.slice(-7)), // Show last 7 days
+                labels: analyticsData.likesGiven.labels,
                 datasets: [
                   {
-                    data: analyticsData.likes.data.slice(-7),
+                    data: analyticsData.likesGiven.data,
                     color: (opacity = 1) => `rgba(255, 105, 180, ${opacity})`,
+                    strokeWidth: 2
+                  },
+                  {
+                    data: analyticsData.likesReceived.data,
+                    color: (opacity = 1) => `rgba(255, 20, 147, ${opacity})`,
+                    strokeWidth: 2
+                  },
+                  {
+                    data: analyticsData.matches.data,
+                    color: (opacity = 1) => `rgba(138, 43, 226, ${opacity})`,
                     strokeWidth: 2
                   }
                 ]
               }}
               width={width - 40}
               height={220}
-              chartConfig={chartConfig}
+              chartConfig={{
+                ...chartConfig,
+                legend: ['Likes Given', 'Likes Received', 'Matches']
+              }}
               bezier
               style={styles.chart}
-            />
-          </View>
-        )}
-
-        {/* Matches Chart */}
-        {analyticsData?.matches && (
-          <View style={styles.chartContainer}>
-            <Text style={styles.chartTitle}>Matches Over Time (Last 30 Days)</Text>
-            <BarChart
-              data={{
-                labels: formatDateLabels(analyticsData.matches.labels.slice(-7)), // Show last 7 days
-                datasets: [
-                  {
-                    data: analyticsData.matches.data.slice(-7)
-                  }
-                ]
-              }}
-              width={width - 40}
-              height={220}
-              chartConfig={barChartConfig}
-              style={styles.chart}
-              showValuesOnTopOfBars={true}
             />
           </View>
         )}
@@ -196,16 +263,10 @@ const Analytics = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa'
+    backgroundColor: 'hotpink'
   },
   scrollView: {
     flex: 1
-  },
-  header: {
-    padding: 20,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef'
   },
   title: {
     fontSize: 24,
@@ -213,19 +274,26 @@ const styles = StyleSheet.create({
     color: '#212529',
     marginBottom: 5
   },
-  lastUpdated: {
-    fontSize: 12,
-    color: '#6c757d',
-    fontStyle: 'italic'
+  lottieAnimation: {
+    width: 200,
+    height: 200,
   },
-  loadingContainer: {
+  errorContainer: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
+    padding: 20
   },
-  loadingText: {
+  errorText: {
     fontSize: 16,
-    color: '#6c757d'
+    color: '#dc3545',
+    textAlign: 'center',
+    marginBottom: 10
+  },
+  retryText: {
+    fontSize: 14,
+    color: '#007bff',
+    textDecorationLine: 'underline'
   },
   summaryContainer: {
     flexDirection: 'row',
@@ -258,6 +326,57 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#212529'
   },
+  sliderContainer: {
+    backgroundColor: '#ffffff',
+    margin: 20,
+    padding: 20,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5
+  },
+  sliderLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#212529',
+    marginBottom: 15,
+    textAlign: 'center'
+  },
+  sliderTrack: {
+    height: 4,
+    backgroundColor: '#e9ecef',
+    borderRadius: 2,
+    position: 'relative',
+    marginVertical: 20
+  },
+  sliderThumb: {
+    width: 20,
+    height: 20,
+    backgroundColor: '#ff69b4',
+    borderRadius: 10,
+    position: 'absolute',
+    top: -8,
+    left: 0,
+    transform: [{ translateX: 0 }]
+  },
+  sliderLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10
+  },
+  sliderMinLabel: {
+    fontSize: 12,
+    color: '#6c757d'
+  },
+  sliderMaxLabel: {
+    fontSize: 12,
+    color: '#6c757d'
+  },
   chartContainer: {
     backgroundColor: '#ffffff',
     margin: 20,
@@ -283,31 +402,17 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     borderRadius: 16
   },
-  infoContainer: {
-    backgroundColor: '#ffffff',
-    margin: 20,
-    padding: 20,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5
+  imageLoader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(200, 200, 200)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 10,
   },
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#212529',
-    marginBottom: 10
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#6c757d',
-    lineHeight: 20
-  }
 })
 
 export default Analytics

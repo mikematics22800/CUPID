@@ -100,8 +100,8 @@ export const ProfileProvider = ({ children }) => {
         // Update geolocation on app start/login only if location sharing is enabled
         // Check if geolocation is not null (meaning location sharing is enabled)
         if (profileData.geolocation !== null) {
-          // Use setTimeout to defer the geolocation update to avoid useInsertionEffect warning
-          setTimeout(async () => {
+          // Use requestAnimationFrame to defer the geolocation update to avoid useInsertionEffect warning
+          requestAnimationFrame(async () => {
             try {
               console.log('📍 Updating geolocation on app start/login');
               const location = await getCurrentLocationAndresidence();
@@ -112,7 +112,7 @@ export const ProfileProvider = ({ children }) => {
             } catch (error) {
               console.error('❌ Error updating geolocation on app start:', error);
             }
-          }, 0);
+          });
         } else {
           console.log('📍 Location sharing disabled (geolocation is null), skipping geolocation update');
         }
@@ -326,21 +326,37 @@ export const ProfileProvider = ({ children }) => {
 
   // Initialize profile on mount
   useEffect(() => {
+    let isMounted = true;
+    
     const initializeProfile = async () => {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (currentUser) {
-        await loadUserProfile(currentUser.id);
-      } else {
-        await loadUserProfile();
+      try {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (isMounted) {
+          if (currentUser) {
+            await loadUserProfile(currentUser.id);
+          } else {
+            await loadUserProfile();
+          }
+        }
+      } catch (error) {
+        console.error('Error initializing profile:', error);
       }
     };
     
     initializeProfile();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Listen for auth state changes
   useEffect(() => {
+    let isMounted = true;
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isMounted) return;
+      
       console.log('🔄 Auth state changed:', event, session?.user?.id);
       
       if (event === 'SIGNED_IN' && session?.user) {
@@ -368,24 +384,28 @@ export const ProfileProvider = ({ children }) => {
     });
 
     return () => {
+      isMounted = false;
       subscription?.unsubscribe();
     };
-  }, []); // Remove user dependency to avoid infinite loops
+  }, [user?.id]); // Only depend on user.id to avoid infinite loops
 
   // Handle pending updates to avoid useInsertionEffect warning
   useEffect(() => {
     if (pendingUpdates) {
-      // Update specific fields if they exist in updates
-      if (pendingUpdates.bio !== undefined) setBio(pendingUpdates.bio);
-      if (pendingUpdates.interests !== undefined) setInterests(pendingUpdates.interests);
-      if (pendingUpdates.residence !== undefined) setResidence(pendingUpdates.residence);
-      if (pendingUpdates.geolocation !== undefined) setGeolocation(pendingUpdates.geolocation);
-      if (pendingUpdates.name !== undefined) setName(pendingUpdates.name);
-      if (pendingUpdates.email !== undefined) setEmail(pendingUpdates.email);
-      if (pendingUpdates.phone !== undefined) setPhone(pendingUpdates.phone);
-      
-      // Clear pending updates
-      setPendingUpdates(null);
+      // Use requestAnimationFrame to defer state updates and avoid useInsertionEffect warning
+      requestAnimationFrame(() => {
+        // Update specific fields if they exist in updates
+        if (pendingUpdates.bio !== undefined) setBio(pendingUpdates.bio);
+        if (pendingUpdates.interests !== undefined) setInterests(pendingUpdates.interests);
+        if (pendingUpdates.residence !== undefined) setResidence(pendingUpdates.residence);
+        if (pendingUpdates.geolocation !== undefined) setGeolocation(pendingUpdates.geolocation);
+        if (pendingUpdates.name !== undefined) setName(pendingUpdates.name);
+        if (pendingUpdates.email !== undefined) setEmail(pendingUpdates.email);
+        if (pendingUpdates.phone !== undefined) setPhone(pendingUpdates.phone);
+        
+        // Clear pending updates
+        setPendingUpdates(null);
+      });
     }
   }, [pendingUpdates]);
 

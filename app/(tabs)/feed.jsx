@@ -514,17 +514,6 @@ export default function Feed() {
           </Animated.View>
         </PanGestureHandler>
       </View>
-      {!canSwipe && nextProfileReady && (
-        <View style={styles.timerContainer}>
-          <LottieView
-            source={require('../../assets/animations/hourglass.json')}
-            autoPlay
-            loop
-            style={styles.hourglassAnimation}
-            speed={1}
-          />
-        </View>
-      )}
     </View>
   );
 }
@@ -941,7 +930,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(200, 200, 200, 0.8)',
+    backgroundColor: 'rgba(200, 200, 200)',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 10,

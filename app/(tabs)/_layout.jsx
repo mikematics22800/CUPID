@@ -13,22 +13,6 @@ export default function TabLayout() {
   useEffect(() => {
     loadAllCounts();
     
-    // Set up real-time subscription for unread messages
-    const messagesSubscription = supabase
-      .channel('unread_messages')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages'
-        },
-        () => {
-          loadAllCounts();
-        }
-      )
-      .subscribe();
-
     // Set up real-time subscription for likes
     const likesSubscription = supabase
       .channel('likes_changes')
@@ -37,7 +21,7 @@ export default function TabLayout() {
         {
           event: '*',
           schema: 'public',
-          table: 'likes'
+          table: 'like'
         },
         () => {
           loadAllCounts();
@@ -53,7 +37,7 @@ export default function TabLayout() {
         {
           event: '*',
           schema: 'public',
-          table: 'matches'
+          table: 'match'
         },
         () => {
           loadAllCounts();
@@ -62,7 +46,6 @@ export default function TabLayout() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(messagesSubscription);
       supabase.removeChannel(likesSubscription);
       supabase.removeChannel(matchesSubscription);
     };

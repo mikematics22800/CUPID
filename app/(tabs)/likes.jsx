@@ -15,15 +15,14 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import LottieView from 'lottie-react-native';
-import { getUsersWhoLikedMe, handleUserLike, discardLike, markLikesAsViewed, updateGeolocationAndFetchProfiles } from '../../lib/supabase';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { useProfile } from '../contexts/ProfileContext';
+import { getUsersWhoLikedMe, handleLikeSwipeRight, handleLikeSwipeLeft, updateGeolocationAndFetchProfiles } from '../../lib/supabase';
+import { useNavigation } from '@react-navigation/native';
+
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SWIPE_THRESHOLD = 120;
 
 export default function LikesScreen() {
-  const { updateProfile } = useProfile();
   const navigation = useNavigation();
   const [likes, setLikes] = useState([]);
   const [swipeCount, setSwipeCount] = useState(0);
@@ -61,8 +60,8 @@ export default function LikesScreen() {
       setImageLoadingStates({}); // Reset image loading states
       console.log(`🔄 Fetching likes with location update: ${shouldUpdateLocation}`);
       
-      // Temporarily mock data to isolate the issue
-      const likesData = [];
+      // Actually fetch likes from the database
+      const likesData = await getUsersWhoLikedMe();
       
       console.log(`✅ Likes data received: ${likesData.length} likes`);
       
@@ -89,24 +88,22 @@ export default function LikesScreen() {
     }
   };
 
-  // Mark likes as viewed when the screen comes into focus
-  useFocusEffect(
-    React.useCallback(() => {
-      const markAsViewed = async () => {
-        try {
-          // await markLikesAsViewed();
-          console.log('✅ Likes marked as viewed');
-        } catch (error) {
-          console.error('❌ Error marking likes as viewed:', error);
-        }
-      };
-      
-      markAsViewed();
-    }, [])
-  );
+
 
   useEffect(() => {
-    fetchLikes(false); // Don't update location on initial load
+    let isMounted = true;
+    
+    const initializeLikes = async () => {
+      if (isMounted) {
+        await fetchLikes(false); // Don't update location on initial load
+      }
+    };
+    
+    initializeLikes();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const onRefresh = () => {
@@ -143,10 +140,10 @@ export default function LikesScreen() {
     // Handle the swipe action
     switch (direction) {
       case 'left':
-        // Passed on like
+        // Passed on like (just delete the like)
         try {
           setProcessingAction(currentLike.id);
-          const result = await discardLike(currentLike.id);
+          const result = await handleLikeSwipeLeft(currentLike.id);
           
           if (result.success) {
             // Remove from likes list
@@ -164,39 +161,33 @@ export default function LikesScreen() {
         }
         break;
       case 'right':
-        // Liked back
+        // Create match and delete like
         try {
           setProcessingAction(currentLike.id);
-          const result = await handleUserLike(currentLike.id);
+          const result = await handleLikeSwipeRight(currentLike.id);
           
           if (result.success) {
-            if (result.isMatch) {
-              // Remove from likes list immediately since they're now a match
-              setLikes(prevLikes => prevLikes.filter(like => like.id !== currentLike.id));
-              
-              Alert.alert(
-                'It\'s a Match! 🎉 ',
-                `You and ${currentLike.name} have liked each other!`,
-                [
-                  {
-                    text: 'View Match',
-                    onPress: () => navigation.navigate('matches')
-                  },
-                  {
-                    text: 'Continue Swiping',
-                    style: 'cancel'
-                  }
-                ]
-              );
-            } else {
-              // Remove from likes list since they're no longer just a "like"
-              setLikes(prevLikes => prevLikes.filter(like => like.id !== currentLike.id));
-              Alert.alert('Success', 'You liked them back!');
-            }
+            // Remove from likes list immediately since they're now a match
+            setLikes(prevLikes => prevLikes.filter(like => like.id !== currentLike.id));
+            
+            Alert.alert(
+              'It\'s a Match! 🎉 ',
+              `You and ${currentLike.name} have matched!`,
+              [
+                {
+                  text: 'View Match',
+                  onPress: () => navigation.navigate('matches')
+                },
+                {
+                  text: 'Continue Swiping',
+                  style: 'cancel'
+                }
+              ]
+            );
           }
         } catch (error) {
-          console.error('❌ Error liking back:', error);
-          Alert.alert('Error', 'Failed to like back. Please try again.');
+          console.error('❌ Error creating match:', error);
+          Alert.alert('Error', 'Failed to create match. Please try again.');
         } finally {
           setProcessingAction(null);
         }
@@ -768,7 +759,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(200, 200, 200, 0.8)',
+    backgroundColor: 'rgba(200, 200, 200)',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 10,
