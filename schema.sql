@@ -22,26 +22,29 @@ CREATE TABLE public.match (
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   active boolean NOT NULL DEFAULT true,
   CONSTRAINT match_pkey PRIMARY KEY (id),
-  CONSTRAINT match_user_2_id_fkey FOREIGN KEY (user_2_id) REFERENCES public.user(id),
-  CONSTRAINT match_user_1_id_fkey FOREIGN KEY (user_1_id) REFERENCES public.user(id)
+  CONSTRAINT match_user_1_id_fkey FOREIGN KEY (user_1_id) REFERENCES public.user(id),
+  CONSTRAINT match_user_2_id_fkey FOREIGN KEY (user_2_id) REFERENCES public.user(id)
 );
 CREATE TABLE public.message (
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  match_id uuid DEFAULT gen_random_uuid(),
-  sender_id uuid DEFAULT gen_random_uuid(),
+  sender_id uuid NOT NULL DEFAULT gen_random_uuid(),
   receiver_id uuid DEFAULT gen_random_uuid(),
+  match_id uuid DEFAULT gen_random_uuid(),
   content text NOT NULL,
   CONSTRAINT message_pkey PRIMARY KEY (id),
-  CONSTRAINT message_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES public.user(id),
-  CONSTRAINT message_receiver_id_fkey FOREIGN KEY (receiver_id) REFERENCES public.user(id),
   CONSTRAINT message_match_id_fkey FOREIGN KEY (match_id) REFERENCES public.match(id)
+);
+CREATE TABLE public.personal (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  sex text NOT NULL,
+  birthdate timestamp with time zone NOT NULL,
+  CONSTRAINT personal_pkey PRIMARY KEY (id),
+  CONSTRAINT personal_id_fkey FOREIGN KEY (id) REFERENCES public.user(id)
 );
 CREATE TABLE public.profile (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
-  name text NOT NULL DEFAULT ''::text,
-  sex text NOT NULL DEFAULT ''::text,
-  birthday timestamp with time zone NOT NULL DEFAULT now(),
   bio text DEFAULT ''::text,
   interests ARRAY,
   images ARRAY,

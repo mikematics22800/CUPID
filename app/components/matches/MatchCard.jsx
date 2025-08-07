@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getUserQuiz } from '../../../lib/supabase';
+import { getUserQuiz, getOtherUserQuizScore, supabase } from '../../../lib/supabase';
 import QuizTaker from './QuizTaker';
+import TimestampDisplay from '../TimestampDisplay';
 
 export default function MatchCard({ 
   match, 
@@ -14,6 +15,7 @@ export default function MatchCard({
   const [otherUserQuizScore, setOtherUserQuizScore] = useState(null);
   const [showQuiz, setShowQuiz] = useState(false);
   const [hasQuiz, setHasQuiz] = useState(false);
+  const [currentUserHasQuiz, setCurrentUserHasQuiz] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
 
   // Load quiz score and check if user has quiz on component mount
@@ -27,15 +29,30 @@ export default function MatchCard({
       const quiz = await getUserQuiz(match.id);
       setHasQuiz(quiz !== null && quiz.length > 0);
       
+      // Check if current user has a quiz
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (currentUser) {
+        const currentUserQuiz = await getUserQuiz(currentUser.id);
+        setCurrentUserHasQuiz(currentUserQuiz !== null && currentUserQuiz.length > 0);
+      }
+      
+      // Get the other user's quiz score on current user's quiz
+      const otherUserScore = await getOtherUserQuizScore(match.id);
+      setOtherUserQuizScore(otherUserScore);
+      
     } catch (error) {
       console.error('Error loading quiz data:', error);
       setHasQuiz(false);
+      setCurrentUserHasQuiz(false);
+      setOtherUserQuizScore(null);
     }
   };
 
   const handleQuizCompleted = (scoreResult) => {
     setQuizScore(scoreResult.score);
     setShowQuiz(false);
+    // Refresh the quiz data to show updated scores
+    loadQuizData();
   };
 
   return (
@@ -75,8 +92,8 @@ export default function MatchCard({
               <Text style={styles.distanceText}>{match.distance} miles away</Text>
             </View>
           )}
-          {/* Quiz Score Display - Only show if other user has taken current user's quiz */}
-          {otherUserQuizScore !== null && (
+          {/* Quiz Score Display - Only show if current user has a quiz and other user has taken it */}
+          {currentUserHasQuiz && otherUserQuizScore !== null && (
             <View style={styles.quizScoreContainer}>
               <Ionicons name="trophy" size={14} color="#666" />
               <Text style={styles.quizScoreText}>
@@ -87,17 +104,12 @@ export default function MatchCard({
         </View>
       </View>
       <View style={styles.matchActions}>
-        <Text style={styles.timestamp}>
-          {match.matchedAt ? 
-            new Date(match.matchedAt).toLocaleString([], { 
-              month: 'short', 
-              day: 'numeric',
-              hour: '2-digit', 
-              minute: '2-digit' 
-            }) : 
-            'Just matched!'
-          }
-        </Text>
+        <TimestampDisplay 
+          timestamp={match.matchedAt}
+          format="relative"
+          style={styles.timestamp}
+          fallbackText="Just matched!"
+        />
         <View style={styles.actionButtons}>
           <TouchableOpacity 
             style={[styles.messageButton]}

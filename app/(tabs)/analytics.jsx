@@ -176,21 +176,25 @@ const Analytics = () => {
         {/* Summary Cards */}
         {summaryData && ( 
           <View style={styles.summaryContainer}>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Likes Received</Text>
-              <Text style={styles.summaryValue}>{summaryData.totalLikesReceived}</Text>
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryLabel}>Likes Received</Text>
+                <Text style={styles.summaryValue}>{summaryData.totalLikesReceived}</Text>
+              </View>
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryLabel}>Likes Given</Text>
+                <Text style={styles.summaryValue}>{summaryData.likesGiven}</Text>
+              </View>
             </View>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Likes Given</Text>
-              <Text style={styles.summaryValue}>{summaryData.likesGiven}</Text>
-            </View>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Total Matches</Text>
-              <Text style={styles.summaryValue}>{summaryData.totalMatches}</Text>
-            </View>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Match Rate</Text>
-              <Text style={styles.summaryValue}>{summaryData.matchRate}%</Text>
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryLabel}>Total Matches</Text>
+                <Text style={styles.summaryValue}>{summaryData.totalMatches}</Text>
+              </View>
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryLabel}>Match Rate</Text>
+                <Text style={styles.summaryValue}>{summaryData.matchRate}%</Text>
+              </View>
             </View>
           </View>
         )}
@@ -262,7 +266,8 @@ const Analytics = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'hotpink'
+    backgroundColor: 'hotpink',
+    paddingTop: 0
   },
   scrollView: {
     flex: 1
@@ -295,16 +300,21 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline'
   },
   summaryContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     padding: 20,
+    paddingTop: 10,
+    gap: 10
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
     gap: 10
   },
   summaryCard: {
     backgroundColor: '#ffffff',
     padding: 15,
     borderRadius: 12,
-    minWidth: (width - 60) / 2,
+    flex: 1,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
@@ -326,10 +336,7 @@ const styles = StyleSheet.create({
     color: '#212529'
   },
   sliderContainer: {
-    marginTop: 20,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#e9ecef'
+    paddingHorizontal: 40,
   },
   sliderLabel: {
     fontSize: 16,
@@ -343,17 +350,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#e9ecef',
     borderRadius: 2,
     position: 'relative',
-    marginVertical: 20
-  },
-  sliderThumb: {
-    width: 20,
-    height: 20,
-    backgroundColor: '#ff69b4',
-    borderRadius: 10,
-    position: 'absolute',
-    top: -8,
-    left: 0,
-    transform: [{ translateX: 0 }]
+    marginTop: 20
   },
   sliderLabels: {
     flexDirection: 'row',
@@ -370,9 +367,9 @@ const styles = StyleSheet.create({
   },
   chartContainer: {
     backgroundColor: '#ffffff',
-    margin: 20,
-    padding: 20,
-    borderRadius: 16,
+    marginHorizontal: 20,
+    paddingVertical: 20,
+    borderRadius: 10,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -380,7 +377,8 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
-    elevation: 5
+    elevation: 5,
+    overflow: 'hidden'
   },
   chartTitle: {
     fontSize: 18,
@@ -390,8 +388,7 @@ const styles = StyleSheet.create({
     textAlign: 'center'
   },
   chart: {
-    marginVertical: 8,
-    borderRadius: 16
+    height: 200,
   },
   imageLoader: {
     position: 'absolute',

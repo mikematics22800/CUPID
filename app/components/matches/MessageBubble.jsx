@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MaterialIcons } from '@expo/vector-icons';
+import TimestampDisplay from '../TimestampDisplay';
 
 export default function MessageBubble({ 
   message, 
@@ -34,12 +35,11 @@ export default function MessageBubble({
           {message.content}
         </Text>
         <View style={styles.messageFooter}>
-          <Text style={styles.messageTime}>
-            {new Date(message.created_at).toLocaleTimeString([], { 
-              hour: '2-digit', 
-              minute: '2-digit' 
-            })}
-          </Text>
+          <TimestampDisplay 
+            timestamp={message.created_at}
+            format="time"
+            style={styles.messageTime}
+          />
         </View>
       </View>
     </View>

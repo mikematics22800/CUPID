@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { TextInput } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
-import { searchCities, getPlaceDetails } from '../../../lib/google_maps';
+import { searchCities, getPlaceDetails } from '../../../lib/google';
 
 export default function ResidenceInput({
   value,
