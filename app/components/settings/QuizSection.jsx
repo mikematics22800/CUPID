@@ -18,26 +18,29 @@ import { useProfile } from '../../contexts/ProfileContext';
 
 export default function QuizSection({ onQuizSaved, onQuizDataChange }) {
   const { user, profile, bio, interests, name } = useProfile();
-  const [questions, setQuestions] = useState([]);
   const [showQuizModal, setShowQuizModal] = useState(false);
   const [showQuestionCountModal, setShowQuestionCountModal] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [questionCount, setQuestionCount] = useState(10);
+  const [quizExists, setQuizExists] = useState(false);
   const pickerScrollViewRef = React.useRef(null);
+
+  // Initialize with 25 empty question forms
+  const [questions, setQuestions] = useState(Array(25).fill(['', '', '', '', '']));
+  const [originalQuestions, setOriginalQuestions] = useState(Array(25).fill(['', '', '', '', '']));
 
   // Load existing quiz on component mount
   useEffect(() => {
     loadExistingQuiz();
   }, [user]);
 
-  // Store original questions to reset on discard
-  const [originalQuestions, setOriginalQuestions] = useState([]);
-
   // Notify parent component when quiz data changes
   useEffect(() => {
     if (onQuizDataChange) {
-      onQuizDataChange(questions);
+      // Only pass non-empty questions to parent
+      const nonEmptyQuestions = questions.filter(q => q[0]?.trim() && q[1]?.trim() && q[2]?.trim() && q[3]?.trim() && q[4]?.trim());
+      onQuizDataChange(nonEmptyQuestions);
     }
   }, [questions, onQuizDataChange]);
 
@@ -53,16 +56,32 @@ export default function QuizSection({ onQuizSaved, onQuizDataChange }) {
           q.correctAnswer,
           ...q.options.filter(option => option !== q.correctAnswer).slice(0, 3)
         ]);
-        setQuestions(formattedQuestions);
-        setOriginalQuestions(formattedQuestions);
+        
+        // Create a new array with 25 slots, populated with existing questions
+        const newQuestions = Array(25).fill(['', '', '', '', '']);
+        formattedQuestions.forEach((question, index) => {
+          if (index < 25) {
+            newQuestions[index] = question;
+          }
+        });
+        
+        setQuestions(newQuestions);
+        setOriginalQuestions([...newQuestions]);
+        setQuizExists(true);
       } else {
-        setQuestions([]);
-        setOriginalQuestions([]);
+        // Reset to empty 25-question array
+        const emptyQuestions = Array(25).fill(['', '', '', '', '']);
+        setQuestions(emptyQuestions);
+        setOriginalQuestions([...emptyQuestions]);
+        setQuizExists(false);
       }
     } catch (error) {
       console.error('Error loading existing quiz:', error);
-      setQuestions([]);
-      setOriginalQuestions([]);
+      // Reset to empty 25-question array
+      const emptyQuestions = Array(25).fill(['', '', '', '', '']);
+      setQuestions(emptyQuestions);
+      setOriginalQuestions([...emptyQuestions]);
+      setQuizExists(false);
     }
   };
 
@@ -72,7 +91,7 @@ export default function QuizSection({ onQuizSaved, onQuizDataChange }) {
     setGenerating(true);
     try {
       // Delete existing quiz first
-      if (questions.length > 0) {
+      if (quizExists) {
         console.log('🗑️ Deleting existing quiz before generating new one...');
         try {
           await deleteQuiz(user.id);
@@ -80,6 +99,7 @@ export default function QuizSection({ onQuizSaved, onQuizDataChange }) {
           // Clear local state
           setQuestions([]);
           setOriginalQuestions([]);
+          setQuizExists(false);
         } catch (deleteError) {
           console.error('❌ Error deleting existing quiz:', deleteError);
           // Continue with generation even if deletion fails
@@ -198,10 +218,30 @@ IMPORTANT:
       }
 
       console.log('✅ Quiz validation passed, setting questions:', quizData);
-      setQuestions(quizData);
-      setOriginalQuestions(quizData);
       
-      Alert.alert('Quiz generated!', `Generated ${numQuestions} questions. Feel free to review and edit to your liking.`);
+      // Create a new array with 25 slots, populated with generated questions
+      const newQuestions = Array(25).fill(['', '', '', '', '']);
+      quizData.forEach((question, index) => {
+        if (index < 25) {
+          newQuestions[index] = question;
+        }
+      });
+      
+      // Save the generated quiz to the database
+      console.log('💾 Saving generated quiz to database...');
+      await createOrUpdateQuiz(user.id, quizData);
+      console.log('✅ Generated quiz saved to database');
+      
+      setQuestions(newQuestions);
+      setOriginalQuestions([...newQuestions]);
+      setQuizExists(true);
+      
+      Alert.alert('Quiz Generated & Saved!', `Generated and saved ${numQuestions} questions. Feel free to review and edit to your liking.`);
+      
+      // Notify parent component
+      if (onQuizSaved) {
+        onQuizSaved();
+      }
     } catch (error) {
       console.error('❌ Error generating quiz:', error);
       
@@ -221,25 +261,24 @@ IMPORTANT:
   };
 
   const addQuestion = () => {
-    if (questions.length >= 25) {
+    // Find the first empty question slot
+    const emptyIndex = questions.findIndex(q => !q[0]?.trim());
+    if (emptyIndex === -1) {
       Alert.alert('Maximum Questions Reached', 'You can have a maximum of 25 questions in your quiz.');
       return;
     }
-    const newQuestions = [...questions, ['', '', '', '', '']];
-    setQuestions(newQuestions);
+    // The form is already there, just focus on it or show a message
+    Alert.alert('Add Question', `Please fill in question ${emptyIndex + 1} to add it to your quiz.`);
   };
 
   const removeQuestion = (index) => {
-    const newQuestions = questions.filter((_, i) => i !== index);
+    const newQuestions = [...questions];
+    newQuestions[index] = ['', '', '', '', ''];
     setQuestions(newQuestions);
   };
 
   const editQuestion = (index, newQuestion, newAnswer, newFakeAnswer1, newFakeAnswer2, newFakeAnswer3) => {
     const newQuestions = [...questions];
-    // Ensure the array has enough elements
-    while (newQuestions.length <= index) {
-      newQuestions.push(['', '', '', '', '']);
-    }
     newQuestions[index] = [newQuestion, newAnswer, newFakeAnswer1, newFakeAnswer2, newFakeAnswer3];
     setQuestions(newQuestions);
   };
@@ -250,7 +289,10 @@ IMPORTANT:
       'Are you sure you want to clear all questions? This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Clear', style: 'destructive', onPress: () => setQuestions([]) }
+        { text: 'Clear', style: 'destructive', onPress: () => {
+          const emptyQuestions = Array(25).fill(['', '', '', '', '']);
+          setQuestions(emptyQuestions);
+        }}
       ]
     );
   };
@@ -271,6 +313,7 @@ IMPORTANT:
             try {
               await deleteQuiz(user.id);
               setQuestions([]);
+              setQuizExists(false);
               Alert.alert('Success', 'Your quiz has been deleted successfully!');
               if (onQuizSaved) {
                 onQuizSaved();
@@ -314,7 +357,12 @@ IMPORTANT:
   };
 
   const validateQuiz = () => {
-    if (questions.length < 10) {
+    // Count non-empty questions
+    const nonEmptyQuestions = questions.filter(q => 
+      q[0]?.trim() && q[1]?.trim() && q[2]?.trim() && q[3]?.trim() && q[4]?.trim()
+    );
+
+    if (nonEmptyQuestions.length < 10) {
       Alert.alert(
         'Insufficient Questions',
         'Your quiz must have at least 10 questions. Please add more questions or generate a new quiz.',
@@ -323,7 +371,7 @@ IMPORTANT:
       return false;
     }
 
-    if (questions.length > 25) {
+    if (nonEmptyQuestions.length > 25) {
       Alert.alert(
         'Too Many Questions',
         'Your quiz cannot have more than 25 questions. Please remove some questions.',
@@ -332,48 +380,26 @@ IMPORTANT:
       return false;
     }
 
-    // Check if all questions have content
+    // Check if all filled questions have complete content
     for (let i = 0; i < questions.length; i++) {
       const question = questions[i];
-      if (!question[0]?.trim() || !question[1]?.trim() || !question[2]?.trim() || !question[3]?.trim() || !question[4]?.trim()) {
-        Alert.alert(
-          'Incomplete Questions',
-          `Question ${i + 1} is incomplete. Please fill in all fields (question, answer, and 3 fake answers).`,
-          [{ text: 'OK', style: 'default' }]
-        );
-        return false;
+      // Only validate questions that have at least one field filled
+      if (question[0]?.trim() || question[1]?.trim() || question[2]?.trim() || question[3]?.trim() || question[4]?.trim()) {
+        if (!question[0]?.trim() || !question[1]?.trim() || !question[2]?.trim() || !question[3]?.trim() || !question[4]?.trim()) {
+          Alert.alert(
+            'Incomplete Questions',
+            `Question ${i + 1} is incomplete. Please fill in all fields (question, answer, and 3 fake answers).`,
+            [{ text: 'OK', style: 'default' }]
+          );
+          return false;
+        }
       }
     }
 
     return true;
   };
 
-  const saveQuiz = async () => {
-    if (!validateQuiz()) {
-      return;
-    }
 
-    try {
-      // Clean up the questions data before saving
-      const cleanedQuestions = questions.map(q => [
-        q[0]?.trim() || '',
-        q[1]?.trim() || '',
-        q[2]?.trim() || '',
-        q[3]?.trim() || '',
-        q[4]?.trim() || ''
-      ]);
-
-      await createOrUpdateQuiz(user.id, cleanedQuestions);
-      setShowQuizModal(false);
-      Alert.alert('Success', 'Quiz saved successfully!');
-      if (onQuizSaved) {
-        onQuizSaved();
-      }
-    } catch (error) {
-      console.error('Error saving quiz:', error);
-      Alert.alert('Error', 'Failed to save quiz. Please try again.');
-    }
-  };
 
   return (
     <View style={styles.container}>
@@ -393,98 +419,34 @@ IMPORTANT:
       >
         <Ionicons name="create" size={20} color="white" />
         <Text style={styles.actionButtonText}>
-          Edit Quiz ({questions.length}/25)
-        </Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.actionButton, styles.generateButton]}
-        onPress={handleGenerateQuiz}
-        disabled={generating}
-      >
-        {generating ? (
-          <ActivityIndicator color="white" size="small" />
-        ) : (
-          <Ionicons name="sparkles" size={20} color="white" />
-        )}
-        <Text style={styles.actionButtonText}>
-          {generating ? 'Generating...' : 'Generate Quiz'}
+          {quizExists ? 'Edit Quiz' : 'Create Quiz'} {(() => {
+            const filledQuestions = questions.filter(q => 
+              q[0]?.trim() && q[1]?.trim() && q[2]?.trim() && q[3]?.trim() && q[4]?.trim()
+            ).length;
+            return filledQuestions > 0 ? `(${filledQuestions}/25)` : '';
+          })()}
         </Text>
       </TouchableOpacity>
 
-      {/* Question Count Selection Modal */}
-      <Modal
-        visible={showQuestionCountModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowQuestionCountModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.questionCountModal}>
-            <Text style={styles.modalTitle}>How many questions?</Text>
-            <View style={styles.pickerContainer}>
-              <View style={styles.pickerWheel}>
-                <View style={styles.pickerSelectionIndicator} />
-                <ScrollView
-                  ref={pickerScrollViewRef}
-                  style={styles.pickerScrollView}
-                  showsVerticalScrollIndicator={false}
-                  snapToInterval={50}
-                  decelerationRate="fast"
-                  onMomentumScrollEnd={(event) => {
-                    const y = event.nativeEvent.contentOffset.y;
-                    const index = Math.round(y / 50);
-                    const newValue = Math.max(10, Math.min(25, 10 + index));
-                    setQuestionCount(newValue);
-                  }}
-                >
-                  {/* Add padding items to center the selection */}
-                  <View style={styles.pickerPaddingItem} />
-                  <View style={styles.pickerPaddingItem} />
-                  
-                  {Array.from({ length: 16 }, (_, i) => i + 10).map((num) => (
-                    <TouchableOpacity
-                      key={num}
-                      style={styles.pickerItem}
-                      onPress={() => setQuestionCount(num)}
-                    >
-                      <View style={[
-                        styles.pickerItemContainer,
-                        questionCount === num && styles.pickerItemContainerSelected
-                      ]}>
-                        <Text style={[
-                          styles.pickerItemText,
-                          questionCount === num && styles.pickerItemTextSelected
-                        ]}>
-                          {num}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                  
-                  {/* Add padding items to center the selection */}
-                  <View style={styles.pickerPaddingItem} />
-                  <View style={styles.pickerPaddingItem} />
-                </ScrollView>
-              </View>
-            </View>
-            
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setShowQuestionCountModal(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.confirmButton]}
-                onPress={confirmGenerateQuiz}
-              >
-                <Text style={styles.confirmButtonText}>Generate</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {quizExists && (
+        <TouchableOpacity
+          style={[styles.actionButton, styles.clearButton]}
+          onPress={handleDeleteQuiz}
+          disabled={deleting}
+        >
+          {deleting ? (
+            <ActivityIndicator color="white" size="small" />
+          ) : (
+            <Ionicons name="trash" size={20} color="white" />
+          )}
+          <Text style={styles.actionButtonText}>
+            {deleting ? 'Deleting...' : 'Delete Quiz'}
+          </Text>
+        </TouchableOpacity>
+      )}
+
+
+
 
       {/* Quiz Editing Modal */}
       <Modal
@@ -492,15 +454,19 @@ IMPORTANT:
         animationType="slide"
         transparent={false}
         onRequestClose={() => {
+          // Reset to original questions if user closes without saving
+          setQuestions([...originalQuestions]);
           setShowQuizModal(false);
         }}
       >
         <SafeAreaView style={styles.modalContainer}>
-          {/* Modal Header */}
+                    {/* Modal Header */}
           <View style={styles.modalHeader}>
             <TouchableOpacity
               style={styles.closeButton}
               onPress={() => {
+                // Reset to original questions if user closes without saving
+                setQuestions([...originalQuestions]);
                 setShowQuizModal(false);
               }}
             >
@@ -508,10 +474,60 @@ IMPORTANT:
             </TouchableOpacity>
             <View style={styles.modalHeaderActions}>
               <TouchableOpacity
-                style={styles.saveQuizButton}
-                onPress={saveQuiz}
+                style={styles.generateButton}
+                onPress={handleGenerateQuiz}
+                disabled={generating}
               >
-                <Text style={styles.saveQuizButtonText}>Save</Text>
+                {generating ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : (
+                  <Ionicons name="sparkles" size={16} color="white" />
+                )}
+                <Text style={styles.generateButtonText}>
+                  {generating ? 'Generating...' : 'Generate'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={clearQuiz}
+              >
+                <Ionicons name="trash-outline" size={16} color="white" />
+                <Text style={styles.clearButtonText}>Clear</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={async () => {
+                  try {
+                    // Validate quiz before saving
+                    if (!validateQuiz()) {
+                      return;
+                    }
+
+                    // Get non-empty questions
+                    const nonEmptyQuestions = questions.filter(q => 
+                      q[0]?.trim() && q[1]?.trim() && q[2]?.trim() && q[3]?.trim() && q[4]?.trim()
+                    );
+
+                    // Save to database
+                    await createOrUpdateQuiz(user.id, nonEmptyQuestions);
+                    
+                    // Update local state
+                    setOriginalQuestions([...questions]);
+                    setQuizExists(true);
+                    
+                    Alert.alert('Success', 'Your quiz has been saved successfully!');
+                    
+                    // Notify parent component
+                    if (onQuizSaved) {
+                      onQuizSaved();
+                    }
+                  } catch (error) {
+                    console.error('Error saving quiz:', error);
+                    Alert.alert('Error', 'Failed to save quiz. Please try again.');
+                  }
+                }}
+              >
+                <Text style={styles.saveButtonText}>Save</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -519,73 +535,155 @@ IMPORTANT:
           {/* Modal Content */}
           <View style={styles.modalContent}>
             <ScrollView style={styles.questionsContainer}>
-              {questions.map((question, index) => (
-                <View key={index} style={styles.questionInputSection}>
-                  <View style={styles.questionHeader}>
-                    <Text style={styles.questionNumber}>Question {index + 1}</Text>
+              {Array.from({ length: 25 }, (_, index) => {
+                const question = questions[index] || ['', '', '', '', ''];
+                const isEmpty = !question[0]?.trim() && !question[1]?.trim() && !question[2]?.trim() && !question[3]?.trim() && !question[4]?.trim();
+                
+                return (
+                  <View key={index} style={[
+                    styles.questionInputSection,
+                    isEmpty && styles.emptyQuestionSection
+                  ]}>
+                    <View style={styles.questionHeader}>
+                      <Text style={[
+                        styles.questionNumber,
+                        isEmpty && styles.emptyQuestionNumber
+                      ]}>
+                        Question {index + 1}
+                      </Text>
+                      {!isEmpty && (
+                        <TouchableOpacity
+                          style={styles.removeQuestionButton}
+                          onPress={() => removeQuestion(index)}
+                        >
+                          <Ionicons name="trash" size={20} color="#ff3b30" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                    <TextInput
+                      mode="outlined"
+                      label="Question"
+                      style={styles.input}
+                      value={question[0] || ''}
+                      onChangeText={(text) => editQuestion(index, text, question[1] || '', question[2] || '', question[3] || '', question[4] || '')}
+                      multiline
+                      maxLength={200}
+                      placeholder={isEmpty ? "Enter your question here..." : ""}
+                    />
+                    <TextInput
+                      mode="outlined"
+                      label="Answer"
+                      style={styles.input}
+                      value={question[1] || ''}
+                      onChangeText={(text) => editQuestion(index, question[0] || '', text, question[2] || '', question[3] || '', question[4] || '')}
+                      multiline
+                      maxLength={100}
+                      placeholder={isEmpty ? "Enter the correct answer..." : ""}
+                    />
+                    <TextInput
+                      mode="outlined"
+                      label="Fake Answer 1"
+                      style={styles.input}
+                      value={question[2] || ''}
+                      onChangeText={(text) => editQuestion(index, question[0] || '', question[1] || '', text, question[3] || '', question[4] || '')}
+                      multiline
+                      maxLength={100}
+                      placeholder={isEmpty ? "Enter a fake answer..." : ""}
+                    />
+                    <TextInput
+                      mode="outlined"
+                      label="Fake Answer 2"
+                      style={styles.input}
+                      value={question[3] || ''}
+                      onChangeText={(text) => editQuestion(index, question[0] || '', question[1] || '', question[2] || '', text, question[4] || '')}
+                      multiline
+                      maxLength={100}
+                      placeholder={isEmpty ? "Enter a fake answer..." : ""}
+                    />
+                    <TextInput
+                      mode="outlined"
+                      label="Fake Answer 3"
+                      style={styles.input}
+                      value={question[4] || ''}
+                      onChangeText={(text) => editQuestion(index, question[0] || '', question[1] || '', question[2] || '', question[3] || '', text)}
+                      multiline
+                      maxLength={100}
+                      placeholder={isEmpty ? "Enter a fake answer..." : ""}
+                    />
+                  </View>
+                );
+              })}
+            </ScrollView>
+
+            {/* Embedded Question Count Modal */}
+            {showQuestionCountModal && (
+              <View style={styles.embeddedModalOverlay}>
+                <View style={styles.embeddedQuestionCountModal}>
+                  <Text style={styles.modalTitle}>How many questions?</Text>
+                  <View style={styles.pickerContainer}>
+                    <View style={styles.pickerWheel}>
+                      <View style={styles.pickerSelectionIndicator} />
+                      <ScrollView
+                        ref={pickerScrollViewRef}
+                        style={styles.pickerScrollView}
+                        showsVerticalScrollIndicator={false}
+                        snapToInterval={50}
+                        decelerationRate="fast"
+                        onMomentumScrollEnd={(event) => {
+                          const y = event.nativeEvent.contentOffset.y;
+                          const index = Math.round(y / 50);
+                          const newValue = Math.max(10, Math.min(25, 10 + index));
+                          setQuestionCount(newValue);
+                        }}
+                      >
+                        {/* Add padding items to center the selection */}
+                        <View style={styles.pickerPaddingItem} />
+                        <View style={styles.pickerPaddingItem} />
+                        
+                        {Array.from({ length: 16 }, (_, i) => i + 10).map((num) => (
+                          <TouchableOpacity
+                            key={num}
+                            style={styles.pickerItem}
+                            onPress={() => setQuestionCount(num)}
+                          >
+                            <View style={[
+                              styles.pickerItemContainer,
+                              questionCount === num && styles.pickerItemContainerSelected
+                            ]}>
+                              <Text style={[
+                                styles.pickerItemText,
+                                questionCount === num && styles.pickerItemTextSelected
+                              ]}>
+                                {num}
+                              </Text>
+                            </View>
+                          </TouchableOpacity>
+                        ))}
+                        
+                        {/* Add padding items to center the selection */}
+                        <View style={styles.pickerPaddingItem} />
+                        <View style={styles.pickerPaddingItem} />
+                      </ScrollView>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.modalButtons}>
                     <TouchableOpacity
-                      style={styles.removeQuestionButton}
-                      onPress={() => removeQuestion(index)}
+                      style={[styles.modalButton, styles.cancelButton]}
+                      onPress={() => setShowQuestionCountModal(false)}
                     >
-                      <Ionicons name="trash" size={20} color="#ff3b30" />
+                      <Text style={styles.cancelButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.modalButton, styles.confirmButton]}
+                      onPress={confirmGenerateQuiz}
+                    >
+                      <Text style={styles.confirmButtonText}>Generate</Text>
                     </TouchableOpacity>
                   </View>
-                  <TextInput
-                    mode="outlined"
-                    label="Question"
-                    style={styles.input}
-                    value={question[0] || ''}
-                    onChangeText={(text) => editQuestion(index, text, question[1] || '', question[2] || '', question[3] || '', question[4] || '')}
-                    multiline
-                    maxLength={200}
-                  />
-                  <TextInput
-                    mode="outlined"
-                    label="Answer"
-                    style={styles.input}
-                    value={question[1] || ''}
-                    onChangeText={(text) => editQuestion(index, question[0] || '', text, question[2] || '', question[3] || '', question[4] || '')}
-                    multiline
-                    maxLength={100}
-                  />
-                  <TextInput
-                    mode="outlined"
-                    label="Fake Answer 1"
-                    style={styles.input}
-                    value={question[2] || ''}
-                    onChangeText={(text) => editQuestion(index, question[0] || '', question[1] || '', text, question[3] || '', question[4] || '')}
-                    multiline
-                    maxLength={100}
-                  />
-                  <TextInput
-                    mode="outlined"
-                    label="Fake Answer 2"
-                    style={styles.input}
-                    value={question[3] || ''}
-                    onChangeText={(text) => editQuestion(index, question[0] || '', question[1] || '', question[2] || '', text, question[4] || '')}
-                    multiline
-                    maxLength={100}
-                  />
-                  <TextInput
-                    mode="outlined"
-                    label="Fake Answer 3"
-                    style={styles.input}
-                    value={question[4] || ''}
-                    onChangeText={(text) => editQuestion(index, question[0] || '', question[1] || '', question[2] || '', question[3] || '', text)}
-                    multiline
-                    maxLength={100}
-                  />
                 </View>
-              ))}
-              
-              {questions.length === 0 && (
-                <View style={styles.emptyStateContainer}>
-                  <Text style={styles.emptyStateText}>
-                    No questions yet. Use the "Generate quiz questions" button to create questions based on your profile. Your quiz will be saved when you click "Save" in the profile section.
-                  </Text>
-                </View>
-              )}
-            </ScrollView>
+              </View>
+            )}
           </View>
 
         </SafeAreaView>
@@ -651,6 +749,17 @@ const styles = StyleSheet.create({
   },
   clearButton: {
     backgroundColor: '#ff3b30',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  clearButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 14,
   },
   addButton: {
     backgroundColor: '#34C759',
@@ -798,6 +907,8 @@ const styles = StyleSheet.create({
   },
   removeQuestionButton: {
     padding: 8,
+    position: 'absolute',
+    right: 0,
   },
   modalHeaderActions: {
     flexDirection: 'row',
@@ -814,6 +925,31 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
+  },
+  generateButton: {
+    backgroundColor: 'hotpink',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  generateButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  saveButton: {
+    backgroundColor: 'hotpink',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+  },
+  saveButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 14,
   },
 
   modalContent: {
@@ -846,9 +982,10 @@ const styles = StyleSheet.create({
   },
   questionHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
+    position: 'relative',
   },
   emptyStateContainer: {
     flex: 1,
@@ -868,8 +1005,34 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     backgroundColor: 'white',
   },
-
-
-
-
+  emptyQuestionSection: {
+    opacity: 0.6,
+    backgroundColor: '#f8f9fa',
+  },
+  emptyQuestionNumber: {
+    color: '#999',
+  },
+  embeddedModalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  embeddedQuestionCountModal: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 24,
+    width: '80%',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 10,
+  },
 }); 

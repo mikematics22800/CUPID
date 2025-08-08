@@ -63,6 +63,7 @@ export default function SettingsScreen() {
     setEmail,
     setPhone,
     updateProfile,
+    updatePersonal,
     updatePhotos,
     removePhoto,
     hasEnoughPhotos,
@@ -460,37 +461,53 @@ export default function SettingsScreen() {
       const allPhotoUrls = [...existingPhotoUrls, ...newlyUploadedUrls];
       const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
       
-      // Save profile data
-      const success = await updateProfile({
+      // Save profile data (bio, interests, residence, images)
+      console.log('💾 Saving profile data:', { bio, interests, residence, imageCount: allPhotoUrls.length });
+      const profileSuccess = await updateProfile({
         bio: bio,
         interests: interests,
         residence: residence,
-        name: fullName,
         images: allPhotoUrls,
       });
+      console.log('✅ Profile save result:', profileSuccess);
+
+      // Save personal data (name)
+      console.log('💾 Saving personal data:', { name: fullName });
+      const personalSuccess = await updatePersonal({
+        name: fullName,
+      });
+      console.log('✅ Personal save result:', personalSuccess);
 
       // Save quiz data if there are questions
+      let quizSaved = false;
       if (quizData.length > 0) {
         try {
+          console.log('💾 Saving quiz data:', { questionCount: quizData.length });
           const { createOrUpdateQuiz } = await import('../../lib/supabase');
           await createOrUpdateQuiz(user.id, quizData);
           console.log('✅ Quiz saved successfully');
+          quizSaved = true;
         } catch (quizError) {
           console.error('❌ Error saving quiz:', quizError);
           Alert.alert('Warning', 'Profile saved but there was an error saving your quiz. Please try again.');
           return;
         }
+      } else {
+        console.log('📝 No quiz data to save');
       }
 
-      if (success) {
-        Alert.alert('Success', 'Profile updated successfully!');
+      if (profileSuccess && personalSuccess) {
+        const message = quizSaved ? 'Profile and quiz updated successfully!' : 'Profile updated successfully!';
+        console.log('🎉 Profile save completed successfully:', { profileSuccess, personalSuccess, quizSaved });
+        Alert.alert('Success', message);
         setShowProfile(false);
       } else {
-        throw new Error('Failed to update profile');
+        console.error('❌ Profile save failed:', { profileSuccess, personalSuccess });
+        throw new Error(`Failed to update profile or personal data. Profile: ${profileSuccess}, Personal: ${personalSuccess}`);
       }
     } catch (error) {
-      console.error('Error saving profile:', error);
-      Alert.alert('Error', 'Failed to save profile. Please try again.');
+      console.error('❌ Error saving profile:', error);
+      Alert.alert('Error', `Failed to save profile: ${error.message}`);
     } finally {
       setSaving(false);
     }
@@ -1024,3 +1041,4 @@ const styles = StyleSheet.create({
     gap: 25,
   },
 });
+

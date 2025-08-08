@@ -9,8 +9,8 @@ CREATE TABLE public.like (
   active boolean NOT NULL DEFAULT true,
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT like_pkey PRIMARY KEY (id),
-  CONSTRAINT like_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES public.user(id),
-  CONSTRAINT like_receiver_id_fkey FOREIGN KEY (receiver_id) REFERENCES public.user(id)
+  CONSTRAINT like_receiver_id_fkey FOREIGN KEY (receiver_id) REFERENCES public.user(id),
+  CONSTRAINT like_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES public.user(id)
 );
 CREATE TABLE public.match (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -22,8 +22,8 @@ CREATE TABLE public.match (
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   active boolean NOT NULL DEFAULT true,
   CONSTRAINT match_pkey PRIMARY KEY (id),
-  CONSTRAINT match_user_1_id_fkey FOREIGN KEY (user_1_id) REFERENCES public.user(id),
-  CONSTRAINT match_user_2_id_fkey FOREIGN KEY (user_2_id) REFERENCES public.user(id)
+  CONSTRAINT match_user_2_id_fkey FOREIGN KEY (user_2_id) REFERENCES public.user(id),
+  CONSTRAINT match_user_1_id_fkey FOREIGN KEY (user_1_id) REFERENCES public.user(id)
 );
 CREATE TABLE public.message (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -60,7 +60,7 @@ CREATE TABLE public.quiz (
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   questions ARRAY,
   answers ARRAY,
-  fake_answers text,
+  fake_answers ARRAY,
   CONSTRAINT quiz_pkey PRIMARY KEY (id),
   CONSTRAINT quizes_id_fkey FOREIGN KEY (id) REFERENCES public.user(id)
 );

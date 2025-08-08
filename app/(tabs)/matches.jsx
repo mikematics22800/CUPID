@@ -473,16 +473,16 @@ export default function MatchesScreen() {
           // Get sender name for the new message
           const getSenderName = async () => {
             try {
-              const { data: userProfile, error } = await supabase
-                .from('profile')
+              const { data: userPersonal, error } = await supabase
+                .from('personal')
                 .select('name')
                 .eq('id', newMessage.sender_id)
                 .single();
               
-              if (!error && userProfile) {
+              if (!error && userPersonal) {
                 const messageWithSender = {
                   ...newMessage,
-                  sender_name: userProfile.name
+                  sender_name: userPersonal.name
                 };
                 setMessages(prev => [...prev, messageWithSender]);
               }

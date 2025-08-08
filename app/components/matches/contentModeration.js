@@ -109,9 +109,9 @@ export const addStrikeToUser = async (userId, violatingMessage, threatAnalysis) 
       .eq('id', userId)
       .single();
 
-    // Get user profile info
-    const { data: userProfile, error: profileError } = await supabase
-      .from('profile')
+    // Get user personal info
+    const { data: userPersonal, error: personalError } = await supabase
+      .from('personal')
       .select('name')
       .eq('id', userId)
       .single();
@@ -121,15 +121,15 @@ export const addStrikeToUser = async (userId, violatingMessage, threatAnalysis) 
       throw userError;
     }
 
-    if (profileError) {
-      console.error('❌ Error getting user profile:', profileError);
-      throw profileError;
+    if (personalError) {
+      console.error('❌ Error getting user personal data:', personalError);
+      throw personalError;
     }
 
-    // Combine user info with profile info
+    // Combine user info with personal info
     const combinedUserInfo = {
       ...userInfo,
-      name: userProfile?.name || 'Unknown User'
+      name: userPersonal?.name || 'Unknown User'
     };
 
     if (userError) {

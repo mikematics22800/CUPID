@@ -307,9 +307,8 @@ export default function Feed() {
 
   if (user && !loading && !hasCompletedProfile()) {
     return (
-      <View style={styles.incompleteProfileContainer}>
-        <Ionicons name="camera-outline" size={80} color="#ccc" />
-        <Text style={styles.insufficientPhotosTitle}>Please complete your profile before continuing.</Text>
+      <View style={styles.noProfilesContainer}>
+        <Ionicons name="camera-outline" size={80} color="white" />
         <TouchableOpacity   
           style={styles.button}
           onPress={() => router.push('/settings')}

@@ -74,7 +74,7 @@ export const ProfileProvider = ({ children }) => {
       // Load profile data including images from database
       const { data: profileData, error } = await supabase
         .from('profile')
-        .select('id, bio, interests, name, birthday, sex, images, residence, geolocation')
+        .select('id, bio, interests, images, residence, geolocation')
         .eq('id', userIdToLoad)
         .single();
 
@@ -83,16 +83,28 @@ export const ProfileProvider = ({ children }) => {
         return;
       }
 
-      if (profileData) {
+      // Load personal data from personal table
+      const { data: personalData, error: personalError } = await supabase
+        .from('personal')
+        .select('id, name, sex, birthdate')
+        .eq('id', userIdToLoad)
+        .single();
+
+      if (personalError && personalError.code !== 'PGRST116') {
+        console.error('Error loading personal data:', personalError);
+        return;
+      }
+
+      if (profileData || personalData) {
         console.log('✅ Profile data loaded for user:', userIdToLoad);
         setProfile(profileData);
-        setBio(profileData.bio || '');
-        setInterests(profileData.interests || []);
-        setResidence(profileData.residence || '');
-        setGeolocation(profileData.geolocation || null);
-        setName(profileData.name || '');
-        setEmail(profileData.email || '');
-        setPhone(profileData.phone || '');
+        setBio(profileData?.bio || '');
+        setInterests(profileData?.interests || []);
+        setResidence(profileData?.residence || '');
+        setGeolocation(profileData?.geolocation || null);
+        setName(personalData?.name || '');
+        setEmail(profileData?.email || '');
+        setPhone(profileData?.phone || '');
         
         // Load photos from both database and storage
         await loadPhotosFromStorage(userIdToLoad, profileData.images);
@@ -201,7 +213,7 @@ export const ProfileProvider = ({ children }) => {
     setRefreshing(false);
   };
 
-  // Update profile data
+  // Update profile data (bio, interests, images, residence, geolocation)
   const updateProfile = async (updates) => {
     try {
       if (!user) return false;
@@ -229,6 +241,31 @@ export const ProfileProvider = ({ children }) => {
       return true;
     } catch (error) {
       console.error('Error updating profile:', error);
+      return false;
+    }
+  };
+
+  // Update personal data (name, sex, birthdate)
+  const updatePersonal = async (updates) => {
+    try {
+      if (!user) return false;
+
+      const { error } = await supabase
+        .from('personal')
+        .update(updates)
+        .eq('id', user.id);
+
+      if (error) {
+        console.error('Error updating personal data:', error);
+        return false;
+      }
+
+      // Set pending updates to be processed in useEffect
+      setPendingUpdates(updates);
+
+      return true;
+    } catch (error) {
+      console.error('Error updating personal data:', error);
       return false;
     }
   };
@@ -428,6 +465,7 @@ export const ProfileProvider = ({ children }) => {
     loadUserProfile,
     refreshProfile,
     updateProfile,
+    updatePersonal,
     updatePhotos,
     removePhoto,
     hasEnoughPhotos,
