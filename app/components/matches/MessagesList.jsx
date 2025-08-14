@@ -15,6 +15,25 @@ export default function MessagesList({
   const internalFlatListRef = useRef(null);
   const finalFlatListRef = flatListRef || internalFlatListRef;
 
+  // Define item dimensions for getItemLayout optimization
+  // Adjust these values based on your MessageBubble heights
+  const MIN_MESSAGE_HEIGHT = 60; // Minimum height for short messages
+  const MAX_MESSAGE_HEIGHT = 200; // Maximum height for long messages
+  const ITEM_SPACING = 0; // Adjust if you have spacing between messages
+
+  const getItemLayout = (data, index) => {
+    const message = data[index];
+    // Estimate height based on message content length
+    // You can refine this logic based on your actual message bubble heights
+    const estimatedHeight = message?.content?.length > 100 ? MAX_MESSAGE_HEIGHT : MIN_MESSAGE_HEIGHT;
+    
+    return {
+      length: estimatedHeight + ITEM_SPACING,
+      offset: (MIN_MESSAGE_HEIGHT + ITEM_SPACING) * index, // Use minimum for offset calculation
+      index,
+    };
+  };
+
   const scrollToBottom = () => {
     if (finalFlatListRef.current) {
       finalFlatListRef.current.scrollToEnd({ animated: false });
@@ -87,6 +106,11 @@ export default function MessagesList({
       showsVerticalScrollIndicator={false}
       onContentSizeChange={scrollToBottom}
       onLayout={scrollToBottom}
+      getItemLayout={getItemLayout}
+      removeClippedSubviews={true}
+      maxToRenderPerBatch={10}
+      windowSize={10}
+      initialNumToRender={10}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -106,4 +130,4 @@ const styles = StyleSheet.create({
   messagesContainer: {
     padding: 15,
   },
-}); 
+});

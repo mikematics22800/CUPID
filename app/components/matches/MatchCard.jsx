@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getUserQuiz, getOtherUserQuizScore, supabase } from '../../../lib/supabase';
-import QuizTaker from './QuizTaker';
+import { MaterialIcons } from '@expo/vector-icons';
 import TimestampDisplay from '../TimestampDisplay';
+import DatePlanner from './DatePlanner';
+import { supabase } from '../../../lib/supabase';
 
 export default function MatchCard({ 
   match, 
@@ -11,49 +12,62 @@ export default function MatchCard({
   onUnmatch, 
   processingUnmatch 
 }) {
-  const [quizScore, setQuizScore] = useState(null);
-  const [otherUserQuizScore, setOtherUserQuizScore] = useState(null);
-  const [showQuiz, setShowQuiz] = useState(false);
-  const [hasQuiz, setHasQuiz] = useState(false);
-  const [currentUserHasQuiz, setCurrentUserHasQuiz] = useState(false);
+
   const [imageLoading, setImageLoading] = useState(false);
+  const [showDatePlanner, setShowDatePlanner] = useState(false);
+  const [pendingDatesCount, setPendingDatesCount] = useState(0);
 
-  // Load quiz score and check if user has quiz on component mount
+  // Check for pending dates when component mounts or match changes
   useEffect(() => {
-    loadQuizData();
-  }, [match.id]);
+    if (match?.matchId) {
+      checkPendingDates();
+    }
+  }, [match?.matchId]);
 
-  const loadQuizData = async () => {
+  const checkPendingDates = async () => {
     try {
-      // Check if the matched user has a quiz
-      const quiz = await getUserQuiz(match.id);
-      setHasQuiz(quiz !== null && quiz.length > 0);
-      
-      // Check if current user has a quiz
       const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (currentUser) {
-        const currentUserQuiz = await getUserQuiz(currentUser.id);
-        setCurrentUserHasQuiz(currentUserQuiz !== null && currentUserQuiz.length > 0);
+      if (!currentUser) return;
+
+      // Get match data to determine which user the current user is
+      const { data: matchData, error: matchError } = await supabase
+        .from('match')
+        .select('user_1_id, user_2_id')
+        .eq('id', match.matchId)
+        .single();
+
+      if (matchError || !matchData) return;
+
+      // Determine if current user is user_1 or user_2
+      const isUser1 = currentUser.id === matchData.user_1_id;
+      const isUser2 = currentUser.id === matchData.user_2_id;
+
+      if (!isUser1 && !isUser2) return;
+
+      // Get pending dates (dates where the current user needs to respond)
+      // If current user is user_1, they can't have pending dates (they create them)
+      // If current user is user_2, they have pending dates from user_1
+      if (isUser2) {
+        const { data: pendingDates, error } = await supabase
+          .from('date')
+          .select('*')
+          .eq('match_id', match.matchId)
+          .eq('user_2_id', currentUser.id)
+          .is('accepted', null);
+
+        if (!error && pendingDates) {
+          setPendingDatesCount(pendingDates.length);
+        }
+      } else {
+        setPendingDatesCount(0);
       }
-      
-      // Get the other user's quiz score on current user's quiz
-      const otherUserScore = await getOtherUserQuizScore(match.id);
-      setOtherUserQuizScore(otherUserScore);
-      
     } catch (error) {
-      console.error('Error loading quiz data:', error);
-      setHasQuiz(false);
-      setCurrentUserHasQuiz(false);
-      setOtherUserQuizScore(null);
+      console.error('Error checking pending dates:', error);
     }
   };
 
-  const handleQuizCompleted = (scoreResult) => {
-    setQuizScore(scoreResult.score);
-    setShowQuiz(false);
-    // Refresh the quiz data to show updated scores
-    loadQuizData();
-  };
+
+
 
   return (
     <View style={styles.matchCard}>
@@ -92,15 +106,7 @@ export default function MatchCard({
               <Text style={styles.distanceText}>{match.distance} miles away</Text>
             </View>
           )}
-          {/* Quiz Score Display - Only show if current user has a quiz and other user has taken it */}
-          {currentUserHasQuiz && otherUserQuizScore !== null && (
-            <View style={styles.quizScoreContainer}>
-              <Ionicons name="trophy" size={14} color="#666" />
-              <Text style={styles.quizScoreText}>
-                {otherUserQuizScore}%
-              </Text>
-            </View>
-          )}
+
         </View>
       </View>
       <View style={styles.matchActions}>
@@ -115,45 +121,43 @@ export default function MatchCard({
             style={[styles.messageButton]}
             onPress={() => onOpenChat(match)}
           >
-            <Ionicons 
-              name="chatbubble-outline" 
-              size={20} 
-              color='white'
-            />
+            <Ionicons name="chatbubble-ellipses" size={20} color="white" />
+
           </TouchableOpacity>
-          
-          {/* Quiz Button - Only show if user has a quiz */}
-          {hasQuiz && (
-            <TouchableOpacity 
-              style={styles.quizButton}
-              onPress={() => setShowQuiz(true)}
-            >
-              <Ionicons 
-                name="trophy"
-                size={20} 
-                color='white'
-              />
-            </TouchableOpacity>
-          )}
-          
+          <TouchableOpacity 
+            style={styles.calendarButton}
+            onPress={() => setShowDatePlanner(true)}
+          >
+            <View style={styles.calendarButtonContainer}>
+              <Ionicons name="calendar" size={20} color="white"/>
+              {pendingDatesCount > 0 && (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationText}>!</Text>
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.unmatchButton, processingUnmatch === match.id && styles.processingButton]}
             onPress={() => onUnmatch(match.id, match.name)}
             disabled={processingUnmatch === match.id}
           >
-            <Ionicons name="close" size={20} color="white"/>
+            <Ionicons name="trash" size={20} color="white"/>
           </TouchableOpacity>
         </View>
       </View>
       
-      {/* Quiz Taker Modal */}
-      <QuizTaker
-        quizOwnerId={match.id}
-        quizOwnerName={match.name}
-        isVisible={showQuiz}
-        onClose={() => setShowQuiz(false)}
-        onQuizCompleted={handleQuizCompleted}
+      {/* Date Planner Modal */}
+      <DatePlanner
+        visible={showDatePlanner}
+        onClose={() => {
+          setShowDatePlanner(false);
+          // Refresh pending dates count when planner closes
+          setTimeout(() => checkPendingDates(), 500);
+        }}
+        match={match}
       />
+
     </View>
   );
 }
@@ -240,11 +244,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
 
-  quizButton: {
-    padding: 8,
-    backgroundColor: '#FFD700',
-    borderRadius: 20,
-  },
+
   unmatchButton: {
     padding: 8,
     backgroundColor: 'red',
@@ -263,15 +263,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
   },
-  quizScoreContainer: {
-    marginTop: 4,
-    flexDirection: 'row',
-    alignItems: 'center', 
-    gap: 4,
+  calendarButton: {
+    padding: 8,
+    backgroundColor: 'purple',
+    borderRadius: 20,
   },
-  quizScoreText: {
+  calendarButtonContainer: {
+    position: 'relative',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: 'red',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notificationText: {
+    color: 'white',
     fontSize: 12,
-    color: '#666',
+    fontWeight: 'bold',
   },
-
 }); 

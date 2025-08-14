@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import LottieView from 'lottie-react-native';
 import MatchCard from './MatchCard';
 
 export default function MatchesList({ 
@@ -10,6 +9,16 @@ export default function MatchesList({
   onOpenChat, 
   onUnmatch 
 }) {
+  // Define item dimensions for getItemLayout optimization
+  const ITEM_HEIGHT = 120; // Adjust this value based on your MatchCard height
+  const ITEM_SPACING = 0; // Adjust if you have spacing between items
+
+  const getItemLayout = (data, index) => ({
+    length: ITEM_HEIGHT + ITEM_SPACING,
+    offset: (ITEM_HEIGHT + ITEM_SPACING) * index,
+    index,
+  });
+
   const renderMatch = ({ item }) => {
     // In new schema, messages are stored within matches
     // No need for separate chat rooms
@@ -40,6 +49,11 @@ export default function MatchesList({
         keyExtractor={item => item.id}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
+        getItemLayout={getItemLayout}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        initialNumToRender={5}
       />
     </View>
   );
@@ -80,4 +94,4 @@ const styles = StyleSheet.create({
   listContainer: {
     padding: 20,
   },
-}); 
+});

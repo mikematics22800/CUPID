@@ -9,7 +9,7 @@ import { useProfile } from '../contexts/ProfileContext';
 import PhotoSection from '../components/settings/PhotoSection';
 import BioSection from '../components/settings/BioSection';
 import PersonalInfoForm from '../components/settings/PersonalInfoForm';
-import QuizSection from '../components/settings/QuizSection';
+
 import AccountSection from '../components/settings/AccountSection';
 import { uploadPhotosToStorage } from '../../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -34,7 +34,7 @@ export default function SettingsScreen() {
   const [saving, setSaving] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [quizData, setQuizData] = useState([]);
+
   const [validationStatus, setValidationStatus] = useState({
     firstName: true,
     lastName: true,
@@ -478,27 +478,10 @@ export default function SettingsScreen() {
       });
       console.log('✅ Personal save result:', personalSuccess);
 
-      // Save quiz data if there are questions
-      let quizSaved = false;
-      if (quizData.length > 0) {
-        try {
-          console.log('💾 Saving quiz data:', { questionCount: quizData.length });
-          const { createOrUpdateQuiz } = await import('../../lib/supabase');
-          await createOrUpdateQuiz(user.id, quizData);
-          console.log('✅ Quiz saved successfully');
-          quizSaved = true;
-        } catch (quizError) {
-          console.error('❌ Error saving quiz:', quizError);
-          Alert.alert('Warning', 'Profile saved but there was an error saving your quiz. Please try again.');
-          return;
-        }
-      } else {
-        console.log('📝 No quiz data to save');
-      }
+
 
       if (profileSuccess && personalSuccess) {
-        const message = quizSaved ? 'Profile and quiz updated successfully!' : 'Profile updated successfully!';
-        console.log('🎉 Profile save completed successfully:', { profileSuccess, personalSuccess, quizSaved });
+        console.log('🎉 Profile save completed successfully:', { profileSuccess, personalSuccess });
         Alert.alert('Success', message);
         setShowProfile(false);
       } else {
@@ -816,13 +799,7 @@ export default function SettingsScreen() {
                   setInterests={setInterests}
                 />
                 
-                <QuizSection 
-                  onQuizSaved={() => {
-                    // Refresh profile data if needed
-                    refreshProfile();
-                  }}
-                  onQuizDataChange={setQuizData}
-                />
+
               </ScrollView>
             </>
           )}

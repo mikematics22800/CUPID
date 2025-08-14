@@ -48,7 +48,6 @@ export default function MatchesScreen() {
   // Filter state
   const [filters, setFilters] = useState({
     dateFilter: 'all',
-    quizScoreFilter: 'all',
     distanceFilter: 'all'
   });
   const [filteredMatches, setFilteredMatches] = useState([]);
@@ -151,30 +150,7 @@ export default function MatchesScreen() {
       }
     }
 
-    // Apply quiz score filter
-    if (currentFilters.quizScoreFilter && currentFilters.quizScoreFilter !== 'all') {
-      filtered = filtered.filter(match => {
-        const score = match.userScore;
-        if (score === null || score === undefined) return false;
 
-        switch (currentFilters.quizScoreFilter) {
-          case '90+':
-            return score >= 90;
-          case '80+':
-            return score >= 80;
-          case '70+':
-            return score >= 70;
-          case '60+':
-            return score >= 60;
-          case '50+':
-            return score >= 50;
-          case 'below50':
-            return score < 50;
-          default:
-            return true;
-        }
-      });
-    }
 
     // Apply distance filter
     if (currentFilters.distanceFilter && currentFilters.distanceFilter !== 'all') {
@@ -214,7 +190,6 @@ export default function MatchesScreen() {
   const handleClearFilters = () => {
     const clearedFilters = {
       dateFilter: 'all',
-      quizScoreFilter: 'all',
       distanceFilter: 'all'
     };
     setFilters(clearedFilters);

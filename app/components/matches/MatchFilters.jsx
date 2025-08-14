@@ -18,15 +18,7 @@ export default function MatchFilters({
     { label: 'Last Year', value: '1year' }
   ];
 
-  const quizScoreOptions = [
-    { label: 'All Scores', value: 'all' },
-    { label: '90%+', value: '90+' },
-    { label: '80%+', value: '80+' },
-    { label: '70%+', value: '70+' },
-    { label: '60%+', value: '60+' },
-    { label: '50%+', value: '50+' },
-    { label: 'Below 50%', value: 'below50' }
-  ];
+
 
   const distanceOptions = [
     { label: 'Any Distance', value: 'all' },
@@ -42,9 +34,7 @@ export default function MatchFilters({
     onFilterChange({ ...filters, dateFilter: value });
   };
 
-  const handleQuizScoreFilterChange = (value) => {
-    onFilterChange({ ...filters, quizScoreFilter: value });
-  };
+
 
   const handleDistanceFilterChange = (value) => {
     onFilterChange({ ...filters, distanceFilter: value });
@@ -58,10 +48,7 @@ export default function MatchFilters({
       activeFilters.push(dateOption?.label || filters.dateFilter);
     }
     
-    if (filters.quizScoreFilter && filters.quizScoreFilter !== 'all') {
-      const scoreOption = quizScoreOptions.find(option => option.value === filters.quizScoreFilter);
-      activeFilters.push(scoreOption?.label || filters.quizScoreFilter);
-    }
+
 
     if (filters.distanceFilter && filters.distanceFilter !== 'all') {
       const distanceOption = distanceOptions.find(option => option.value === filters.distanceFilter);
@@ -73,7 +60,6 @@ export default function MatchFilters({
 
   const hasActiveFilters = () => {
     return (filters.dateFilter && filters.dateFilter !== 'all') || 
-           (filters.quizScoreFilter && filters.quizScoreFilter !== 'all') ||
            (filters.distanceFilter && filters.distanceFilter !== 'all');
   };
 
@@ -137,30 +123,7 @@ export default function MatchFilters({
                 ))}
               </View>
 
-              {/* Quiz Score Filter Section */}
-              <View style={styles.filterSection}>
-                <Text style={styles.filterSectionTitle}>Quiz Score</Text>
-                {quizScoreOptions.map((option) => (
-                  <TouchableOpacity
-                    key={option.value}
-                    style={[
-                      styles.filterOption,
-                      filters.quizScoreFilter === option.value && styles.selectedFilterOption
-                    ]}
-                    onPress={() => handleQuizScoreFilterChange(option.value)}
-                  >
-                    <Text style={[
-                      styles.filterOptionText,
-                      filters.quizScoreFilter === option.value && styles.selectedFilterOptionText
-                    ]}>
-                      {option.label}
-                    </Text>
-                    {filters.quizScoreFilter === option.value && (
-                      <Ionicons name="checkmark" size={16} color="hotpink" />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
+
 
               {/* Distance Filter Section */}
               <View style={styles.filterSection}>

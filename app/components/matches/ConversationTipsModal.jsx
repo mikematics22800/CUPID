@@ -26,13 +26,9 @@ export default function ConversationTipsModal({
     >
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Conversation Tips</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color="#333" />
-            </TouchableOpacity>
-          </View>
-          
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Ionicons name="close" size={24} color="#333" />
+          </TouchableOpacity>
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             {loading ? (
               <View style={styles.loadingContainer}>
@@ -83,14 +79,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
   title: {
     fontSize: 20,
@@ -101,7 +91,7 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   content: {
-    padding: 20,
+    paddingHorizontal: 10,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -137,12 +127,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  tipsContainer: {
-    paddingVertical: 10,
-  },
   tipsText: {
-    fontSize: 16,
-    color: '#333',
-    lineHeight: 24,
+    fontSize: 12,
+    color: 'hotpink',
+    fontWeight: 'bold',
   },
 }); 

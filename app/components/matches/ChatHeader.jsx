@@ -48,11 +48,6 @@ export default function ChatHeader({
             <Ionicons name="refresh" size={24} color="black" />
           </TouchableOpacity>
         )}
-        {onShowTips && (
-          <TouchableOpacity onPress={onShowTips} style={styles.tipsButton}>
-            <Ionicons name="chatbubble-ellipses" size={24} color="hotpink" />
-          </TouchableOpacity>
-        )}
       </View>
     </View>
   );

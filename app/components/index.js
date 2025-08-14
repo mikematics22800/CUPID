@@ -1,5 +1,5 @@
 // Matches components
-export { MatchCard, MessageBubble, ChatHeader, MessageInput, EmptyState as MatchesEmptyState } from './matches';
+export { MatchCard, MessageBubble, ChatHeader, MessageInput, EmptyState as MatchesEmptyState, DatePlanner, TimePicker, VenueInput } from './matches';
 
 // Likes components
 export { LikeCard, SwipeIndicators as LikesSwipeIndicators, LikeCounter, EmptyState as LikesEmptyState } from './likes';
