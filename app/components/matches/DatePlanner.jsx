@@ -23,9 +23,17 @@ const DatePlanner = ({ visible, onClose, match }) => {
   const [modifyVenue, setModifyVenue] = useState('');
 
   useEffect(() => {
-    if (visible && match) {
-      loadUserAndMatchData();
-      loadDatePlans();
+    if (visible && match?.matchId) {
+      // Check if user is authenticated first
+      const checkAuthAndLoad = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await loadUserAndMatchData();
+          await loadDatePlans();
+        }
+      };
+      
+      checkAuthAndLoad();
     }
   }, [visible, match]);
 
@@ -34,7 +42,7 @@ const DatePlanner = ({ visible, onClose, match }) => {
       // Get current user
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
-        Alert.alert('Error', 'Authentication required');
+        console.log('Authentication error or no user:', authError);
         return;
       }
       setCurrentUser(user);
@@ -47,13 +55,13 @@ const DatePlanner = ({ visible, onClose, match }) => {
         .single();
 
       if (matchError || !matchData) {
-        Alert.alert('Error', 'Match not found');
+        console.log('Match not found:', matchError);
         return;
       }
       setMatchData(matchData);
       
       // Determine if current user is user_1 or user_2
-      setIsUser1(currentUser?.id === matchData.user_1_id);
+      setIsUser1(user.id === matchData.user_1_id);
       
       // Set calendar to start from the match creation date
       if (matchData.created_at) {
@@ -64,12 +72,11 @@ const DatePlanner = ({ visible, onClose, match }) => {
       }
     } catch (error) {
       console.error('Error loading user and match data:', error);
-      Alert.alert('Error', 'Failed to load user data');
     }
   };
 
   const loadDatePlans = async () => {
-    if (!match?.matchId) return;
+    if (!match?.matchId || !currentUser) return;
     
     try {
       setLoading(true);
@@ -83,7 +90,6 @@ const DatePlanner = ({ visible, onClose, match }) => {
 
       if (error) {
         console.error('Error loading date plans:', error);
-        Alert.alert('Error', 'Failed to load date plans');
         return;
       }
 
@@ -92,13 +98,12 @@ const DatePlanner = ({ visible, onClose, match }) => {
       // Load pending dates (dates where current user needs to respond)
       if (!isUser1 && data) {
         const pending = data.filter(date => 
-          date.user_2_id === currentUser?.id && date.accepted === null
+          date.user_2_id === currentUser.id && date.accepted === null
         );
         setPendingDates(pending);
       }
     } catch (error) {
       console.error('Error loading date plans:', error);
-      Alert.alert('Error', 'Failed to load date plans');
     } finally {
       setLoading(false);
     }
@@ -123,8 +128,8 @@ const DatePlanner = ({ visible, onClose, match }) => {
     try {
       setLoading(true);
       
-      const isUser1 = currentUser?.id === matchData.user_1_id;
-      const isUser2 = currentUser?.id === matchData.user_2_id;
+      const isUser1 = currentUser.id === matchData.user_1_id;
+      const isUser2 = currentUser.id === matchData.user_2_id;
 
       if (!isUser1 && !isUser2) {
         Alert.alert('Error', 'You are not part of this match');
@@ -280,8 +285,8 @@ const DatePlanner = ({ visible, onClose, match }) => {
     try {
       setLoading(true);
       
-      const isUser1 = currentUser?.id === matchData.user_1_id;
-      const isUser2 = currentUser?.id === matchData.user_2_id;
+      const isUser1 = currentUser.id === matchData.user_1_id;
+      const isUser2 = currentUser.id === matchData.user_2_id;
 
       if (!isUser1 && !isUser2) {
         Alert.alert('Error', 'You are not part of this match');
@@ -496,7 +501,7 @@ const DatePlanner = ({ visible, onClose, match }) => {
     }
   };
 
-  if (!match) return null;
+  if (!match?.matchId) return null;
 
   return (
     <Modal
@@ -518,10 +523,12 @@ const DatePlanner = ({ visible, onClose, match }) => {
         <ScrollView style={styles.content}>
           {/* Calendar */}
           <View style={styles.calendarSection}>
-            {loading ? (
+            {loading || !currentUser ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="hotpink" />
-                <Text style={styles.loadingText}>Loading...</Text>
+                <Text style={styles.loadingText}>
+                  {!currentUser ? 'Loading user data...' : 'Loading...'}
+                </Text>
               </View>
             ) : !currentMonth ? (
               <View style={styles.loadingContainer}>
@@ -593,7 +600,7 @@ const DatePlanner = ({ visible, onClose, match }) => {
           </View>
 
           {/* Date Plan Form */}
-          {selectedDate && (
+          {selectedDate && currentUser && (
             <View style={styles.formSection}>              
               {/* Time Selection */}
               <View style={styles.inputContainer}>
@@ -639,7 +646,7 @@ const DatePlanner = ({ visible, onClose, match }) => {
           )}
 
           {/* Pending Dates (for user_2 only) */}
-          {!isUser1 && pendingDates.length > 0 && (
+          {!isUser1 && currentUser && pendingDates.length > 0 && (
             <View style={styles.plansSection}>
               <Text style={styles.plansTitle}>Pending Date Requests</Text>
               
@@ -689,7 +696,7 @@ const DatePlanner = ({ visible, onClose, match }) => {
           )}
 
           {/* Existing Date Plans */}
-          {datePlans.length > 0 && (
+          {datePlans.length > 0 && currentUser && (
             <View style={styles.plansSection}>
               <Text style={styles.plansTitle}>
                 {isUser1 ? 'Your Scheduled Dates' : 'All Date Plans'}

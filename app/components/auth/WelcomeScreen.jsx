@@ -39,7 +39,7 @@ export default function WelcomeScreen({ onLoginPress, onRegisterPress }) {
           style={[styles.logo, { transform: [{ translateY }] }]} 
         />
         <Text style={styles.heroText}>
-          <Text style={{color: 'white'}}>C</Text>ognitive <Text style={{color: 'white'}}>U</Text>ser <Text style={{color: 'white'}}>P</Text>latform <Text style={{color: 'white'}}>I</Text>nnovating <Text style={{color: 'white'}}>D</Text>ating 🏹
+          The <Text style={{color: 'pink'}}>c</Text>ognitive <Text style={{color: 'pink'}}>u</Text>ser <Text style={{color: 'pink'}}>p</Text>latform <Text style={{color: 'pink'}}>i</Text>nnovating <Text style={{color: 'pink'}}>d</Text>ating! 🏹
         </Text>
       </View>
       <View style={styles.auth}>
@@ -83,8 +83,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   heroText: {
-    fontSize: 25,
-    color: 'pink',
+    fontSize: 20,
+    color: 'white',
     textAlign: 'center',
     fontWeight: 'bold',
   },
