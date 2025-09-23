@@ -108,10 +108,25 @@ app/
 3. **Environment Setup**
    Create a `.env` file in the root directory:
    ```env
-   EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
-   EXPO_PUBLIC_SUPABASE_KEY=your_supabase_anon_key
-   EXPO_PUBLIC_GEMINI_API_KEY=your_gemini_api_key
+   # Supabase Configuration
+   EXPO_PUBLIC_SUPABASE_URL=your_supabase_project_url
+   EXPO_PUBLIC_SUPABASE_KEY=your_supabase_anon_public_key
+   
+   # Google Gemini AI
+   EXPO_PUBLIC_GEMINI_KEY=your_google_gemini_api_key
+   
+   # Google Maps API
+   EXPO_PUBLIC_GOOGLE_MAPS_KEY=your_google_maps_api_key
    ```
+
+   ### Environment Variables Explained:
+   
+   | Variable | Description | Where to Get It |
+   |----------|-------------|-----------------|
+   | `EXPO_PUBLIC_SUPABASE_URL` | Your Supabase project URL | Supabase Dashboard → Settings → API |
+   | `EXPO_PUBLIC_SUPABASE_KEY` | Supabase anonymous public key | Supabase Dashboard → Settings → API |
+   | `EXPO_PUBLIC_GEMINI_KEY` | Google Gemini API key for AI features | Google AI Studio → Get API Key |
+   | `EXPO_PUBLIC_GOOGLE_MAPS_KEY` | Google Maps API key for location services | Google Cloud Console → APIs & Services → Credentials |
 
 4. **Database Setup**
    - Set up a Supabase project
@@ -154,9 +169,23 @@ The app uses PostgreSQL with the following main tables:
 5. Set up storage buckets for profile photos
 
 ### Google Gemini Integration
-1. Get API key from Google AI Studio
-2. Add to environment variables
-3. Configure content moderation settings
+1. Visit [Google AI Studio](https://aistudio.google.com/)
+2. Create a new project or use existing one
+3. Generate an API key
+4. Add `EXPO_PUBLIC_GEMINI_KEY` to your `.env` file
+5. Configure content moderation settings in the app
+
+### Google Maps Integration
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select existing one
+3. Enable the following APIs:
+   - Maps JavaScript API
+   - Places API
+   - Geocoding API
+   - Time Zone API
+4. Create credentials (API Key)
+5. Add `EXPO_PUBLIC_GOOGLE_MAPS_KEY` to your `.env` file
+6. Restrict the API key to your app's bundle identifier for security
 
 ### Location Services
 - iOS: Add location permissions to `Info.plist`
