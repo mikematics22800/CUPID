@@ -111,16 +111,16 @@ app/
    # Supabase Configuration
    EXPO_PUBLIC_SUPABASE_URL=your_supabase_project_url
    EXPO_PUBLIC_SUPABASE_KEY=your_supabase_anon_public_key
-   
+
    # Google Gemini AI
    EXPO_PUBLIC_GEMINI_KEY=your_google_gemini_api_key
-   
+
    # Google Maps API
    EXPO_PUBLIC_GOOGLE_MAPS_KEY=your_google_maps_api_key
    ```
 
    ### Environment Variables Explained:
-   
+
    | Variable | Description | Where to Get It |
    |----------|-------------|-----------------|
    | `EXPO_PUBLIC_SUPABASE_URL` | Your Supabase project URL | Supabase Dashboard → Settings → API |
@@ -142,7 +142,7 @@ app/
    ```bash
    # iOS
    npm run ios
-   
+
    # Android
    npm run android
    ```

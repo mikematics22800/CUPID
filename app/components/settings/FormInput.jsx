@@ -35,7 +35,7 @@ export default function FormInput({
         maxLength={maxLength}
         right={right}
         left={left}
-        outlineColor={outlineColor || (error ? 'red' : undefined)}
+        outlineColor={outlineColor}
         {...props}
       />
       {error && errorText && (

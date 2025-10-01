@@ -4,14 +4,16 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useState } from 'react';
 
 export default function PersonalInfoSection({
+  firstName,
+  setFirstName,
+  lastName,
+  setLastName,
   sex,
   setSex,
   birthday,
   setBirthday,
   validationStatus
 }) {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
   const [sexMenuVisible, setSexMenuVisible] = useState(false);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
 
@@ -46,53 +48,35 @@ export default function PersonalInfoSection({
         <TextInput
           mode="outlined"
           label="First Name"
-          style={[
-            styles.nameInput, 
-            !validationStatus.firstName && firstName.length > 0 && styles.invalidInput
-          ]}
-          placeholder="Enter your first name"
+          style={styles.nameInput}
           value={firstName}
           onChangeText={setFirstName}
           keyboardType="default"
           maxLength={20}
-          outlineColor={!validationStatus.firstName && firstName.length > 0 ? 'red' : undefined}
         />
         <TextInput
           mode="outlined"
           label="Last Name"
-          style={[
-            styles.nameInput, 
-            !validationStatus.lastName && lastName.length > 0 && styles.invalidInput
-          ]}
-          placeholder="Enter your last name"
+          style={styles.nameInput}
           value={lastName}
           onChangeText={setLastName}
           keyboardType="default"
           maxLength={20}
-          outlineColor={!validationStatus.lastName && lastName.length > 0 ? 'red' : undefined}
         />
       </View>
       <View style={styles.dualInputs}>
-        <View style={[
-          styles.dateSelect,
-          !validationStatus.birthday && birthday && styles.invalidInput
-        ]}>
+        <View style={styles.dateSelect}>
           <TextInput
             mode="outlined"
             label="Birthday"
             style={styles.dateInput}
-            placeholder="Select your birthday"
             value={formatDate(birthday)}
             onPressIn={() => setDatePickerVisible(true)}
             editable={false}
             right={<TextInput.Icon icon="calendar" />}
-            outlineColor={!validationStatus.birthday && birthday ? 'red' : undefined}
           />
         </View>
-        <View style={[
-          styles.sexSelect,
-          !validationStatus.sex && sex && styles.invalidInput
-        ]}>
+        <View style={styles.sexSelect}>
           <Menu
             visible={sexMenuVisible}
             onDismiss={() => setSexMenuVisible(false)}
@@ -101,12 +85,10 @@ export default function PersonalInfoSection({
                 mode="outlined"
                 label="Biological Sex"
                 style={styles.sexInput}
-                placeholder="Select your biological sex"
                 value={sex || ''}
                 onPressIn={() => setSexMenuVisible(true)}
                 editable={false}
                 right={<TextInput.Icon icon="chevron-down" />}
-                outlineColor={!validationStatus.sex && sex ? 'red' : undefined}
               />
             }
           >
@@ -195,9 +177,5 @@ const styles = StyleSheet.create({
   modalButton: {
     marginTop: 20,
     width: '100%',
-  },
-  invalidInput: {
-    borderColor: 'red',
-    borderWidth: 1,
   },
 }); 
