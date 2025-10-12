@@ -5,7 +5,8 @@ export default function PhoneInput({
   phone,
   setPhone,
   validationStatus,
-  label = "Phone Number"
+  label = "Phone Number",
+  optional = false
 }) {
   // Format phone number for better display
   const formatPhoneNumber = (text) => {
@@ -32,7 +33,7 @@ export default function PhoneInput({
     <View style={styles.phoneInputContainer}>
       <TextInput
         mode="outlined"
-        label={label}
+        label={optional ? `${label} (Optional)` : label}
         style={styles.phoneInput}
         value={formatPhoneNumber(phone || '')}
         onChangeText={handlePhoneChange}

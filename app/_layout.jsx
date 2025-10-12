@@ -111,9 +111,10 @@ export default function Layout() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (isMounted) {
-          // Only consider user authenticated if email is confirmed
+          // Only consider user authenticated if email or phone is confirmed
           const isEmailConfirmed = session?.user?.email_confirmed_at;
-          setIsAuthenticated(!!session && !!isEmailConfirmed);
+          const isPhoneConfirmed = session?.user?.phone_confirmed_at;
+          setIsAuthenticated(!!session && (!!isEmailConfirmed || !!isPhoneConfirmed));
           setIsLoading(false);
         }
       } catch (error) {
@@ -131,15 +132,17 @@ export default function Layout() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (isMounted) {
         if (event === 'SIGNED_IN') {
-          // Check if user's email is confirmed
-          if (session?.user?.email_confirmed_at) {
+          // Check if user's email or phone is confirmed
+          const isEmailConfirmed = session?.user?.email_confirmed_at;
+          const isPhoneConfirmed = session?.user?.phone_confirmed_at;
+          
+          if (isEmailConfirmed || isPhoneConfirmed) {
             setIsAuthenticated(true);
             router.replace('/(tabs)/feed');
           } else {
-            // User is signed in but email not confirmed
+            // User is signed in but email/phone not confirmed
             setIsAuthenticated(false);
             router.replace('/auth');
-            // You could show a message here about email verification
           }
         } else if (event === 'SIGNED_OUT') {
           setIsAuthenticated(false);

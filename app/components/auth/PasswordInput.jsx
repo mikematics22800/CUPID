@@ -7,7 +7,8 @@ export default function PasswordInput({
   setPassword,
   validationStatus,
   label = "Password",
-  minLength = 8
+  minLength = 8,
+  optional = false
 }) {
   const [showPassword, setShowPassword] = useState(false);
 
@@ -15,7 +16,7 @@ export default function PasswordInput({
     <View style={styles.passwordInputContainer}>
       <TextInput
         mode="outlined"
-        label={label}
+        label={optional ? `${label} (Optional)` : label}
         style={styles.passwordInput}
         value={password}
         onChangeText={setPassword}

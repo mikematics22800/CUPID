@@ -7,7 +7,6 @@ export { default as PhoneInput } from './PhoneInput';
 export { default as LoginForm } from './LoginForm';
 export { default as RegisterForm } from './RegisterForm';
 export { default as VerificationForm } from './VerificationForm';
-export { default as ContactSection } from './ContactSection';
 
 // Section Components
 export { default as PersonalInfoSection } from '../settings/PersonalInfoSection';
@@ -15,7 +14,6 @@ export { default as LocationSection } from '../settings/LocationSection';
 export { default as PhotoSection } from '../settings/PhotoSection';
 
 // UI Components
-export { default as RegisterButton } from './RegisterButton';
 export { default as WelcomeScreen } from './WelcomeScreen';
 export { default as FloatingHearts } from './FloatingHearts';
 

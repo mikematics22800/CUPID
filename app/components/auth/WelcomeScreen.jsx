@@ -39,9 +39,8 @@ export default function WelcomeScreen({ onLoginPress, onRegisterPress }) {
           style={[styles.logo, { transform: [{ translateY }] }]} 
         />
         <Text style={styles.heroText}>
-          The <Text style={{color: 'pink'}}>c</Text>ognitive <Text style={{color: 'pink'}}>u</Text>ser <Text style={{color: 'pink'}}>p</Text>latform <Text style={{color: 'pink'}}>i</Text>nnovating <Text style={{color: 'pink'}}>d</Text>ating! 🏹
-        </Text>
-      </View>
+          Chatbot and User Platform for Intelligent Dating 🏹</Text>
+        </View>
       <View style={styles.auth}>
         <TouchableOpacity style={styles.button} onPress={onLoginPress}>
           <Text style={styles.buttonText}>Login</Text>
@@ -83,7 +82,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   heroText: {
-    fontSize: 20,
+    fontSize: 24,
     color: 'white',
     textAlign: 'center',
     fontWeight: 'bold',

@@ -538,7 +538,7 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>General</Text>
         <SettingItem
-          icon="account-circle"
+          icon="settings"
           title="Account"
           onPress={() => setShowAccountModal(true)}
         />

@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import WelcomeScreen from './components/auth/WelcomeScreen';
 import LoginForm from './components/auth/LoginForm';
 import RegisterForm from './components/auth/RegisterForm';
+import VerificationForm from './components/auth/VerificationForm';
 import FloatingHearts from './components/auth/FloatingHearts';
 
 export default function LoginScreen() {
@@ -11,8 +12,8 @@ export default function LoginScreen() {
   const [verificationForm, setVerificationForm] = useState(false);
   const [verificationData, setVerificationData] = useState(null);
 
-  const handleRegistrationSuccess = (email, phone) => {
-    setVerificationData({ email, phone });
+  const handleRegistrationSuccess = (userData) => {
+    setVerificationData(userData);
     setVerificationForm(true);
     setRegisterForm(false);
   };
@@ -20,8 +21,8 @@ export default function LoginScreen() {
   const handleVerificationSuccess = () => {
     setVerificationForm(false);
     setVerificationData(null);
-    // User can now login
-    setLoginForm(true);
+    // User is now logged in automatically after verification
+    // The auth state listener in _layout.jsx will handle navigation
   };
 
   const handleBack = () => {
@@ -49,6 +50,13 @@ export default function LoginScreen() {
         <RegisterForm
           onBack={handleBack}
           onRegistrationSuccess={handleRegistrationSuccess}
+        />
+      )}
+      {verificationForm && verificationData && (
+        <VerificationForm
+          verificationData={verificationData}
+          onVerificationSuccess={handleVerificationSuccess}
+          onBack={handleBack}
         />
       )}
     </View>

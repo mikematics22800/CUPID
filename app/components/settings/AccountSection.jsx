@@ -12,13 +12,11 @@ export default function AccountSection({
   setEmail,
   phone,
   setPhone,
-  validationStatus,
   onEmailUpdate,
   onPhoneUpdate,
   onLogout,
   onDeleteAccount,
   onDisableAccount,
-  user
 }) {
   const [newEmail, setNewEmail] = useState('');
   const [newPhone, setNewPhone] = useState('');
@@ -210,8 +208,8 @@ export default function AccountSection({
 
   const handleDeleteAccount = () => {
     Alert.alert(
-      'Delete Account',
-      'Are you sure you want to delete your account? This action cannot be undone and will permanently remove all your data including:\n\n• Your profile and photos\n• All your matches and conversations\n• Your likes and preferences\n\nThis action is irreversible.',
+      'Confirm Deletion',
+      'Are you sure? This action cannot be undone.',
       [
         {
           text: 'Cancel',
@@ -221,27 +219,10 @@ export default function AccountSection({
           text: 'Delete Account',
           style: 'destructive',
           onPress: () => {
-            // Second confirmation
-            Alert.alert(
-              'Final Confirmation',
-              'This is your final warning. Deleting your account will:\n\n• Permanently remove all your data\n• End all your matches and conversations\n• Cannot be undone\n\nAre you absolutely sure you want to proceed?',
-              [
-                {
-                  text: 'Cancel',
-                  style: 'cancel',
-                },
-                {
-                  text: 'Yes, Delete My Account',
-                  style: 'destructive',
-                  onPress: () => {
-                    if (onDeleteAccount) {
-                      onDeleteAccount();
-                    }
-                    resetModal();
-                  }
-                }
-              ]
-            );
+            if (onDeleteAccount) {
+              onDeleteAccount();
+            }
+            resetModal();
           }
         }
       ]
@@ -250,8 +231,8 @@ export default function AccountSection({
 
   const handleDisableAccount = () => {
     Alert.alert(
-      'Disable Account',
-      'Disabling your account will:\n\n• Hide your profile from other users\n• Prevent new matches and conversations\n• Keep your data but make you invisible\n• You can re-enable your account later\n\nThis is different from deleting your account.',
+      'Confirm Disable',
+      'Disabling your account will hide your profile from other users, pausing your matches and conversations.',
       [
         {
           text: 'Cancel',

@@ -9,7 +9,7 @@ const FloatingHearts = () => {
   const hearts = [];
 
   // Generate multiple hearts with different positions and speeds
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 25; i++) {
     const heartRef = useRef(new Animated.Value(screenHeight + 50)).current;
     const opacityRef = useRef(new Animated.Value(0)).current;
     heartAnimations.push(heartRef);

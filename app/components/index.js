@@ -17,8 +17,6 @@ export { default as WelcomeScreen } from './auth/WelcomeScreen';
 export { default as PhotoSection } from './settings/PhotoSection';
 export { default as LoginForm } from './auth/LoginForm';
 export { default as RegisterForm } from './auth/RegisterForm';
-export { default as ContactSection } from './auth/ContactSection';
-export { default as RegisterButton } from './auth/RegisterButton';
 export { default as BioSection } from './settings/BioSection';
 export { default as InterestsSection } from './settings/InterestsSection';
 export { default as PersonalInfoSection } from './settings/PersonalInfoSection';

@@ -6,9 +6,9 @@ import PasswordInput from './PasswordInput';
 import PhoneInput from './PhoneInput';
 
 export default function LoginForm({ onBack }) {
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('mikematics22800@gmail.com');
+  const [phone, setPhone] = useState('5617159065');
+  const [password, setPassword] = useState('D7452m61457!');
   const [loading, setLoading] = useState(false);
   const [isEmailValid, setIsEmailValid] = useState(false);
   const [validationStatus, setValidationStatus] = useState({
@@ -62,9 +62,9 @@ export default function LoginForm({ onBack }) {
           minLength={6}
         />
         <TouchableOpacity 
-          style={[styles.button, !isEmailValid && styles.disabledButton]} 
+          style={[styles.button]} 
           onPress={handleSignInWithEmail}
-          disabled={!isEmailValid}
+          disabled={loading}
         >
           <Text style={styles.buttonText}>Login with Email</Text>
         </TouchableOpacity>
@@ -76,9 +76,9 @@ export default function LoginForm({ onBack }) {
           validationStatus={validationStatus}
         />
         <TouchableOpacity 
-          style={[styles.button, !validationStatus.phone && styles.disabledButton]} 
+          style={[styles.button]} 
           onPress={handleSignInWithPhone}
-          disabled={!validationStatus.phone}
+          disabled={loading}
         >
           <Text style={styles.buttonText}>Login with Phone</Text>
         </TouchableOpacity>
@@ -118,10 +118,6 @@ const styles = StyleSheet.create({
     color: 'hotpink',
     fontWeight: 'bold',
     fontSize: 16,
-  },
-  disabledButton: {
-    backgroundColor: '#ffb6c1',
-    opacity: 0.7,
   },
   infoSection: {
     width: '100%',

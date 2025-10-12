@@ -5,13 +5,14 @@ export default function EmailInput({
   email,
   setEmail,
   validationStatus,
-  label = "Email"
+  label = "Email",
+  optional = false
 }) {
   return (
     <View style={styles.emailInputContainer}>
       <TextInput
         mode="outlined"
-        label={label}
+        label={optional ? `${label} (Optional)` : label}
         style={styles.emailInput}
         value={email}
         onChangeText={setEmail}
