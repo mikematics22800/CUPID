@@ -1,16 +1,14 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Modal, TextInput, SafeAreaView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { supabase, deleteUserAccount, disableUserAccount } from '../../lib/supabase';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import { Picker } from '@react-native-picker/picker';
-import LottieView from 'lottie-react-native';
 import { useProfile } from '../contexts/ProfileContext';
-import PhotoSection from '../components/settings/PhotoSection';
-import BioSection from '../components/settings/BioSection';
-import PersonalInfoForm from '../components/settings/PersonalInfoForm';
-
 import AccountSection from '../components/settings/AccountSection';
+import AgeRangeModal from '../components/settings/AgeRangeModal';
+import SexPreferenceModal from '../components/settings/SexPreferenceModal';
+import DistanceModal from '../components/settings/DistanceModal';
+import ProfileEditModal from '../components/settings/ProfileEditModal';
 import { uploadPhotosToStorage } from '../../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -25,9 +23,6 @@ export default function SettingsScreen() {
   const [showSexModal, setShowSexModal] = useState(false);
   const [showDistanceModal, setShowDistanceModal] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
-  const [tempAgeRange, setTempAgeRange] = useState({ min: 18, max: 50 });
-  const [tempPreferredSex, setTempPreferredSex] = useState('all');
-  const [tempMaxDistance, setTempMaxDistance] = useState(50);
 
   // Profile editing state
   const [showProfile, setShowProfile] = useState(false);
@@ -101,20 +96,17 @@ export default function SettingsScreen() {
 
       if (storedMaxDistance) {
         setMaxDistance(parseInt(storedMaxDistance));
-        setTempMaxDistance(parseInt(storedMaxDistance));
         console.log('📏 Loaded max distance:', storedMaxDistance);
       }
 
       if (storedAgeRange) {
         const parsedAgeRange = JSON.parse(storedAgeRange);
         setAgeRange(parsedAgeRange);
-        setTempAgeRange(parsedAgeRange);
         console.log('🎂 Loaded age range:', parsedAgeRange);
       }
 
       if (storedPreferredSex) {
         setPreferredSex(storedPreferredSex);
-        setTempPreferredSex(storedPreferredSex);
         console.log('❤️ Loaded preferred sex:', storedPreferredSex);
       }
     } catch (error) {
@@ -231,45 +223,30 @@ export default function SettingsScreen() {
   };
 
   const handleAgeRangePress = () => {
-    setTempAgeRange(ageRange);
     setShowAgeModal(true);
   };
 
   const handleSexPreferencePress = () => {
-    setTempPreferredSex(preferredSex);
     setShowSexModal(true);
   };
 
   const handleDistancePress = () => {
-    setTempMaxDistance(maxDistance);
     setShowDistanceModal(true);
   };
 
-  const saveAgeRange = () => {
-    // Validate age range
-    if (tempAgeRange.min > tempAgeRange.max) {
-      Alert.alert('Invalid Age Range', 'Minimum age cannot be greater than maximum age');
-      return;
-    }
-    if (tempAgeRange.min < 18 || tempAgeRange.max > 100) {
-      Alert.alert('Invalid Age Range', 'Age must be between 18 and 100');
-      return;
-    }
-    setAgeRange(tempAgeRange);
-    saveUserPreference('ageRange', tempAgeRange);
-    setShowAgeModal(false);
+  const saveAgeRange = (newAgeRange) => {
+    setAgeRange(newAgeRange);
+    saveUserPreference('ageRange', newAgeRange);
   };
 
-  const saveSexPreference = () => {
-    setPreferredSex(tempPreferredSex);
-    saveUserPreference('preferredSex', tempPreferredSex);
-    setShowSexModal(false);
+  const saveSexPreference = (newPreferredSex) => {
+    setPreferredSex(newPreferredSex);
+    saveUserPreference('preferredSex', newPreferredSex);
   };
 
-  const saveDistance = () => {
-    setMaxDistance(tempMaxDistance);
-    saveUserPreference('maxDistance', tempMaxDistance);
-    setShowDistanceModal(false);
+  const saveDistance = (newMaxDistance) => {
+    setMaxDistance(newMaxDistance);
+    saveUserPreference('maxDistance', newMaxDistance);
   };
 
   // Location sharing functions
@@ -617,194 +594,51 @@ export default function SettingsScreen() {
       />
 
       {/* Age Range Modal */}
-      <Modal
+      <AgeRangeModal
         visible={showAgeModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowAgeModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.ageInputContainer}>
-              <View style={styles.ageInput}>
-                <Text style={styles.ageLabel}>Minimum</Text>
-                <TextInput
-                  style={styles.ageTextInput}
-                  value={tempAgeRange.min.toString()}
-                  onChangeText={(text) => setTempAgeRange(prev => ({ ...prev, min: parseInt(text) || 18 }))}
-                  keyboardType="numeric"
-                  maxLength={2}
-                />
-              </View>
-              <Text style={styles.ageSeparator}>-</Text>
-              <View style={styles.ageInput}>
-                <Text style={styles.ageLabel}>Maximum</Text>
-                <TextInput
-                  style={styles.ageTextInput}
-                  value={tempAgeRange.max.toString()}
-                  onChangeText={(text) => setTempAgeRange(prev => ({ ...prev, max: parseInt(text) || 50 }))}
-                  keyboardType="numeric"
-                  maxLength={2}
-                />
-              </View>
-            </View>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.modalButton} onPress={() => setShowAgeModal(false)}>
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, styles.modalButtonPrimary]} onPress={saveAgeRange}>
-                <Text style={[styles.modalButtonText, styles.modalButtonTextPrimary]}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setShowAgeModal(false)}
+        ageRange={ageRange}
+        onSave={saveAgeRange}
+      />
 
       {/* Sex Preference Modal */}
-      <Modal
+      <SexPreferenceModal
         visible={showSexModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowSexModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={tempPreferredSex}
-                onValueChange={(itemValue) => setTempPreferredSex(itemValue)}
-                style={styles.picker}
-              >
-                <Picker.Item label="All" value="all" />
-                <Picker.Item label="Men" value="male" />
-                <Picker.Item label="Women" value="female" />
-              </Picker>
-            </View>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.modalButton} onPress={() => setShowSexModal(false)}>
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, styles.modalButtonPrimary]} onPress={saveSexPreference}>
-                <Text style={[styles.modalButtonText, styles.modalButtonTextPrimary]}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setShowSexModal(false)}
+        preferredSex={preferredSex}
+        onSave={saveSexPreference}
+      />
 
       {/* Distance Modal */}
-      <Modal
+      <DistanceModal
         visible={showDistanceModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowDistanceModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Maximum Distance</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={tempMaxDistance}
-                onValueChange={(itemValue) => setTempMaxDistance(itemValue)}
-                style={styles.picker}
-              >
-                <Picker.Item label="1 mile" value={1} />
-                <Picker.Item label="5 miles" value={5} />
-                <Picker.Item label="10 miles" value={10} />
-                <Picker.Item label="25 miles" value={25} />
-                <Picker.Item label="50 miles" value={50} />
-                <Picker.Item label="100+ miles" value={100} />
-              </Picker>
-            </View>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.modalButton} onPress={() => setShowDistanceModal(false)}>
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, styles.modalButtonPrimary]} onPress={saveDistance}>
-                <Text style={[styles.modalButtonText, styles.modalButtonTextPrimary]}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setShowDistanceModal(false)}
+        maxDistance={maxDistance}
+        onSave={saveDistance}
+      />
 
       {/* Profile Editing Modal */}
-      <Modal
+      <ProfileEditModal
         visible={showProfile}
-        animationType="slide"
-        transparent={false}
-        onRequestClose={() => setShowProfile(false)}
-      >
-        <SafeAreaView style={styles.profileContainer}>
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <LottieView
-                source={require('../../assets/animations/heart.json')}
-                autoPlay
-                loop
-                style={styles.lottieAnimation}
-                speed={1}
-              />
-            </View>
-          ) : (
-            <>
-              {/* Modal Header */}
-              <View style={styles.profileModalHeader}>
-                <TouchableOpacity
-                  style={styles.closeButton}
-                  onPress={() => setShowProfile(false)}
-                >
-                  <MaterialIcons name="close" size={24} color="black" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.profileSaveButton,
-                    saving && styles.disabledProfileSaveButton
-                  ]}
-                  onPress={saveProfile}
-                  disabled={saving}
-                >
-                  {saving ? (
-                    <ActivityIndicator color="white" size="small" />
-                  ) : (
-                    <Text style={styles.profileSaveButtonText}>Save</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView 
-                style={styles.profileForm} 
-                contentContainerStyle={styles.profileFormContent}
-                showsVerticalScrollIndicator={false}
-              >
-                <PersonalInfoForm
-                  firstName={firstName}
-                  setFirstName={setFirstName}
-                  lastName={lastName}
-                  setLastName={setLastName}
-                  residence={residence}
-                  setResidence={setResidence}
-                  validationStatus={validationStatus}
-                />
-                <PhotoSection
-                  photos={photos}
-                  setPhotos={setPhotos}
-                  required={true}
-                  onRemovePhoto={handlePhotoRemove}
-                />
-                <BioSection
-                  bio={bio}
-                  setBio={setBio}
-                  interests={interests}
-                  setInterests={setInterests}
-                />
-                
-
-              </ScrollView>
-            </>
-          )}
-        </SafeAreaView>
-      </Modal>
+        onClose={() => setShowProfile(false)}
+        loading={loading}
+        saving={saving}
+        firstName={firstName}
+        setFirstName={setFirstName}
+        lastName={lastName}
+        setLastName={setLastName}
+        residence={residence}
+        setResidence={setResidence}
+        validationStatus={validationStatus}
+        photos={photos}
+        setPhotos={setPhotos}
+        onRemovePhoto={handlePhotoRemove}
+        bio={bio}
+        setBio={setBio}
+        interests={interests}
+        setInterests={setInterests}
+        onSave={saveProfile}
+      />
     </ScrollView>
   );
 }
@@ -864,95 +698,6 @@ const styles = StyleSheet.create({
     color: '#999',
     marginBottom: 20,
   },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    padding: 24,
-    borderRadius: 16,
-    width: '85%',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 24,
-    color: '#333',
-  },
-  ageInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ageInput: {
-    flex: 1,
-    marginRight: 10,
-  },
-  ageLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    textAlign: 'center',
-  },
-  ageTextInput: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 10,
-    borderRadius: 8,
-    fontSize: 16,
-    textAlign: 'center',
-    marginTop: 5,
-    backgroundColor: '#f9f9f9',
-  },
-  ageSeparator: {
-    marginHorizontal: 15,
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#999',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-    width: '100%',
-  },
-  modalButton: {
-    padding: 12,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    flex: 1,
-    marginHorizontal: 5,
-    alignItems: 'center',
-  },
-  modalButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
-  },
-  modalButtonPrimary: {
-    backgroundColor: '#007AFF',
-  },
-  modalButtonTextPrimary: {
-    color: '#fff',
-  },
-  pickerContainer: {
-    width: '100%',
-    marginBottom: 20,
-  },
-  picker: {
-    width: '100%',
-  },
   destructiveText: {
     color: '#ff3b30',
   },
@@ -960,62 +705,6 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#eee',
     marginVertical: 10,
-  },
-  // Profile editing styles
-  profileContainer: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  profileModalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  closeButton: {
-    padding: 5,
-  },
-  profileModalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  profileSaveButton: {
-    backgroundColor: 'hotpink',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 16,
-  },
-  disabledProfileSaveButton: {
-    backgroundColor: '#ccc',
-  },
-  profileSaveButtonText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-  },
-  lottieAnimation: {
-    width: 200,
-    height: 200,
-  },
-  profileForm: {
-    flex: 1,
-    paddingHorizontal: 25,
-    paddingVertical: 20,
-  },
-  profileFormContent: {
-    paddingVertical: 20,
-    gap: 25,
   },
 });
 

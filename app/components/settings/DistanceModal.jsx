@@ -1,14 +1,22 @@
-import React from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import { useState, useEffect } from 'react';
 
-export default function DistanceModal({ 
-  visible, 
-  tempMaxDistance, 
-  setTempMaxDistance, 
-  onClose, 
-  onSave 
-}) {
+export default function DistanceModal({ visible, onClose, maxDistance, onSave }) {
+  const [tempMaxDistance, setTempMaxDistance] = useState(50);
+
+  // Update temp value when modal opens or maxDistance changes
+  useEffect(() => {
+    if (visible) {
+      setTempMaxDistance(maxDistance);
+    }
+  }, [visible, maxDistance]);
+
+  const handleSave = () => {
+    onSave(tempMaxDistance);
+    onClose();
+  };
+
   return (
     <Modal
       visible={visible}
@@ -37,7 +45,7 @@ export default function DistanceModal({
             <TouchableOpacity style={styles.modalButton} onPress={onClose}>
               <Text style={styles.modalButtonText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.modalButton, styles.modalButtonPrimary]} onPress={onSave}>
+            <TouchableOpacity style={[styles.modalButton, styles.modalButtonPrimary]} onPress={handleSave}>
               <Text style={[styles.modalButtonText, styles.modalButtonTextPrimary]}>Save</Text>
             </TouchableOpacity>
           </View>
@@ -102,9 +110,9 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   modalButtonPrimary: {
-    backgroundColor: '#007AFF',
+    backgroundColor: 'hotpink',
   },
   modalButtonTextPrimary: {
     color: '#fff',
   },
-}); 
+});

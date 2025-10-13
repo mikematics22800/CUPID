@@ -2,17 +2,15 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Modal, SafeAreaView, ScrollView } from 'react-native';
 import { TextInput } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '../../../lib/supabase';
-import { EmailInput, PhoneInput, VerificationForm } from '../auth/index';
+import { updateUserEmail, sendPhoneUpdateCode, verifyAndUpdatePhone } from '../../../lib/supabase';
+import { EmailInput, PhoneInput } from '../auth/index';
 
 export default function AccountSection({
   visible,
   onClose,
   email,
-  setEmail,
   phone,
   setPhone,
-  onEmailUpdate,
   onPhoneUpdate,
   onLogout,
   onDeleteAccount,
@@ -20,13 +18,11 @@ export default function AccountSection({
 }) {
   const [newEmail, setNewEmail] = useState('');
   const [newPhone, setNewPhone] = useState('');
-  const [emailVerificationCode, setEmailVerificationCode] = useState('');
   const [phoneVerificationCode, setPhoneVerificationCode] = useState('');
-  const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
   const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
-  const [showEmailVerification, setShowEmailVerification] = useState(false);
   const [showPhoneVerification, setShowPhoneVerification] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
+  const [isUpdatingPhone, setIsUpdatingPhone] = useState(false);
 
   // Initialize form when modal opens
   useState(() => {
@@ -47,24 +43,22 @@ export default function AccountSection({
       return;
     }
 
-    setLoading(true);
+    setIsUpdatingEmail(true);
     try {
-      // Send verification code to new email
-      const { error } = await supabase.auth.signInWithOtp({
-        email: newEmail,
-      });
-
-      if (error) {
-        throw error;
+      // Update email using the new function - sends verification emails to both old and new
+      // The email won't be updated in the database until user clicks verification links in BOTH emails
+      const result = await updateUserEmail(newEmail);
+      
+      if (result.success) {
+        // Note: Email is not updated in database yet - user must verify both emails first
+        // Close modal and reset
+        resetModal();
       }
-
-      setShowEmailVerification(true);
-      Alert.alert('Verification Sent', 'A verification code has been sent to your new email address.');
     } catch (error) {
-      console.error('Error sending email verification:', error);
-      Alert.alert('Error', 'Failed to send verification code. Please try again.');
+      console.error('Error updating email:', error);
+      // Error alert is handled in updateUserEmail function
     } finally {
-      setLoading(false);
+      setIsUpdatingEmail(false);
     }
   };
 
@@ -80,61 +74,24 @@ export default function AccountSection({
       return;
     }
 
-    setLoading(true);
+    setIsUpdatingPhone(true);
     try {
-      // Send verification code to new phone
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: `+1${cleanedPhone}`,
-      });
-
-      if (error) {
-        throw error;
+      // Send verification code to new phone using the new function
+      const result = await sendPhoneUpdateCode(newPhone);
+      
+      if (result.success) {
+        setShowPhoneVerification(true);
       }
-
-      setShowPhoneVerification(true);
-      Alert.alert('Verification Sent', 'A verification code has been sent to your new phone number.');
     } catch (error) {
       console.error('Error sending phone verification:', error);
-      Alert.alert('Error', 'Failed to send verification code. Please try again.');
+      // Error alert is handled in sendPhoneUpdateCode function
     } finally {
-      setLoading(false);
+      setIsUpdatingPhone(false);
     }
   };
 
-  const verifyEmailCode = async () => {
-    if (!emailVerificationCode || emailVerificationCode.length !== 6) {
-      Alert.alert('Invalid Code', 'Please enter the 6-digit verification code.');
-      return;
-    }
-
-    setIsVerifyingEmail(true);
-    try {
-      const { error } = await supabase.auth.verifyOtp({
-        email: newEmail,
-        token: emailVerificationCode,
-        type: 'email'
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      // Update the email in the profile
-      if (onEmailUpdate) {
-        await onEmailUpdate(newEmail);
-      } else {
-        setEmail(newEmail);
-      }
-      setShowEmailVerification(false);
-      setNewEmail('');
-      setEmailVerificationCode('');
-    } catch (error) {
-      console.error('Error verifying email:', error);
-      Alert.alert('Verification Failed', 'Invalid verification code. Please try again.');
-    } finally {
-      setIsVerifyingEmail(false);
-    }
-  };
+  // Email verification is now handled by clicking the link in the email
+  // No need for a code verification function for email
 
   const verifyPhoneCode = async () => {
     if (!phoneVerificationCode || phoneVerificationCode.length !== 6) {
@@ -144,28 +101,27 @@ export default function AccountSection({
 
     setIsVerifyingPhone(true);
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        phone: `+1${newPhone.replace(/\D/g, '')}`,
-        token: phoneVerificationCode,
-        type: 'sms'
-      });
-
-      if (error) {
-        throw error;
+      // Verify and update phone using the new function
+      const result = await verifyAndUpdatePhone(newPhone, phoneVerificationCode);
+      
+      if (result && result.success) {
+        // Update the phone in the profile
+        if (onPhoneUpdate) {
+          await onPhoneUpdate(result.phone);
+        } else if (setPhone) {
+          setPhone(result.phone);
+        }
+        
+        setShowPhoneVerification(false);
+        setNewPhone('');
+        setPhoneVerificationCode('');
+        resetModal();
       }
-
-      // Update the phone in the profile
-      if (onPhoneUpdate) {
-        await onPhoneUpdate(newPhone.replace(/\D/g, ''));
-      } else {
-        setPhone(newPhone.replace(/\D/g, ''));
-      }
-      setShowPhoneVerification(false);
-      setNewPhone('');
-      setPhoneVerificationCode('');
     } catch (error) {
       console.error('Error verifying phone:', error);
-      Alert.alert('Verification Failed', 'Invalid verification code. Please try again.');
+      // Error alert is handled in verifyAndUpdatePhone function
+      // Reset verification state on error
+      setPhoneVerificationCode('');
     } finally {
       setIsVerifyingPhone(false);
     }
@@ -253,14 +209,12 @@ export default function AccountSection({
   };
 
   const resetModal = () => {
-    setShowEmailVerification(false);
     setShowPhoneVerification(false);
     setNewEmail('');
     setNewPhone('');
-    setEmailVerificationCode('');
     setPhoneVerificationCode('');
-    setLoading(false);
-    setIsVerifyingEmail(false);
+    setIsUpdatingEmail(false);
+    setIsUpdatingPhone(false);
     setIsVerifyingPhone(false);
     onClose();
   };
@@ -290,7 +244,7 @@ export default function AccountSection({
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
-          {!showEmailVerification && !showPhoneVerification ? (
+          {!showPhoneVerification ? (
             <View style={styles.mainContainer}>
                 <View style={styles.inputsContainer}>
                   <View style={styles.inputSection}>
@@ -300,12 +254,12 @@ export default function AccountSection({
                       label="Email"
                     />
                     <TouchableOpacity 
-                      style={[styles.updateButton, loading && styles.disabledButton]} 
+                      style={[styles.updateButton, isUpdatingEmail && styles.disabledButton]} 
                       onPress={handleEmailUpdate}
-                      disabled={loading}
+                      disabled={isUpdatingEmail}
                     >
                       <Text style={styles.updateButtonText}>
-                        {loading ? 'Sending...' : 'Update'}
+                        {isUpdatingEmail ? 'Sending...' : 'Update Email'}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -316,12 +270,12 @@ export default function AccountSection({
                       label="Phone"
                     />
                     <TouchableOpacity 
-                      style={[styles.updateButton, loading && styles.disabledButton]} 
+                      style={[styles.updateButton, isUpdatingPhone && styles.disabledButton]} 
                       onPress={handlePhoneUpdate}
-                      disabled={loading}
+                      disabled={isUpdatingPhone}
                     >
                       <Text style={styles.updateButtonText}>
-                        {loading ? 'Sending...' : 'Update'}
+                        {isUpdatingPhone ? 'Sending...' : 'Update Phone'}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -352,31 +306,43 @@ export default function AccountSection({
                 </TouchableOpacity>
                 </View>
             </View>
-          ) : showEmailVerification ? (
-            <View style={styles.verificationSection}>
-              <Text style={styles.sectionTitle}>Email Verification</Text>
-              <Text style={styles.sectionDescription}>
-                Enter the 6-digit verification code sent to {newEmail}
-              </Text>
-              <VerificationForm
-                verificationCode={emailVerificationCode}
-                setVerificationCode={setEmailVerificationCode}
-                onVerifyCode={verifyEmailCode}
-                onBack={() => setShowEmailVerification(false)}
-              />
-            </View>
           ) : (
             <View style={styles.verificationSection}>
               <Text style={styles.sectionTitle}>Phone Verification</Text>
               <Text style={styles.sectionDescription}>
                 Enter the 6-digit verification code sent to {formatPhoneDisplay(newPhone)}
               </Text>
-              <VerificationForm
-                verificationCode={phoneVerificationCode}
-                setVerificationCode={setPhoneVerificationCode}
-                onVerifyCode={verifyPhoneCode}
-                onBack={() => setShowPhoneVerification(false)}
+              
+              <TextInput
+                mode="outlined"
+                label="Verification Code"
+                style={styles.verificationInput}
+                value={phoneVerificationCode}
+                onChangeText={setPhoneVerificationCode}
+                keyboardType="number-pad"
+                maxLength={6}
+                outlineColor="#ddd"
+                activeOutlineColor="hotpink"
               />
+              
+              <View style={styles.verificationButtons}>
+                <TouchableOpacity 
+                  style={[styles.verifyButton, isVerifyingPhone && styles.disabledButton]} 
+                  onPress={verifyPhoneCode}
+                  disabled={isVerifyingPhone}
+                >
+                  <Text style={styles.verifyButtonText}>
+                    {isVerifyingPhone ? 'Verifying...' : 'Verify Code'}
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.backButton} 
+                  onPress={() => setShowPhoneVerification(false)}
+                >
+                  <Text style={styles.backButtonText}>Back</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
         </ScrollView>
@@ -471,6 +437,35 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
+  verificationInput: {
+    backgroundColor: 'white',
+    marginBottom: 20,
+  },
+  verificationButtons: {
+    gap: 12,
+  },
+  verifyButton: {
+    backgroundColor: 'hotpink',
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  verifyButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  backButton: {
+    backgroundColor: '#f0f0f0',
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  backButtonText: {
+    color: '#333',
+    fontWeight: '600',
+    fontSize: 16,
+  },
   updateButton: {
     backgroundColor: 'hotpink',
     paddingVertical: 12,
@@ -520,5 +515,5 @@ const styles = StyleSheet.create({
   },
   actionContainer: {
     gap: 10,
-  },
+  }
 }); 

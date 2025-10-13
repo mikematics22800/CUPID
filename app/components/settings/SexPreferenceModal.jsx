@@ -1,14 +1,22 @@
-import React from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import { useState, useEffect } from 'react';
 
-export default function SexPreferenceModal({ 
-  visible, 
-  tempPreferredSex, 
-  setTempPreferredSex, 
-  onClose, 
-  onSave 
-}) {
+export default function SexPreferenceModal({ visible, onClose, preferredSex, onSave }) {
+  const [tempPreferredSex, setTempPreferredSex] = useState('all');
+
+  // Update temp value when modal opens or preferredSex changes
+  useEffect(() => {
+    if (visible) {
+      setTempPreferredSex(preferredSex);
+    }
+  }, [visible, preferredSex]);
+
+  const handleSave = () => {
+    onSave(tempPreferredSex);
+    onClose();
+  };
+
   return (
     <Modal
       visible={visible}
@@ -18,7 +26,6 @@ export default function SexPreferenceModal({
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Show Me</Text>
           <View style={styles.pickerContainer}>
             <Picker
               selectedValue={tempPreferredSex}
@@ -34,7 +41,7 @@ export default function SexPreferenceModal({
             <TouchableOpacity style={styles.modalButton} onPress={onClose}>
               <Text style={styles.modalButtonText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.modalButton, styles.modalButtonPrimary]} onPress={onSave}>
+            <TouchableOpacity style={[styles.modalButton, styles.modalButtonPrimary]} onPress={handleSave}>
               <Text style={[styles.modalButtonText, styles.modalButtonTextPrimary]}>Save</Text>
             </TouchableOpacity>
           </View>
@@ -66,12 +73,6 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 24,
-    color: '#333',
-  },
   pickerContainer: {
     width: '100%',
     marginBottom: 20,
@@ -99,9 +100,9 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   modalButtonPrimary: {
-    backgroundColor: '#007AFF',
+    backgroundColor: 'hotpink',
   },
   modalButtonTextPrimary: {
     color: '#fff',
   },
-}); 
+});

@@ -1,13 +1,38 @@
-import React from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Alert } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+import { useState, useEffect } from 'react';
 
-export default function AgeRangeModal({ 
-  visible, 
-  tempAgeRange, 
-  setTempAgeRange, 
-  onClose, 
-  onSave 
-}) {
+// Generate age options from 18 to 100
+const generateAgeOptions = () => {
+  const ages = [];
+  for (let i = 18; i <= 100; i++) {
+    ages.push(i);
+  }
+  return ages;
+};
+
+const ageOptions = generateAgeOptions();
+
+export default function AgeRangeModal({ visible, onClose, ageRange, onSave }) {
+  const [tempAgeRange, setTempAgeRange] = useState({ min: 18, max: 50 });
+
+  // Update temp values when modal opens or ageRange changes
+  useEffect(() => {
+    if (visible) {
+      setTempAgeRange(ageRange);
+    }
+  }, [visible, ageRange]);
+
+  const handleSave = () => {
+    // Validate age range
+    if (tempAgeRange.min > tempAgeRange.max) {
+      Alert.alert('Invalid Age Range', 'Minimum age cannot be greater than maximum age');
+      return;
+    }
+    onSave(tempAgeRange);
+    onClose();
+  };
+
   return (
     <Modal
       visible={visible}
@@ -18,34 +43,37 @@ export default function AgeRangeModal({
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>Age Range</Text>
-          <View style={styles.ageInputContainer}>
-            <View style={styles.ageInput}>
-              <Text style={styles.ageLabel}>Min Age</Text>
-              <TextInput
-                style={styles.ageTextInput}
-                value={tempAgeRange.min.toString()}
-                onChangeText={(text) => setTempAgeRange(prev => ({ ...prev, min: parseInt(text) || 18 }))}
-                keyboardType="numeric"
-                maxLength={2}
-              />
+          <View style={styles.pickersContainer}>
+            <View style={styles.pickerWrapper}>
+              <Text style={styles.pickerLabel}>Min</Text>
+              <Picker
+                selectedValue={tempAgeRange.min}
+                onValueChange={(itemValue) => setTempAgeRange(prev => ({ ...prev, min: itemValue }))}
+                style={styles.picker}
+              >
+                {ageOptions.map(age => (
+                  <Picker.Item key={`min-${age}`} label={age.toString()} value={age} />
+                ))}
+              </Picker>
             </View>
-            <Text style={styles.ageSeparator}>-</Text>
-            <View style={styles.ageInput}>
-              <Text style={styles.ageLabel}>Max Age</Text>
-              <TextInput
-                style={styles.ageTextInput}
-                value={tempAgeRange.max.toString()}
-                onChangeText={(text) => setTempAgeRange(prev => ({ ...prev, max: parseInt(text) || 50 }))}
-                keyboardType="numeric"
-                maxLength={2}
-              />
+            <View style={styles.pickerWrapper}>
+              <Text style={styles.pickerLabel}>Max</Text>
+              <Picker
+                selectedValue={tempAgeRange.max}
+                onValueChange={(itemValue) => setTempAgeRange(prev => ({ ...prev, max: itemValue }))}
+                style={styles.picker}
+              >
+                {ageOptions.map(age => (
+                  <Picker.Item key={`max-${age}`} label={age.toString()} value={age} />
+                ))}
+              </Picker>
             </View>
           </View>
           <View style={styles.modalButtons}>
             <TouchableOpacity style={styles.modalButton} onPress={onClose}>
               <Text style={styles.modalButtonText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.modalButton, styles.modalButtonPrimary]} onPress={onSave}>
+            <TouchableOpacity style={[styles.modalButton, styles.modalButtonPrimary]} onPress={handleSave}>
               <Text style={[styles.modalButtonText, styles.modalButtonTextPrimary]}>Save</Text>
             </TouchableOpacity>
           </View>
@@ -83,40 +111,38 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     color: '#333',
   },
-  ageInputContainer: {
+  pickersContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 20,
   },
-  ageInput: {
+  pickerWrapper: {
     flex: 1,
-    marginRight: 10,
   },
-  ageLabel: {
+  pickerLabel: {
     fontSize: 14,
     fontWeight: '600',
     color: '#666',
+    marginBottom: 4,
     textAlign: 'center',
   },
-  ageTextInput: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 10,
-    borderRadius: 8,
-    fontSize: 16,
-    textAlign: 'center',
-    marginTop: 5,
-    backgroundColor: '#f9f9f9',
+  picker: {
+    width: '100%',
+    height: 150,
   },
   ageSeparator: {
-    marginHorizontal: 15,
-    fontSize: 18,
+    marginHorizontal: 10,
+    fontSize: 24,
     fontWeight: '600',
     color: '#999',
+    marginTop: 20,
   },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 20,
+    marginTop: 40,
     width: '100%',
   },
   modalButton: {
@@ -133,9 +159,10 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   modalButtonPrimary: {
-    backgroundColor: '#007AFF',
+    backgroundColor: 'hotpink',
   },
   modalButtonTextPrimary: {
     color: '#fff',
   },
-}); 
+});
+
