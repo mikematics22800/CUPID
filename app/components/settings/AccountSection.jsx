@@ -1,9 +1,79 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Modal, SafeAreaView, ScrollView } from 'react-native';
 import { TextInput } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { updateUserEmail, sendPhoneUpdateCode, verifyAndUpdatePhone } from '../../../lib/supabase';
-import { EmailInput, PhoneInput } from '../auth/index';
+
+// Email input component
+function EmailInput({ email, setEmail, label = "Email" }) {
+  return (
+    <View style={styles.emailInputContainer}>
+      <TextInput
+        mode="outlined"
+        label={label}
+        style={styles.emailInput}
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        outlineColor="#ddd"
+        activeOutlineColor="hotpink"
+        left={
+          <TextInput.Icon 
+            icon="email" 
+          />
+        }
+        numberOfLines={1}
+        ellipsizeMode="tail"
+      />
+    </View>
+  );
+}
+
+// Phone input component
+function PhoneInput({ phone, setPhone, label = "Phone Number" }) {
+  // Format phone number for better display
+  const formatPhoneNumber = (text) => {
+    // Remove all non-numeric characters
+    const cleaned = text.replace(/\D/g, '');
+    
+    // Format as (XXX) XXX-XXXX
+    if (cleaned.length <= 3) {
+      return cleaned;
+    } else if (cleaned.length <= 6) {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3)}`;
+    } else {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
+    }
+  };
+
+  const handlePhoneChange = (text) => {
+    // Remove formatting for storage, keep only digits
+    const cleaned = text.replace(/\D/g, '');
+    setPhone(cleaned);
+  };
+
+  return (
+    <View style={styles.phoneInputContainer}>
+      <TextInput
+        mode="outlined"
+        label={label}
+        style={styles.phoneInput}
+        value={formatPhoneNumber(phone || '')}
+        onChangeText={handlePhoneChange}
+        keyboardType="numeric"
+        maxLength={14} // (XXX) XXX-XXXX format
+        outlineColor="#ddd"
+        activeOutlineColor="hotpink"
+        left={
+          <TextInput.Icon 
+            icon="phone" 
+          />
+        }
+      />
+    </View>
+  );
+}
 
 export default function AccountSection({
   visible,
@@ -16,21 +86,19 @@ export default function AccountSection({
   onDeleteAccount,
   onDisableAccount,
 }) {
-  const [newEmail, setNewEmail] = useState('');
-  const [newPhone, setNewPhone] = useState('');
+  const [newEmail, setNewEmail] = useState(email || '');
+  const [newPhone, setNewPhone] = useState(phone || '');
   const [phoneVerificationCode, setPhoneVerificationCode] = useState('');
   const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
   const [showPhoneVerification, setShowPhoneVerification] = useState(false);
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
   const [isUpdatingPhone, setIsUpdatingPhone] = useState(false);
 
-  // Initialize form when modal opens
-  useState(() => {
-    if (visible) {
-      setNewEmail(email || '');
-      setNewPhone(phone || '');
-    }
-  });
+  // Update form values when props change
+  useEffect(() => {
+    setNewEmail(email || '');
+    setNewPhone(phone || '');
+  }, [email, phone]);
 
   const handleEmailUpdate = async () => {
     if (!newEmail || !newEmail.match(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)) {
@@ -499,7 +567,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   logoutAction: {
-    backgroundColor: '#007AFF',
+    backgroundColor: 'purple',
   },
   disableAction: {
     backgroundColor: '#FF9500',
@@ -515,5 +583,19 @@ const styles = StyleSheet.create({
   },
   actionContainer: {
     gap: 10,
-  }
+  },
+  emailInputContainer: {
+    width: '100%',
+  },
+  emailInput: {
+    width: '100%',
+    backgroundColor: 'white',
+  },
+  phoneInputContainer: {
+    width: '100%',
+  },
+  phoneInput: {
+    width: '100%',
+    backgroundColor: 'white',
+  },
 }); 

@@ -103,8 +103,9 @@ export const ProfileProvider = ({ children }) => {
         setResidence(profileData?.residence || '');
         setGeolocation(profileData?.geolocation || null);
         setName(personalData?.name || '');
-        setEmail(profileData?.email || '');
-        setPhone(profileData?.phone || '');
+        // Get email and phone from auth user object
+        setEmail(currentUser?.email || '');
+        setPhone(currentUser?.phone || '');
         
         // Load photos from both database and storage
         await loadPhotosFromStorage(userIdToLoad, profileData.images);
@@ -136,8 +137,9 @@ export const ProfileProvider = ({ children }) => {
         setResidence('');
         setGeolocation(null);
         setName('');
-        setEmail('');
-        setPhone('');
+        // Get email and phone from auth user object
+        setEmail(currentUser?.email || '');
+        setPhone(currentUser?.phone || '');
         
         // Don't update geolocation for new users until they explicitly enable location sharing
         console.log('📍 New user, location sharing disabled by default (geolocation is null)');
